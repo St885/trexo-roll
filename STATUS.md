@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.8.0 — Recompensas (monedas + estrellas-token) y Tienda de Canje (v0.4.2 en producción; 0.5.0→0.8.0 sin push aún) |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.4.2) · 🛠️ v0.8.0 monedas/estrellas en niveles, tienda de canje y 3 potenciadores (vida extra, bloqueo de trampa, escudo de caída con ptero-rescate), lista para probar local (sin push) |
+| **Versión** | 0.8.0 — Recompensas (monedas + estrellas-token) y Tienda de Canje |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.8.0) · monedas/estrellas en niveles, tienda de canje y 3 potenciadores (vida extra, bloqueo de trampa, escudo de caída con ptero-rescate) en producción |
 | **Fecha** | 2026-06-19 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
@@ -12,7 +12,7 @@
 | **Bolas** | 5, cada una con **especie de dino distinta** (T-Rex, Raptor, Parasaurio, Triceratops, Braquiosaurio) |
 | **Biomas** | 8 ambientaciones jurásicas |
 | **Git** | Repo `github.com/St885/trexo-roll`, rama `main` |
-| **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ (2026-06-19) |
+| **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · v0.8.0 (2026-06-19) |
 
 ---
 
