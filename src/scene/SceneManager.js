@@ -2,14 +2,18 @@
 // del tablero. Aísla todo lo "3D" del resto del juego.
 
 import * as THREE from 'three';
-import { makeSkyTexture, makeContactShadowTexture, makeThemeSky, getTheme } from './textures.js';
+import { makeSkyTexture, makeContactShadowTexture, makeThemeSky, getTheme, makeGroundTexture } from './textures.js';
 import { buildBoard } from './BoardBuilder.js';
 import { buildDino, buildConfetti } from './CelebrationDino.js';
+import { makeCoin, makeStarToken, makeTrapCover, makePtero } from './collectibleArt.js';
 import { footprintBounds } from '../physics/footprint.js';
 import { PHYS } from '../utils/constants.js';
 
 const CAM_DIR = new THREE.Vector3(0, 0.92, 1.0).normalize(); // dirección fija de la cámara
 const V_FOV = 48;
+// Banda de decoración alrededor del tablero (debe coincidir con decorate() en
+// BoardBuilder). El encuadre la incluye para que la decoración no se "corte".
+const DECOR_MARGIN = 2.0;
 
 export class SceneManager {
   constructor(container) {
@@ -27,9 +31,11 @@ export class SceneManager {
     this.scene = new THREE.Scene();
     this._bgTexture = makeSkyTexture();
     this.scene.background = this._bgTexture;
-    this.scene.fog = new THREE.Fog(0xbfe3d0, 42, 95);
+    // Niebla LEJANA: deja el tablero (y la decoración cercana) nítidos y solo
+    // difumina el suelo/horizonte → profundidad de jungla sin "empañar" el juego.
+    this.scene.fog = new THREE.Fog(0xbfe3d0, 80, 220);
 
-    this.camera = new THREE.PerspectiveCamera(V_FOV, 1, 0.1, 200);
+    this.camera = new THREE.PerspectiveCamera(V_FOV, 1, 0.1, 260);
     this.camera.position.set(0, 14, 16);
     this.camera.lookAt(0, 0, 0);
 
@@ -43,6 +49,9 @@ export class SceneManager {
     this._t = 0;
     this._shake = 0;
     this._celebration = null;
+    this._collectibles = []; // {mesh, x, z, type, taken}
+    this._pickFx = [];       // efectos "pop" al recoger
+    this._ptero = null;      // estado del ptero-rescate
 
     // Sombra de contacto bajo la bola (da sensación de peso y apoyo).
     this._contactShadow = new THREE.Mesh(
@@ -50,6 +59,17 @@ export class SceneManager {
       new THREE.MeshBasicMaterial({ map: makeContactShadowTexture(), transparent: true, opacity: 0.35, depthWrite: false })
     );
     this._contactShadow.rotation.x = -Math.PI / 2;
+
+    // Sombra grande y suave proyectada sobre el suelo, bajo el tablero: lo ancla y
+    // refuerza la sensación de plataforma elevada (no "hundida" en el fondo).
+    this._boardShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ map: makeContactShadowTexture(), transparent: true, opacity: 0.5, depthWrite: false })
+    );
+    this._boardShadow.rotation.x = -Math.PI / 2;
+    this._boardShadow.frustumCulled = false;
+    this._boardShadow.visible = false;
+    this.scene.add(this._boardShadow);
 
     this.resize();
   }
@@ -61,10 +81,12 @@ export class SceneManager {
     sun.position.set(10, 20, 8);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    const s = 24;
+    // Volumen de sombra amplio: cubre el tablero + decoración incluso inclinado,
+    // así nada pierde su sombra al girar.
+    const s = 34;
     sun.shadow.camera.left = -s; sun.shadow.camera.right = s;
     sun.shadow.camera.top = s; sun.shadow.camera.bottom = -s;
-    sun.shadow.camera.near = 1; sun.shadow.camera.far = 70;
+    sun.shadow.camera.near = 1; sun.shadow.camera.far = 100;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.02;
     this.scene.add(sun);
@@ -77,12 +99,14 @@ export class SceneManager {
   }
 
   _addGround() {
-    const geo = new THREE.PlaneGeometry(200, 200);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x4f7a3a, roughness: 1 });
+    const geo = new THREE.PlaneGeometry(240, 240);
+    this.groundTex = makeGroundTexture('valle');
+    const mat = new THREE.MeshStandardMaterial({ map: this.groundTex, roughness: 1 });
     const ground = new THREE.Mesh(geo, mat);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -3.2;
+    ground.position.y = -4.2; // más abajo que antes (-3.2): separa el tablero sin exagerar
     ground.receiveShadow = true;
+    ground.frustumCulled = false; // suelo grande: nunca debe culearse
     this.scene.add(ground);
     this.ground = ground;
   }
@@ -94,7 +118,14 @@ export class SceneManager {
     this._bgTexture = makeThemeSky(name);
     this.scene.background = this._bgTexture;
     if (old) old.dispose();
-    if (this.ground) this.ground.material.color.set(theme.ground);
+    if (this.ground) {
+      const oldG = this.groundTex;
+      this.groundTex = makeGroundTexture(name);
+      this.ground.material.map = this.groundTex;
+      this.ground.material.color.set(0xffffff); // el color real lo aporta la textura
+      this.ground.material.needsUpdate = true;
+      if (oldG) oldG.dispose();
+    }
     if (this.scene.fog) this.scene.fog.color.set(theme.fog);
   }
 
@@ -106,6 +137,10 @@ export class SceneManager {
     group.add(ballMesh);
     group.add(this._contactShadow);
     this._ballMesh = ballMesh;
+    // El tablero gira (rotation.x/z): desactivar el frustum culling de TODO lo que
+    // cuelga de él evita que objetos/esquinas "desaparezcan" por una esfera de
+    // recorte mal calculada al inclinar. La escena es pequeña: coste despreciable.
+    group.traverse((o) => { o.frustumCulled = false; });
     this.scene.add(group);
     this.boardGroup = group;
     this.animated = animated;
@@ -113,11 +148,18 @@ export class SceneManager {
     const b = footprintBounds(level.footprint);
     this._bounds = b;
     this._boardCenter.set((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2);
+
+    // Sombra grande del tablero sobre el suelo (anclaje + sensación de elevación).
+    this._boardShadow.scale.set(b.width + 6, b.depth + 6, 1);
+    this._boardShadow.position.set(this._boardCenter.x, this.ground.position.y + 0.06, this._boardCenter.z);
+    this._boardShadow.visible = true;
+
     this._frame(b);
     return group;
   }
 
   clearBoard() {
+    if (this._boardShadow) this._boardShadow.visible = false;
     if (!this.boardGroup) return;
     // La bola y la sombra se reutilizan: sacarlas antes de liberar el tablero.
     if (this._ballMesh && this._ballMesh.parent === this.boardGroup) {
@@ -131,6 +173,101 @@ export class SceneManager {
     this.boardGroup = null;
     this.animated = [];
     this._celebration = null; // sus objetos se liberan con el árbol del tablero
+    this._collectibles = [];  // sus meshes colgaban del tablero (ya liberados)
+    this._pickFx = [];
+    if (this._ptero) { this.scene.remove(this._ptero.group); disposeTree(this._ptero.group); this._ptero = null; }
+  }
+
+  // --- Coleccionables (monedas + estrella-token) ----------------------------
+  /** Monta los coleccionables del nivel como hijos del tablero (se inclinan con él). */
+  mountCollectibles(coins, star) {
+    this._collectibles = [];
+    if (!this.boardGroup) return;
+    for (const c of coins || []) {
+      const mesh = makeCoin();
+      mesh.position.set(c.x, 0.55, c.z);
+      mesh.traverse((o) => { o.frustumCulled = false; });
+      this.boardGroup.add(mesh);
+      this._collectibles.push({ mesh, x: c.x, z: c.z, type: 'coin', taken: false });
+    }
+    if (star) {
+      const mesh = makeStarToken();
+      mesh.position.set(star.x, 0.64, star.z);
+      mesh.traverse((o) => { o.frustumCulled = false; });
+      this.boardGroup.add(mesh);
+      this._collectibles.push({ mesh, x: star.x, z: star.z, type: 'star', taken: false });
+    }
+  }
+
+  /** Marca un coleccionable como recogido y lanza su efecto "pop". */
+  collectAt(index) {
+    const c = this._collectibles[index];
+    if (!c || c.taken) return;
+    c.taken = true;
+    this._pickFx.push({ mesh: c.mesh, t: 0, dur: 0.3 });
+  }
+
+  /** Tapa una trampa bloqueada con una piedra gris (se ve "apagada"). */
+  coverTrap(trap) {
+    if (!this.boardGroup || !trap) return;
+    const cover = makeTrapCover(trap.r || 1);
+    cover.position.set(trap.x, 0.04, trap.z);
+    cover.traverse((o) => { o.frustumCulled = false; });
+    this.boardGroup.add(cover);
+  }
+
+  // --- Escudo de caída: rescate del pterosaurio -----------------------------
+  /** Lanza el ptero, que recoge la bola caída y la deja en una zona segura. */
+  startPteroRescue(safeX, safeZ, colorHex, onDone) {
+    const ball = this._ballMesh;
+    if (!ball) { if (onDone) onDone(); return; }
+    ball.visible = true;
+    const ptero = makePtero(colorHex || '#8a5a3a');
+    ptero.traverse((o) => { o.frustumCulled = false; });
+    ptero.position.set(ball.position.x, ball.position.y + 6, ball.position.z - 3);
+    this.scene.add(ptero);
+    this._ptero = {
+      group: ptero, t: 0, onDone,
+      bx: ball.position.x, by: ball.position.y, bz: ball.position.z,
+      safeX, safeZ,
+    };
+  }
+
+  _animatePtero(dt) {
+    const P = this._ptero;
+    if (!P) return;
+    P.t += dt;
+    const t = P.t;
+    const ptero = P.group;
+    const ball = this._ballMesh;
+    const flap = Math.sin(t * 18) * 0.6;
+    if (ptero.userData.wings) {
+      ptero.userData.wings[0].rotation.z = flap;
+      ptero.userData.wings[1].rotation.z = -flap;
+    }
+    const PICK = 0.55, CARRY = 1.5, OUT = 2.1;
+    if (t < PICK) {
+      const p = t / PICK;
+      ptero.position.set(P.bx, lerp(P.by + 6, P.by + 0.7, p), lerp(P.bz - 3, P.bz, p));
+      if (ball) ball.position.y = lerp(P.by, P.by - 0.6, p);
+    } else if (t < CARRY) {
+      const e = easeOut((t - PICK) / (CARRY - PICK));
+      const bx = lerp(P.bx, P.safeX, e);
+      const bz = lerp(P.bz, P.safeZ, e);
+      const by = lerp(P.by - 0.6, PHYS.BALL_RADIUS, e) + Math.sin(e * Math.PI) * 1.3;
+      if (ball) ball.position.set(bx, by, bz);
+      ptero.position.set(bx, by + 0.85, bz);
+    } else if (t < OUT) {
+      const p = (t - CARRY) / (OUT - CARRY);
+      if (ball) ball.position.set(P.safeX, PHYS.BALL_RADIUS, P.safeZ);
+      ptero.position.set(lerp(P.safeX, P.safeX + 5, p), lerp(PHYS.BALL_RADIUS + 0.85, 7, p), lerp(P.safeZ, P.safeZ - 5, p));
+    } else {
+      this.scene.remove(ptero);
+      disposeTree(ptero);
+      const cb = P.onDone;
+      this._ptero = null;
+      if (cb) cb();
+    }
   }
 
   /** Lanza la celebración: el dino de la bola sale del hoyo y baila + confeti. */
@@ -141,6 +278,10 @@ export class SceneManager {
     dino.position.set(x, -1.4, z);
     const { points, velocities } = buildConfetti(ballDef.dino);
     points.position.set(x, 0.6, z);
+    // Se añaden después del traverse de mountLevel: desactivar su culling aquí para
+    // que el dino y el confeti no se recorten al moverse durante la celebración.
+    dino.traverse((o) => { o.frustumCulled = false; });
+    points.frustumCulled = false;
     this.boardGroup.add(dino);
     this.boardGroup.add(points);
     this._celebration = {
@@ -205,20 +346,34 @@ export class SceneManager {
     c.points.material.opacity = Math.max(0, 1 - t / 1.4);
   }
 
-  /** Encuadra la cámara para que el tablero entre completo (también en vertical/móvil). */
+  /**
+   * Encuadra la cámara para que el tablero entre COMPLETO incluso al inclinarse.
+   * El radio a encuadrar cubre: (a) las esquinas reales del tablero (diagonal, no
+   * solo el lado mayor), (b) la banda de decoración que lo rodea, y (c) el balanceo
+   * que la inclinación máxima provoca en las esquinas. Así no se cortan esquinas ni
+   * desaparece la decoración al girar.
+   */
   _frame(bounds) {
-    const radius = Math.max(bounds.width, bounds.depth) / 2 + 2.2;
+    const halfDiag = Math.hypot(bounds.width / 2, bounds.depth / 2);
+    const decorReach = Math.max(bounds.width, bounds.depth) / 2 + DECOR_MARGIN;
+    // El tablero gira alrededor del pivote (origen): una ESFERA de este radio centrada
+    // en el centro del tablero lo contiene COMPLETO a cualquier inclinación, porque la
+    // rotación conserva la distancia al pivote. Por eso NO hace falta un término extra
+    // de "balanceo" → la cámara puede acercarse (tablero más grande) sin recortar
+    // esquinas ni objetos. 'offset' cubre tableros cuyo centro no esté en el pivote.
+    const offset = this._boardCenter.length();
+    const radius = Math.max(halfDiag, decorReach) + offset + 0.5;
+
     const aspect = this.camera.aspect;
     const vFov = THREE.MathUtils.degToRad(this.camera.fov);
     const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
     const limiting = Math.min(vFov, hFov);
     const portrait = aspect < 1;
-    // En vertical (móvil) el tablero se ve MÁS GRANDE (menos margen) y se sube un
-    // poco para dejar sitio a los controles táctiles de abajo.
-    const margin = portrait ? radius * 0.18 : radius * 0.32;
-    const dist = radius / Math.tan(limiting / 2) + margin;
+    // Encaje por esfera (sin·, no tan·) con margen pequeño: tablero grande pero estable.
+    const margin = portrait ? radius * 0.03 : radius * 0.07;
+    const dist = radius / Math.sin(limiting / 2) + margin;
     const target = this._boardCenter.clone();
-    target.z += portrait ? radius * 0.1 : 0; // sube el tablero en pantalla
+    target.z += portrait ? radius * 0.05 : 0; // sube un pelín el tablero (sitio para los controles)
     const pos = CAM_DIR.clone().multiplyScalar(dist).add(this._boardCenter);
     this.camera.position.copy(pos);
     this.camera.lookAt(target);
@@ -248,6 +403,31 @@ export class SceneManager {
       }
     }
     if (this._celebration) this._animateCelebration(dt);
+
+    // Coleccionables: giro suave + flote.
+    for (const c of this._collectibles) {
+      if (c.taken) continue;
+      c.mesh.rotation.y += dt * (c.type === 'star' ? 1.9 : 2.6);
+      const baseY = c.type === 'star' ? 0.64 : 0.55;
+      c.mesh.position.y = baseY + Math.sin(this._t * 3 + c.x) * 0.08;
+    }
+    // Efecto "pop" al recoger: crece, sube y desaparece.
+    for (let i = this._pickFx.length - 1; i >= 0; i--) {
+      const fx = this._pickFx[i];
+      fx.t += dt;
+      const p = Math.min(1, fx.t / fx.dur);
+      fx.mesh.scale.setScalar(1 + p * 1.3);
+      fx.mesh.position.y += dt * 2.6;
+      fx.mesh.rotation.y += dt * 9;
+      if (p >= 1) {
+        if (this.boardGroup) this.boardGroup.remove(fx.mesh);
+        disposeTree(fx.mesh);
+        this._pickFx.splice(i, 1);
+      }
+    }
+    // Ptero-rescate (escudo de caída).
+    if (this._ptero) this._animatePtero(dt);
+
     // La sombra de contacto sigue a la bola y se atenúa cuando la bola se hunde/cae.
     if (this._ballMesh && this._contactShadow.parent) {
       const m = this._ballMesh;
@@ -287,6 +467,9 @@ export class SceneManager {
     if (this._bounds) this._frame(this._bounds); // reencuadrar al rotar/redimensionar
   }
 }
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
 function disposeTree(root) {
   root.traverse((o) => {

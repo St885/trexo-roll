@@ -2,6 +2,175 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.8.0] — 2026-06-19 — Recompensas: monedas, estrellas-token y Tienda de Canje
+
+### Añadido — recompensas en el tablero
+- **Monedas** (`🪙 +100`) colocadas de forma **procedural y determinista** en cada nivel,
+  validadas contra huella/hoyos/trampas/inicio (nunca bloquean ni hacen imposible el nivel).
+  Dificultad creciente: iniciales fáciles, medios en rutas secundarias, avanzados cerca de
+  zonas de riesgo. Monedas 3D doradas que giran y flotan; **VFX "pop"** + sonido al recoger.
+- **Estrella especial** (`⭐ +500`) **cada 2 niveles** (2, 4, 6…): suma puntos y **+1
+  estrella-token**, con efecto y sonido más vistosos. Se guarda en `localStorage` al recogerla.
+- **HUD**: chip de **monedas** del nivel (con animación al sumar).
+
+### Añadido — inventario y Tienda de Canje
+- **Inventario** persistente (`localStorage`): `starTokens`, `extraLives`, `trapBlocks`,
+  `fallShields`. *(Las estrellas-token son distintas de las ★ de valoración por nivel.)*
+- **Tienda de Canje** (menú → 🛒 Canje): muestra estrellas disponibles, las 3 recompensas
+  con coste y cantidad poseída, botón de compra y feedback (éxito / faltan estrellas).
+
+### Añadido — 3 potenciadores
+- **Vida extra** (2★): si llegas a 0 vidas, se **consume automáticamente** y recuperas 1.
+- **Bloqueo de trampa** (3★): se activa en preparación; **tapa la trampa más peligrosa**
+  (la más cercana a la línea inicio→meta) — se ve gris/apagada y deja de contar.
+- **Escudo de caída** (4★): si caes del tablero, **un pterosaurio te rescata** (animación) y
+  te deja en zona segura; se consume. Mensaje "¡Rescate jurásico!".
+- Activación por nivel desde **preparación** (toggles que aparecen solo si tienes stock).
+
+### Validado
+- `npm test` ampliado con **colocación de coleccionables** (105 monedas y 12 estrellas en
+  los 25 niveles: válidas, deterministas, estrella en pares). `test:visual` cubre los modelos
+  3D (moneda/estrella/ptero/tapa). `test:graph` incluye los módulos nuevos. Cross-check de
+  IDs (48) y CSS: verde. **Controles móviles y música intactos.**
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.7.1] — 2026-06-19 — Música de fondo desde archivo (pista de aventura)
+
+### Cambiado — música de fondo
+- La música ahora es una **pista de archivo**: `assets/audio/trexo-roll-adventure-bg.mp3`
+  (copiada con permiso desde `04_recursos_compartidos/musica-de-fondo/aventura/`
+  `nastelbom-adventure-471461(trexob).mp3`; original intacto). MP3 válido, 4.6 MB.
+- `music.js` reescrito para reproducir el archivo con `HTMLAudioElement`:
+  **bucle**, **volumen moderado** (0.4), **instancia única** (no se duplica al cambiar de
+  pantalla), **autoplay-safe** (suena tras pulsar "Entrar"; reintenta en el siguiente gesto
+  si el navegador lo bloquea). Silenciable desde el botón de sonido del **menú** y la **pausa**.
+- La implementación **procedural anterior** se conserva como respaldo en
+  `src/effects/music-procedural.js.bak` (no se borró nada).
+- Ruta **relativa** (`assets/audio/…`) → funciona en local y en GitHub Pages (`/trexo-roll/`).
+
+### Notas
+- Sin dependencias nuevas. Los ajustes visuales de v0.7.0 (tablero más grande/elevado,
+  fondo jungla) siguen aplicados. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.7.0] — 2026-06-19 — Tablero protagonista: más grande, elevado, jungla y nueva música
+
+### Tablero más grande (sin recortes)
+- **Encuadre simplificado y correcto** (`SceneManager._frame`): como la rotación conserva
+  la distancia al pivote, una **esfera de radio `flat`** (diagonal del tablero + banda de
+  decoración) lo contiene COMPLETO a cualquier inclinación. Se eliminó el término extra de
+  "balanceo" (sobre-conservador) y se redujeron los márgenes → la cámara se **acerca** y el
+  tablero ocupa bastante más viewport, **sin reintroducir recortes de esquinas/objetos**.
+
+### Tablero elevado (no hundido)
+- **Grosor real** del tablero (THICKNESS 0.5 → 1.4) con **cantos oscuros** (material por
+  cara en cajas y cilindros) → parece una **plataforma con cuerpo**, no una lámina.
+- **Suelo más abajo** (−3.2 → −4.2) y **sombra grande proyectada** bajo el tablero → lo
+  ancla y separa del fondo; el tablero "flota" como plataforma, deja de verse hundido.
+
+### Fondo de jungla
+- **Capas de profundidad** en el cielo de cada bioma: **bruma atmosférica** sobre el
+  horizonte + **canopy de jungla** (copas frondosas en 2 capas, color del bioma) sobre las
+  siluetas existentes → sensación de selva con profundidad en todos los mundos.
+- **Niebla 3D más lejana** (near 42→80): el tablero y la decoración cercana quedan
+  **nítidos** y solo se difumina el suelo/horizonte (antes la niebla "empañaba" el tablero).
+
+### Música nueva (mejor que la anterior)
+- `music.js` rehecho: **música generativa** con progresión **I–V–vi–IV** (Do–Sol–Lam–Fa),
+  pad cálido + bajo + **melodía pentatónica que varía** (silencios y saltos de octava → no
+  suena "en bucle") y **eco** corto para dar espacio. Épico-suave, amigable. Volumen
+  moderado, **autoplay-safe**, silenciable desde menú y pausa.
+- **Cómo cambiar a una pista de archivo** (CC0/libre): documentado en la cabecera de
+  `music.js` (copiar mp3 a `assets/music/` y usar un `HTMLAudioElement`).
+
+### Validado
+- `npm test`, `test:graph` (incl. `music.js`), `test:visual` **ampliado** (construye los
+  **25 tableros** con la geometría nueva + `makeGroundTexture`/canopy en 8 biomas): verde.
+  **Controles móviles y de escritorio intactos** (sin tocar `InputController`).
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.6.0] — 2026-06-19 — Mapa: cámara robusta, fondo jurásico y música
+
+### Corregido — objetos y esquinas desaparecían al inclinar el tablero
+- **Causa raíz:** el encuadre de cámara se calculaba para el tablero **plano** y demasiado
+  ajustado: usaba el lado mayor (no la **diagonal** real de las esquinas) y no tenía en
+  cuenta el **balanceo** que la inclinación provoca; además la decoración (hija del grupo
+  del tablero) quedaba en el borde del frame y, al rotar, se salía. Algunos objetos podían
+  además **culearse** por una esfera de recorte desfasada al girar.
+- **Solución:**
+  - **Encuadre robusto** (`SceneManager._frame`): el radio a encuadrar cubre la **diagonal**
+    del tablero, la **banda de decoración** y el **balanceo por inclinación máxima**; encaje
+    por esfera (`sin`) en lugar de plano (`tan`). Resultado: el tablero entra completo aun
+    inclinado, en vertical y horizontal.
+  - **`frustumCulled = false`** en todo lo que cuelga del tablero (superficie, paredes,
+    hoyos, anillos, decoración, banner) y en el dino de celebración + confeti → nada
+    "desaparece" por culling al rotar.
+  - **Volumen de sombra ampliado** (±34, far 100) y `far` de cámara a 260: las sombras no se
+    cortan al inclinar.
+
+### Mejorado — fondo y escenario
+- **Suelo jurásico trabajado** (`makeGroundTexture`): reemplaza el verde plano por tierra
+  del bioma con vetas, matas de follaje y piedrecitas; tinte por bioma. Más vivo sin
+  distraer (la niebla + viñeta enfocan el tablero). Se mantiene HUD legible.
+- **Decoración por bioma**: mezcla de props según el mundo (volcán=rocas, pantano/isla=
+  helechos, huevos=nidos, ruinas=fósiles…), en una banda controlada (no invade el área
+  jugable ni se corta) con leve jitter para que no se vea "en rejilla".
+
+### Añadido — música de fondo
+- **`music.js`**: música procedural (Web Audio) estilo aventura jurásica — pad grave suave +
+  melodía pentatónica amable en bucle. **Sin archivos ni copyright.** Volumen moderado.
+  **Autoplay-safe**: arranca tras el primer gesto (pulsar "Entrar"). Silenciable desde el
+  botón de sonido del **menú** y del **menú de pausa** (etiquetas sincronizadas).
+
+### Validado
+- `npm test` (física + 25 niveles + **controles móviles**), `test:graph` (incl. `music.js`),
+  `test:visual` (incl. `makeGroundTexture` en los 8 biomas), cross-check de IDs y CSS: verde.
+  **Controles móviles y de escritorio intactos.**
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.5.0] — 2026-06-19 — Pase de pulido visual y UX (todas las pantallas)
+
+Iteración de polish sobre **todas** las pantallas, mobile-first y coherente, **sin tocar
+la lógica de los controles táctiles** (D-pad/joystick siguen validados por `npm test`).
+
+### Añadido
+- **Sistema de diseño**: tokens de color jurásicos ampliados, sombras en capas, jerarquía
+  tipográfica, filo dorado en paneles y **animaciones de entrada** de pantalla/panel.
+- **Landing** rediseñada: etiqueta de marca, bola 🦖 con rebote, fondo con decoración
+  jurásica flotante (hojas/huesos/huevos), CTA claro ("Entrar a la aventura").
+- **Menú**: **barra de progreso** (estrellas totales + nivel desbloqueado) y botón
+  **"⏩ Continuar"** (aparece solo si hay progreso; retoma el último nivel jugado).
+- **Selección de dino**: nombres de personaje (**Rex Blanco, Raptor Verde, Dino Rosa,
+  Tricera Amarillo, Bronto Azul**), tarjetas con check de selección y mejor contraste.
+- **Selector de niveles**: franja de color por dificultad (Fácil/Media/Difícil/Experto).
+- **Victoria**: emoji 🏆, **destellos** cayendo, y botón **"↻ Repetir nivel"**.
+- **Game Over**: emoji, mensaje motivador y **nivel alcanzado**.
+- **Pausa**: mini-resumen (vidas + puntos).
+- **Cómo jugar**: ítems en tarjetas legibles; controles móviles explicados (D-pad/joystick).
+
+### Mejorado
+- Botones (variantes primary/amber/ghost), paneles, sombras, contraste y espaciados.
+- HUD: chips más legibles y mejor distribución; respeto de *safe areas* en ambos lados.
+- Responsive: revisados vertical/horizontal/tablet/desktop; compactaciones en paisaje bajo;
+  decoración desactivada donde estorbaba; `prefers-reduced-motion` respetado.
+
+### Calidad
+- Limpieza de CSS sin uso (`.decor-line`).
+- Cross-check de IDs DOM: los 41 IDs referenciados por JS existen en `index.html`
+  (se detectó y corrigió la pérdida accidental de `over-record`).
+
+### Validado
+- `npm test` (física + 25 niveles + pipeline de control), `test:graph`, `test:visual`,
+  balance de CSS y cross-check de IDs: todo en verde. **Controles móviles intactos.**
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
 ## [0.4.2] — 2026-06-19 — Control móvil definitivo: D-pad robusto
 
 ### Corregido (el D-pad "dejaba de responder" al jugar en móvil real)

@@ -1,0 +1,183 @@
+// music.js — Música de fondo generativa (Web Audio), estilo aventura jurásica:
+// una progresión de acordes I–V–vi–IV (Do–Sol–Lam–Fa) con pad cálido, bajo suave,
+// melodía pentatónica que va variando (no se siente "en bucle") y un eco corto para
+// dar espacio. Épico-suave, amigable, no infantil ni tenso. Cero archivos, cero
+// copyright, sin dependencias. Volumen moderado, silenciable.
+//
+// Autoplay-safe: el AudioContext arranca suspendido y solo suena tras un gesto del
+// usuario (start() se llama desde un click). Si se invoca antes, no falla ni suena.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// ¿Quieres usar una PISTA DE ARCHIVO (CC0/libre) en vez de la generativa?
+//   1) Copia tu .mp3/.ogg libre a, p.ej., `assets/music/aventura.mp3`.
+//   2) Sustituye el cuerpo de start()/stop()/setMuted() por un HTMLAudioElement:
+//        const a = new Audio('assets/music/aventura.mp3'); a.loop = true; a.volume = 0.4;
+//        start()  → a.play()  (dentro de un gesto del usuario)
+//        stop()   → a.pause()
+//        setMuted(m) → a.muted = m
+//   3) No subas música con copyright. Usa CC0 / libre con atribución válida.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _ctx = null;
+let _master = null;      // ganancia global (mute con rampa suave)
+let _melodyBus = null;   // mezcla de la melodía (va a seco + eco)
+let _timer = null;
+let _step = 0;
+let _voices = [];        // osciladores vivos (pad/bajo) para poder pararlos
+let _started = false;
+let _muted = false;
+
+// Progresión I–V–vi–IV en Do mayor (luminosa, de aventura). Cada acorde:
+//   bass = nota grave del bajo · pad = tríada media · mel = pentatónica para la melodía.
+const CHORDS = [
+  { bass: 65.41,  pad: [130.81, 164.81, 196.00], mel: [523.25, 587.33, 659.25, 392.00, 440.00] }, // C
+  { bass: 98.00,  pad: [196.00, 246.94, 293.66], mel: [392.00, 440.00, 493.88, 587.33, 659.25] }, // G
+  { bass: 110.00, pad: [220.00, 261.63, 329.63], mel: [440.00, 523.25, 587.33, 659.25, 392.00] }, // Am
+  { bass: 87.31,  pad: [174.61, 220.00, 261.63], mel: [349.23, 392.00, 440.00, 523.25, 587.33] }, // F
+];
+const STEP_MS = 600;          // ritmo tranquilo
+const STEPS_PER_CHORD = 6;    // cada acorde dura ~3.6 s (loop completo ~14.4 s)
+
+function getCtx() {
+  if (!_ctx) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      _ctx = new AC();
+    } catch (_) {
+      return null;
+    }
+  }
+  if (_ctx.state === 'suspended') _ctx.resume().catch(() => {});
+  return _ctx;
+}
+
+/** Lanza un acorde: pad (tríada) + bajo, con envolvente suave que cubre el compás. */
+function _playChord(chord) {
+  const ac = getCtx();
+  if (!ac || !_master) return;
+  const t = ac.currentTime;
+  const dur = (STEP_MS * STEPS_PER_CHORD) / 1000;
+
+  // Pad cálido (triángulo), tríada.
+  for (const f of chord.pad) {
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.014, t + 0.8);            // entra suave
+    g.gain.setValueAtTime(0.014, t + dur - 0.8);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.4); // se solapa con el siguiente
+    osc.connect(g).connect(_master);
+    osc.start(t);
+    osc.stop(t + dur + 0.5);
+    _voices.push(osc);
+  }
+
+  // Bajo (seno) en la raíz, redondo.
+  const bo = ac.createOscillator();
+  const bg = ac.createGain();
+  bo.type = 'sine';
+  bo.frequency.value = chord.bass;
+  bg.gain.setValueAtTime(0, t);
+  bg.gain.linearRampToValueAtTime(0.03, t + 0.25);
+  bg.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.2);
+  bo.connect(bg).connect(_master);
+  bo.start(t);
+  bo.stop(t + dur + 0.3);
+  _voices.push(bo);
+
+  // Recorta el array de voces para que no crezca sin fin.
+  if (_voices.length > 24) _voices = _voices.slice(-16);
+}
+
+/** Una nota de melodía (con probabilidad), variando para que no suene repetitiva. */
+function _playMelodyNote(chord) {
+  if (Math.random() < 0.28) return; // silencios ocasionales = frase más natural
+  const ac = getCtx();
+  if (!ac || !_melodyBus) return;
+  let f = chord.mel[Math.floor(Math.random() * chord.mel.length)];
+  if (Math.random() < 0.18) f *= 2; // salto de octava puntual (brillo)
+  const t = ac.currentTime;
+  const osc = ac.createOscillator();
+  const g = ac.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = f;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.05, t + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  osc.connect(g).connect(_melodyBus);
+  osc.start(t);
+  osc.stop(t + 0.55);
+}
+
+function _tick() {
+  if (!_started) return;
+  const chord = CHORDS[Math.floor(_step / STEPS_PER_CHORD) % CHORDS.length];
+  if (_step % STEPS_PER_CHORD === 0) _playChord(chord);
+  _playMelodyNote(chord);
+  _step++;
+  _timer = setTimeout(_tick, STEP_MS);
+}
+
+export const music = {
+  isPlaying() { return _started; },
+  isMuted() { return _muted; },
+
+  /** Arranca la música (idempotente). Debe llamarse tras un gesto del usuario. */
+  start() {
+    if (_started) { getCtx(); return; }
+    const ac = getCtx();
+    if (!ac) return;
+    _started = true;
+
+    _master = ac.createGain();
+    _master.gain.setValueAtTime(0.0001, ac.currentTime);
+    _master.gain.linearRampToValueAtTime(_muted ? 0.0001 : 0.9, ac.currentTime + 1.5);
+    _master.connect(ac.destination);
+
+    // Eco corto para dar espacio a la melodía (seco + retardo realimentado).
+    try {
+      const delay = ac.createDelay(1.0);
+      delay.delayTime.value = 0.33;
+      const fb = ac.createGain();
+      fb.gain.value = 0.26;
+      const wet = ac.createGain();
+      wet.gain.value = 0.45;
+      _melodyBus = ac.createGain();          // bus de melodía
+      _melodyBus.connect(_master);           // seco
+      _melodyBus.connect(delay);
+      delay.connect(fb).connect(delay);      // realimentación
+      delay.connect(wet).connect(_master);   // húmedo
+    } catch (_) {
+      _melodyBus = _master;                  // sin eco si el navegador no soporta DelayNode
+    }
+
+    _step = 0;
+    _tick();
+  },
+
+  /** Silencia/restaura con rampa suave (no corta los osciladores). */
+  setMuted(m) {
+    _muted = !!m;
+    if (!_started) return;
+    const ac = getCtx();
+    if (!ac || !_master) return;
+    const now = ac.currentTime;
+    _master.gain.cancelScheduledValues(now);
+    _master.gain.setValueAtTime(Math.max(0.0001, _master.gain.value), now);
+    _master.gain.linearRampToValueAtTime(_muted ? 0.0001 : 0.9, now + 0.4);
+  },
+
+  /** Detiene del todo (libera osciladores). */
+  stop() {
+    if (_timer !== null) { clearTimeout(_timer); _timer = null; }
+    for (const osc of _voices) { try { osc.stop(); } catch (_) { /* noop */ } }
+    _voices = [];
+    if (_melodyBus && _melodyBus !== _master) { try { _melodyBus.disconnect(); } catch (_) { /* noop */ } }
+    _melodyBus = null;
+    if (_master) { try { _master.disconnect(); } catch (_) { /* noop */ } _master = null; }
+    _started = false;
+  },
+};

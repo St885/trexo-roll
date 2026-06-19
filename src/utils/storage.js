@@ -3,10 +3,18 @@
 
 import { STORAGE_KEY } from './constants.js';
 
-const DEFAULT = { highScore: 0, unlocked: 1, stars: {}, bestTimes: {}, selectedBall: 'blanca', lastLevel: 1 };
+// NOTA sobre "estrellas": hay DOS conceptos distintos y separados.
+//   · stars{}      → valoración por nivel (1–3 ★), puntuación/progreso (ya existía).
+//   · starTokens   → estrellas ESPECIALES acumulables, moneda de la Tienda de Canje.
+// Inventario de potenciadores: extraLives, trapBlocks, fallShields.
+const DEFAULT = {
+  highScore: 0, unlocked: 1, stars: {}, bestTimes: {}, selectedBall: 'blanca', lastLevel: 1,
+  starTokens: 0, extraLives: 0, trapBlocks: 0, fallShields: 0,
+};
 let memoryFallback = clone(DEFAULT);
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function nonNeg(v) { return Math.max(0, Number(v) || 0); }
 
 export function load() {
   try {
@@ -20,11 +28,18 @@ export function load() {
       bestTimes: data.bestTimes && typeof data.bestTimes === 'object' ? data.bestTimes : {},
       selectedBall: typeof data.selectedBall === 'string' ? data.selectedBall : 'blanca',
       lastLevel: Math.max(1, Number(data.lastLevel) || 1),
+      starTokens: nonNeg(data.starTokens),
+      extraLives: nonNeg(data.extraLives),
+      trapBlocks: nonNeg(data.trapBlocks),
+      fallShields: nonNeg(data.fallShields),
     };
   } catch (_) {
     return clone(memoryFallback);
   }
 }
+
+// Claves válidas de potenciadores (para validar entradas).
+export const POWERUPS = ['extraLives', 'trapBlocks', 'fallShields'];
 
 export function save(state) {
   memoryFallback = { ...memoryFallback, ...state };
@@ -100,4 +115,43 @@ export function getLastLevel() {
 
 export function setLastLevel(levelNumber) {
   save({ ...load(), lastLevel: levelNumber });
+}
+
+// --- Estrellas-token (moneda de canje) e inventario de potenciadores ----------
+
+export function getStarTokens() {
+  return load().starTokens;
+}
+
+/** Suma (o resta, con n negativo) estrellas-token. No baja de 0. */
+export function addStarTokens(n = 1) {
+  const c = load();
+  save({ ...c, starTokens: Math.max(0, c.starTokens + n) });
+}
+
+export function getInventory() {
+  const c = load();
+  return {
+    starTokens: c.starTokens, extraLives: c.extraLives,
+    trapBlocks: c.trapBlocks, fallShields: c.fallShields,
+  };
+}
+
+/**
+ * Compra un potenciador: descuenta `cost` estrellas-token y suma 1 al item.
+ * @returns {boolean} true si había estrellas suficientes y se realizó la compra.
+ */
+export function buyPowerup(item, cost) {
+  const c = load();
+  if (!POWERUPS.includes(item) || c.starTokens < cost) return false;
+  save({ ...c, starTokens: c.starTokens - cost, [item]: nonNeg(c[item]) + 1 });
+  return true;
+}
+
+/** Consume 1 unidad del potenciador si hay stock. @returns {boolean} */
+export function consumePowerup(item) {
+  const c = load();
+  if (!POWERUPS.includes(item) || nonNeg(c[item]) <= 0) return false;
+  save({ ...c, [item]: c[item] - 1 });
+  return true;
 }

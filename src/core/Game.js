@@ -7,17 +7,27 @@ import { BallPhysics } from '../physics/BallPhysics.js';
 import { InputController } from './InputController.js';
 import { ScreenManager } from './ScreenManager.js';
 import { LEVELS, getLevel } from '../levels/levels.js';
+import { generateCollectibles, COIN_POINTS, STAR_POINTS, PICKUP_RADIUS } from '../levels/collectibles.js';
 import { BALLS, getBall } from '../data/balls.js';
 import { getDino } from '../data/dinos.js';
 import { SCREENS, LIVES_START, SCORE } from '../utils/constants.js';
 import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
+import { music } from '../effects/music.js';
 import { makeBallThumbnail } from '../scene/textures.js';
 import {
   getHighScore, setHighScore, getUnlocked, unlockLevel,
   getStars, setStars, getTotalStars, getBestTime, setBestTime,
-  getSelectedBall, setSelectedBall, setLastLevel,
+  getSelectedBall, setSelectedBall, setLastLevel, getLastLevel,
+  getStarTokens, addStarTokens, getInventory, buyPowerup, consumePowerup,
 } from '../utils/storage.js';
+
+// Catálogo de la Tienda de Canje (clave de inventario → datos de la recompensa).
+const SHOP = [
+  { key: 'extraLives',  name: 'Vida extra',        icon: '🥚', cost: 2, desc: 'Si llegas a 0 vidas, recuperas 1 automáticamente.' },
+  { key: 'trapBlocks',  name: 'Bloqueo de trampa', icon: '🪨', cost: 3, desc: 'Tapa la primera trampa peligrosa del nivel.' },
+  { key: 'fallShields', name: 'Escudo de caída',   icon: '🦅', cost: 4, desc: 'Un pterosaurio te rescata si caes del tablero.' },
+];
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -57,6 +67,13 @@ export class Game {
     this._last = performance.now();
     this.muted = false;
 
+    // Recompensas dentro del nivel + potenciadores activados en preparación.
+    this._collect = [];            // [{x,z,type,taken}] alineado con la escena
+    this._coinsThisLevel = 0;
+    this._fallShieldActive = false; // escudo armado para el nivel en curso
+    this._pendingTrapBlock = false; // activar bloqueo de trampa al empezar
+    this._pendingFallShield = false;// armar escudo de caída al empezar
+
     this._wireUI();
     window.addEventListener('resize', () => { this.scene.resize(); this.input.refresh(); });
     // Al rotar el móvil el layout tarda un instante en estabilizarse.
@@ -81,9 +98,12 @@ export class Game {
     const click = (id, fn) => this.screens.onClick(id, () => { sfx.click(); fn(); });
 
     click('btn-enter', () => this._showMenu());
+    click('btn-continue', () => this._continueRun());
     click('btn-play', () => this._newRun());
     click('btn-balls', () => this._showBalls());
     click('btn-balls-back', () => this._showMenu());
+    click('btn-shop', () => this._showShop());
+    click('btn-shop-back', () => this._showMenu());
     click('btn-levels', () => this._showLevels());
     click('btn-howto', () => this.screens.show(SCREENS.HOWTO));
     click('btn-sound', () => this._toggleSound());
@@ -91,6 +111,8 @@ export class Game {
 
     click('btn-prep-start', () => this._startLevel());
     click('btn-prep-ball', () => this._cyclePrepBall());
+    click('btn-prep-trapblock', () => this._togglePrepPower('trap'));
+    click('btn-prep-shield', () => this._togglePrepPower('shield'));
     click('btn-prep-back', () => this._showMenu());
     click('btn-howto-back', () => this._showMenu());
     click('btn-levels-back', () => this._showMenu());
@@ -98,9 +120,11 @@ export class Game {
     click('btn-pause', () => this._pause());
     click('btn-resume', () => this._resume());
     click('btn-restart', () => this._restartLevel());
+    click('btn-pause-sound', () => this._toggleSound());
     click('btn-pause-menu', () => this._quitToMenu());
 
     click('btn-win-next', () => this._onWinNext());
+    click('btn-win-retry', () => this._showPrep());
     click('btn-win-menu', () => this._quitToMenu());
     click('btn-over-retry', () => this._onRetry());
     click('btn-over-menu', () => this._quitToMenu());
@@ -113,7 +137,34 @@ export class Game {
     this.scene.clearBoard();
     this._updateHighScoreLabels();
     this._updateBallPreviews();
+    this._updateMenuProgress();
+    // Llegamos aquí tras pulsar "Entrar" (gesto del usuario): podemos arrancar la
+    // música de fondo respetando las restricciones de autoplay del navegador.
+    if (!music.isPlaying()) music.start();
+    music.setMuted(this.muted);
     this.screens.show(SCREENS.MENU);
+  }
+
+  /** Barra de progreso + botón "Continuar" en el menú (solo si hay progreso). */
+  _updateMenuProgress() {
+    const unlocked = Math.min(getUnlocked(), LEVELS.length);
+    const total = getTotalStars();
+    const pct = Math.round((total / MAX_STARS) * 100);
+    const fill = document.getElementById('menu-progress-fill');
+    if (fill) fill.style.width = pct + '%';
+    setText('menu-progress-label', `⭐ ${total}/${MAX_STARS}  ·  Nivel ${unlocked}/${LEVELS.length} desbloqueado`);
+    const hasProgress = unlocked > 1 || getLastLevel() > 1 || total > 0;
+    const cont = document.getElementById('btn-continue');
+    if (cont) cont.style.display = hasProgress ? 'block' : 'none';
+    const shopBtn = document.getElementById('btn-shop');
+    if (shopBtn) shopBtn.textContent = `🛒 Canje · ⭐ ${getStarTokens()}`;
+  }
+
+  /** "Continuar": empieza en el último nivel jugado (o el más avanzado desbloqueado). */
+  _continueRun() {
+    const target = Math.max(getLastLevel(), getUnlocked());
+    const index = Math.min(Math.max(1, target), LEVELS.length) - 1;
+    this._startRunAt(index);
   }
 
   _showLevels() {
@@ -124,8 +175,13 @@ export class Game {
   _toggleSound() {
     this.muted = !this.muted;
     sfx.setMuted(this.muted);
-    const btn = document.getElementById('btn-sound');
-    if (btn) btn.textContent = this.muted ? '🔇 Sonido: OFF' : '🔊 Sonido: ON';
+    music.setMuted(this.muted);
+    if (!this.muted && !music.isPlaying()) music.start();
+    const label = this.muted ? '🔇 Sonido: OFF' : '🔊 Sonido: ON';
+    for (const id of ['btn-sound', 'btn-pause-sound']) {
+      const btn = document.getElementById(id);
+      if (btn) btn.textContent = label;
+    }
   }
 
   /** Pantalla completa (Android/desktop). En iOS Safari no siempre es posible. */
@@ -151,6 +207,52 @@ export class Game {
     }
   }
 
+  // --- Tienda de Canje ------------------------------------------------------
+  _showShop() {
+    this._renderShop();
+    this.screens.show(SCREENS.SHOP);
+  }
+
+  _renderShop() {
+    setText('shop-tokens', `⭐ ${getStarTokens()}`);
+    const tokens = getStarTokens();
+    const inv = getInventory();
+    const list = document.getElementById('shop-list');
+    if (list) {
+      list.innerHTML = '';
+      for (const item of SHOP) {
+        const owned = inv[item.key] || 0;
+        const card = document.createElement('div');
+        card.className = 'shop-card';
+        card.innerHTML =
+          `<div class="shop-icon" aria-hidden="true">${item.icon}</div>` +
+          '<div class="shop-info">' +
+            `<span class="shop-name">${item.name}</span>` +
+            `<span class="shop-desc">${item.desc}</span>` +
+            `<span class="shop-owned">Tienes: <b>${owned}</b></span>` +
+          '</div>' +
+          `<button class="btn tiny shop-buy" data-key="${item.key}">⭐ ${item.cost}</button>`;
+        const buyBtn = card.querySelector('.shop-buy');
+        if (tokens < item.cost) buyBtn.classList.add('disabled');
+        buyBtn.addEventListener('click', () => this._buy(item));
+        list.appendChild(card);
+      }
+    }
+    setText('shop-feedback', '');
+  }
+
+  _buy(item) {
+    if (buyPowerup(item.key, item.cost)) {
+      sfx.buy();
+      setText('shop-feedback', `✅ ¡${item.name} comprado!`);
+      this._renderShop();
+      this._updateMenuProgress();
+    } else {
+      sfx.nope();
+      setText('shop-feedback', `❌ Te faltan estrellas (necesitas ⭐ ${item.cost}).`);
+    }
+  }
+
   // --- Selección de bola ----------------------------------------------------
   _showBalls() {
     this._renderBallCards();
@@ -169,11 +271,11 @@ export class Game {
       card.appendChild(thumb);
       const name = document.createElement('span');
       name.className = 'ball-name';
-      name.textContent = def.name;
+      name.textContent = def.label || def.name;
       card.appendChild(name);
       const dino = document.createElement('span');
       dino.className = 'ball-dino';
-      dino.textContent = getDino(def.species).name;
+      dino.textContent = `${getDino(def.species).name} · ${def.name}`;
       card.appendChild(dino);
       card.addEventListener('click', () => this._selectBall(def.id));
       list.appendChild(card);
@@ -193,7 +295,7 @@ export class Game {
     const def = getBall(this.selectedBall);
     setThumb('menu-ball', def, 56);
     setThumb('prep-ball', def, 64);
-    setText('prep-ball-name', `${def.name} · ${getDino(def.species).name}`);
+    setText('prep-ball-name', `${def.label || def.name} · ${getDino(def.species).name}`);
   }
 
   /** Cambia rápidamente a la siguiente bola sin salir de la preparación. */
@@ -216,6 +318,7 @@ export class Game {
       const stars = getStars(lvl.id);
       const btn = document.createElement('button');
       btn.className = 'level-card' + (locked ? ' locked' : '');
+      btn.dataset.tier = lvl.tier || '';
       btn.disabled = locked;
       btn.innerHTML =
         `<span class="level-num">${i + 1}</span>` +
@@ -248,10 +351,49 @@ export class Game {
     const lvl = getLevel(this.levelIndex);
     setText('prep-level', `Nivel ${this.levelIndex + 1}: ${lvl.name}`);
     setText('prep-tier', lvl.tier || '');
+    const tierEl = document.getElementById('prep-tier');
+    if (tierEl) tierEl.dataset.tier = lvl.tier || '';
     setText('prep-lives', '🥚'.repeat(this.lives));
     setText('prep-objective', lvl.hint);
     this._updateBallPreviews();
+    // Potenciadores: se eligen de nuevo para cada nivel.
+    this._pendingTrapBlock = false;
+    this._pendingFallShield = false;
+    this._renderPrepPowerups();
     this.screens.show(SCREENS.PREP);
+  }
+
+  /** Activa/desactiva un potenciador para el próximo nivel (si hay stock). */
+  _togglePrepPower(which) {
+    const inv = getInventory();
+    if (which === 'trap') {
+      if (inv.trapBlocks <= 0) return;
+      this._pendingTrapBlock = !this._pendingTrapBlock;
+    } else {
+      if (inv.fallShields <= 0) return;
+      this._pendingFallShield = !this._pendingFallShield;
+    }
+    sfx.click();
+    this._renderPrepPowerups();
+  }
+
+  /** Pinta los botones de potenciador disponibles en preparación. */
+  _renderPrepPowerups() {
+    const inv = getInventory();
+    const wrap = document.getElementById('prep-powerups');
+    if (wrap) wrap.style.display = (inv.trapBlocks > 0 || inv.fallShields > 0) ? 'flex' : 'none';
+    const tb = document.getElementById('btn-prep-trapblock');
+    if (tb) {
+      tb.style.display = inv.trapBlocks > 0 ? 'inline-flex' : 'none';
+      tb.classList.toggle('active', this._pendingTrapBlock);
+      tb.textContent = `🪨 Bloqueo (${inv.trapBlocks})`;
+    }
+    const fs = document.getElementById('btn-prep-shield');
+    if (fs) {
+      fs.style.display = inv.fallShields > 0 ? 'inline-flex' : 'none';
+      fs.classList.toggle('active', this._pendingFallShield);
+      fs.textContent = `🦅 Escudo (${inv.fallShields})`;
+    }
   }
 
   _startLevel() {
@@ -263,9 +405,37 @@ export class Game {
     this.ball.reset(lvl.start.x, lvl.start.z);
     this.scene.setTilt(0, 0);
 
+    // --- Recompensas del nivel (monedas + estrella-token cada 2 niveles) ---
+    const { coins, star } = generateCollectibles(lvl, this.levelIndex);
+    this._collect = [
+      ...coins.map((c) => ({ x: c.x, z: c.z, type: 'coin', taken: false })),
+      ...(star ? [{ x: star.x, z: star.z, type: 'star', taken: false }] : []),
+    ];
+    this.scene.mountCollectibles(coins, star);
+    this._coinsThisLevel = 0;
+    this._pickupR2 = PICKUP_RADIUS * PICKUP_RADIUS;
+
+    // --- Potenciadores activados en preparación (se consumen aquí) ---
+    this._fallShieldActive = false;
+    if (this._pendingTrapBlock && consumePowerup('trapBlocks')) {
+      const t = this._firstDangerousTrap(lvl);
+      if (t) {
+        this.physics.traps = this.physics.traps.filter((x) => x !== t); // deja de ser trampa
+        this.scene.coverTrap(t);                                         // se ve tapada/gris
+        hud.toast('🪨 Trampa bloqueada', 1400);
+      }
+    }
+    if (this._pendingFallShield && consumePowerup('fallShields')) {
+      this._fallShieldActive = true;
+      hud.toast('🦅 Escudo de caída activo', 1400);
+    }
+    this._pendingTrapBlock = false;
+    this._pendingFallShield = false;
+
     hud.setLevel(lvl.name, this.levelIndex + 1, LEVELS.length);
     hud.setLives(this.lives);
     hud.setScore(this.score);
+    hud.setCoins(0);
     hud.setTime(0);
     setThumb('hud-ball', getBall(this.selectedBall), 34);
     setLastLevel(this.levelIndex + 1);
@@ -300,6 +470,9 @@ export class Game {
     this.input.reset();
     this.scene.setTilt(0, 0);
     setText('pause-level', `Nivel ${this.levelIndex + 1} · ${getLevel(this.levelIndex).name}`);
+    setText('pause-lives', '🥚'.repeat(Math.max(0, this.lives)) || '—');
+    const ps = document.getElementById('pause-score');
+    if (ps) ps.innerHTML = `<b>${this.score}</b> pts`;
     this.screens.show(SCREENS.PAUSE);
   }
 
@@ -325,9 +498,74 @@ export class Game {
     this.ball.roll(this.physics.vx, this.physics.vz, dt);
     hud.setTime(this._elapsed());
 
+    this._checkPickups();
+
     if (ev === 'goal') this._startResolve('goal');
     else if (ev === 'trap') this._startResolve('trap');
-    else if (ev === 'fall') this._startResolve('fall');
+    else if (ev === 'fall') {
+      if (this._fallShieldActive) this._startRescue();
+      else this._startResolve('fall');
+    }
+  }
+
+  /** Recoge monedas/estrella si la bola pasa cerca. Suma puntos/estrellas-token. */
+  _checkPickups() {
+    const bx = this.physics.x, bz = this.physics.z;
+    for (let i = 0; i < this._collect.length; i++) {
+      const c = this._collect[i];
+      if (c.taken) continue;
+      const dx = c.x - bx, dz = c.z - bz;
+      if (dx * dx + dz * dz > this._pickupR2) continue;
+      c.taken = true;
+      this.scene.collectAt(i);
+      if (c.type === 'star') {
+        this.score += STAR_POINTS;
+        addStarTokens(1); // moneda de canje, persistida
+        sfx.starGet();
+        hud.flash('gold');
+        hud.toast(`⭐ ¡Estrella especial! +${STAR_POINTS} · +1 de canje`, 1500);
+      } else {
+        this.score += COIN_POINTS;
+        this._coinsThisLevel += 1;
+        sfx.coin();
+        hud.setCoins(this._coinsThisLevel);
+      }
+      hud.setScore(this.score);
+    }
+  }
+
+  /** Escudo de caída: el pterosaurio rescata la bola y la deja en zona segura. */
+  _startRescue() {
+    this._fallShieldActive = false; // se consume al usarse
+    this.ballState = 'rescuing';
+    this.input.reset();
+    this.input.tiltX = 0; this.input.tiltZ = 0;
+    this.scene.setTilt(0, 0);
+    sfx.rescue();
+    hud.flash('gold');
+    hud.toast('🦅 ¡Rescate jurásico! El escudo te salvó', 1700);
+    const lvl = getLevel(this.levelIndex);
+    const color = getBall(this.selectedBall).dino;
+    this.scene.startPteroRescue(lvl.start.x, lvl.start.z, color, () => {
+      this.physics.reset(lvl.start);
+      this.ball.reset(lvl.start.x, lvl.start.z);
+      this.input.reset();
+      this.ballState = 'rolling';
+    });
+  }
+
+  /** Trampa "más peligrosa": la más cercana a la línea inicio→meta. */
+  _firstDangerousTrap(lvl) {
+    const traps = lvl.traps || [];
+    if (!traps.length) return null;
+    const mx = (lvl.start.x + (lvl.goal ? lvl.goal.x : lvl.start.x)) / 2;
+    const mz = (lvl.start.z + (lvl.goal ? lvl.goal.z : lvl.start.z)) / 2;
+    let best = traps[0], bestD = Infinity;
+    for (const t of traps) {
+      const d = Math.hypot(t.x - mx, t.z - mz);
+      if (d < bestD) { bestD = d; best = t; }
+    }
+    return best;
   }
 
   _startResolve(kind) {
@@ -404,9 +642,24 @@ export class Game {
   _loseLife(kind) {
     this.lives -= 1;
     hud.setLives(this.lives);
-    if (this.lives <= 0) { this._gameOver(); return; }
-    hud.toast(kind === 'fall' ? `¡Caíste! Intentos: ${this.lives}` : `¡Trampa! Intentos: ${this.lives}`, 1300);
     const lvl = getLevel(this.levelIndex);
+    if (this.lives <= 0) {
+      // Vida extra del inventario: se consume automáticamente y sigues en juego.
+      if (consumePowerup('extraLives')) {
+        this.lives = 1;
+        hud.setLives(this.lives);
+        hud.flash('gold');
+        hud.toast('🥚 ¡Vida extra! Sigues en juego', 1500);
+        this.physics.reset(lvl.start);
+        this.ball.reset(lvl.start.x, lvl.start.z);
+        this.input.reset();
+        this.ballState = 'rolling';
+        return;
+      }
+      this._gameOver();
+      return;
+    }
+    hud.toast(kind === 'fall' ? `¡Caíste! Intentos: ${this.lives}` : `¡Trampa! Intentos: ${this.lives}`, 1300);
     this.physics.reset(lvl.start);
     this.ball.reset(lvl.start.x, lvl.start.z);
     this.input.reset();
@@ -457,6 +710,7 @@ export class Game {
     const isRecord = setHighScore(this.score);
     if (isRecord) sfx.record();
     setText('over-score', `Puntos: ${this.score}`);
+    setText('over-level', `Nivel alcanzado: ${this.levelIndex + 1}/${LEVELS.length}`);
     setText('over-high', `Mejor: ${getHighScore()}`);
     showEl('over-record', isRecord);
     this.screens.show(SCREENS.GAMEOVER);
@@ -483,6 +737,7 @@ export class Game {
       if (!this.paused) {
         if (this.ballState === 'rolling') this._stepPlay(dt);
         else if (this.ballState === 'celebrating') this._updateCelebration(dt);
+        else if (this.ballState === 'rescuing') { /* la escena anima el ptero y mueve la bola */ }
         else this._updateAnim(dt);
       }
       this.scene.update(dt);

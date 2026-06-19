@@ -218,6 +218,17 @@ export function makeThemeSky(name) {
   ctx.beginPath(); ctx.arc(w * 0.72, h * 0.28, 90, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
+  // Bruma atmosférica sobre el horizonte (da profundidad de jungla; va detrás de las
+  // siluetas y el canopy).
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  const mg = ctx.createLinearGradient(0, h * 0.46, 0, h * 0.66);
+  mg.addColorStop(0, 'rgba(255,255,255,0)');
+  mg.addColorStop(1, '#ffffff');
+  ctx.fillStyle = mg;
+  ctx.fillRect(0, h * 0.44, w, h * 0.26);
+  ctx.restore();
+
   drawScenery(ctx, t, w, h);
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -279,13 +290,97 @@ function drawScenery(ctx, t, w, h) {
       ctx.fillRect(cx - 6, horizon - hh - 10, 38, 12);
     }
   }
-  // Banda de horizonte para asentar
+  // Treeline de jungla (copas frondosas en dos capas) → sensación de selva con
+  // profundidad en TODOS los biomas. El color sale del suelo del bioma para cohesión.
+  const canopyBase = '#' + (t.ground >>> 0).toString(16).padStart(6, '0');
+  drawCanopy(ctx, canopyBase, horizon, w);
+
+  // Banda de horizonte para asentar (tapa la base de las copas).
   ctx.fillStyle = near;
   ctx.fillRect(0, horizon - 2, w, h - horizon + 2);
 }
 
 function mountain(ctx, x, baseY, halfW, ht) {
   ctx.beginPath(); ctx.moveTo(x - halfW, baseY); ctx.lineTo(x, baseY - ht); ctx.lineTo(x + halfW, baseY); ctx.closePath(); ctx.fill();
+}
+
+/** Copas de jungla: grupos de círculos solapados en dos capas (lejana clara, cercana
+ *  oscura) sobre el horizonte. Crea una línea de árboles frondosa con profundidad. */
+function drawCanopy(ctx, baseHex, horizon, w) {
+  const layers = [
+    { dy: -4, r: 24, col: shade(baseHex, 8),   step: 64 },
+    { dy: 10, r: 34, col: shade(baseHex, -16), step: 86 },
+  ];
+  for (const L of layers) {
+    ctx.fillStyle = L.col;
+    for (let x = -30; x < w + 50; x += L.step * (0.7 + Math.random() * 0.6)) {
+      const cy = horizon + L.dy - Math.random() * 8;
+      const rr = L.r * (0.7 + Math.random() * 0.6);
+      for (let k = 0; k < 5; k++) {
+        ctx.beginPath();
+        ctx.arc(
+          x + (Math.random() - 0.5) * rr,
+          cy + (Math.random() - 0.5) * rr * 0.5,
+          rr * (0.55 + Math.random() * 0.5),
+          0, Math.PI * 2,
+        );
+        ctx.fill();
+      }
+    }
+  }
+}
+
+/**
+ * Suelo jurásico "trabajado": tierra del bioma con vetas, matas de follaje y
+ * piedrecitas. Reemplaza el verde plano por un suelo con vida sin distraer del
+ * tablero (la niebla + viñeta oscurecen los bordes para enfocar el juego).
+ */
+export function makeGroundTexture(name) {
+  const t = getTheme(name);
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const base = '#' + (t.ground >>> 0).toString(16).padStart(6, '0');
+
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+
+  // Vetas de tierra (bandas suaves para romper la uniformidad)
+  for (let i = 0; i < 6; i++) {
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = i % 2 ? shade(base, 14) : shade(base, -16);
+    ctx.fillRect(0, (i / 6) * size + Math.random() * 18, size, size / 9);
+  }
+  ctx.globalAlpha = 1;
+
+  // Matas de hierba / follaje
+  for (let i = 0; i < 150; i++) {
+    const x = Math.random() * size, y = Math.random() * size;
+    const r = 3 + Math.random() * 9;
+    ctx.globalAlpha = 0.12 + Math.random() * 0.18;
+    ctx.fillStyle = Math.random() > 0.5 ? shade(base, 22) : shade(base, -22);
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.6, Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Piedrecitas dispersas
+  for (let i = 0; i < 44; i++) {
+    const x = Math.random() * size, y = Math.random() * size;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = shade('#8d8470', Math.random() * 30 - 15);
+    ctx.beginPath();
+    ctx.arc(x, y, 1.4 + Math.random() * 2.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(6, 6);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 /** Cielo jurásico: degradado vertical cálido. Devuelve una THREE.Texture para fondo. */

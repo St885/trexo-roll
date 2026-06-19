@@ -6,12 +6,16 @@ import { makeBoardTexture } from './textures.js';
 import { footprintBounds } from '../physics/footprint.js';
 import { makeRock, makeFern, makeEggNest, makeFossil, makeFootprintDecal, makeTRexBanner } from './decor.js';
 
-const THICKNESS = 0.5;
+const THICKNESS = 1.4;   // grosor del tablero (plataforma elevada, no una lámina hundida)
 const WALL_HEIGHT = 0.85;
 const HOLE_DEPTH = 1.0;
 
 const WALL_MAT = new THREE.MeshStandardMaterial({ color: 0x9c6b43, roughness: 0.85 });
 WALL_MAT.userData.shared = true; // compartido entre niveles: no liberar al limpiar
+
+// Lados/canto del tablero: tierra oscura, para que la plataforma "tenga cuerpo".
+const SIDE_MAT = new THREE.MeshStandardMaterial({ color: 0x40341f, roughness: 1 });
+SIDE_MAT.userData.shared = true;
 
 /**
  * @param {object} level  definición del nivel
@@ -27,10 +31,15 @@ export function buildBoard(level) {
   for (const s of level.footprint) {
     let mesh;
     if (s.type === 'rect') {
-      mesh = new THREE.Mesh(new THREE.BoxGeometry(s.w, THICKNESS, s.d), surfaceMat);
+      // Caja con TOP texturizado (superficie) y CANTOS oscuros → plataforma con cuerpo.
+      // Orden de materiales del Box: [+x, -x, +y(top), -y, +z, -z].
+      const mats = [SIDE_MAT, SIDE_MAT, surfaceMat, SIDE_MAT, SIDE_MAT, SIDE_MAT];
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(s.w, THICKNESS, s.d), mats);
       mesh.position.set(s.x, -THICKNESS / 2, s.z);
     } else if (s.type === 'circle') {
-      mesh = new THREE.Mesh(new THREE.CylinderGeometry(s.r, s.r, THICKNESS, 48), surfaceMat);
+      // Cilindro con leve estrechamiento abajo (look de plataforma/roca). [lado, top, fondo].
+      const mats = [SIDE_MAT, surfaceMat, SIDE_MAT];
+      mesh = new THREE.Mesh(new THREE.CylinderGeometry(s.r, s.r * 0.9, THICKNESS, 48), mats);
       mesh.position.set(s.x, -THICKNESS / 2, s.z);
     } else if (s.type === 'poly') {
       const shape = new THREE.Shape();
@@ -39,12 +48,14 @@ export function buildBoard(level) {
         if (i === 0) shape.moveTo(px, -pz);
         else shape.lineTo(px, -pz);
       });
+      // Superficie plana (geometría probada y robusta para tableros poligonales).
       mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), surfaceMat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.material.side = THREE.DoubleSide;
     }
     if (mesh) {
       mesh.receiveShadow = true;
+      if (s.type !== 'poly') mesh.castShadow = true;
       group.add(mesh);
     }
   }
@@ -104,20 +115,38 @@ function makeRing(hole, color, emissive) {
   return ring;
 }
 
-/** Coloca props alrededor (fuera de la huella) y algunas huellas sobre el tablero. */
+// Mezcla de props por bioma: cada mundo se siente distinto (volcán = rocas,
+// pantano/isla = helechos, huevos = nidos, ruinas = fósiles…).
+const THEME_PROPS = {
+  valle:   [makeRock, makeFern, makeEggNest, makeFossil, makeRock, makeFern],
+  bosque:  [makeFern, makeFern, makeRock, makeFern, makeEggNest, makeFern],
+  volcan:  [makeRock, makeRock, makeFossil, makeRock, makeFern, makeRock],
+  pantano: [makeFern, makeFern, makeEggNest, makeFern, makeRock, makeFern],
+  meseta:  [makeRock, makeFossil, makeRock, makeFern, makeEggNest, makeRock],
+  ruinas:  [makeRock, makeFossil, makeRock, makeFossil, makeRock, makeFern],
+  isla:    [makeFern, makeRock, makeFern, makeEggNest, makeFern, makeRock],
+  huevos:  [makeEggNest, makeFern, makeEggNest, makeRock, makeEggNest, makeFern],
+};
+
+/** Coloca props en una banda controlada alrededor del tablero (sin invadir el área
+ *  jugable ni salirse del encuadre) y algunas huellas sobre la superficie. */
 function decorate(group, level) {
   const b = footprintBounds(level.footprint);
   const cx = (b.minX + b.maxX) / 2;
   const cz = (b.minZ + b.maxZ) / 2;
-  const radius = Math.max(b.width, b.depth) / 2 + 1.6;
-  const factories = [makeRock, makeFern, makeEggNest, makeFossil, makeRock, makeFern];
+  // Banda ajustada: lo bastante fuera para no tapar el tablero, lo bastante dentro
+  // para no cortarse al inclinar (coincide con DECOR_MARGIN del encuadre de cámara).
+  const radius = Math.max(b.width, b.depth) / 2 + 1.0;
+  const zSquash = b.depth / b.width || 1;
+  const factories = THEME_PROPS[level.theme] || THEME_PROPS.valle;
   const count = 10;
   for (let i = 0; i < count; i++) {
-    const ang = (i / count) * Math.PI * 2 + 0.3;
-    const rr = radius + (i % 2) * 0.9;
+    // Reparto angular uniforme + pequeño jitter para que no se vea "en rejilla".
+    const ang = (i / count) * Math.PI * 2 + 0.3 + (Math.random() - 0.5) * 0.18;
+    const rr = radius + (i % 2) * 0.4;
     const make = factories[i % factories.length];
     const prop = make(0.9 + Math.random() * 0.5);
-    prop.position.set(cx + Math.cos(ang) * rr, -0.1, cz + Math.sin(ang) * rr * (b.depth / b.width || 1));
+    prop.position.set(cx + Math.cos(ang) * rr, -0.1, cz + Math.sin(ang) * rr * zSquash);
     prop.rotation.y = Math.random() * Math.PI * 2;
     group.add(prop);
   }

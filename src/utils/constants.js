@@ -48,6 +48,7 @@ export const SCREENS = {
   LANDING: 'screen-landing',
   MENU: 'screen-menu',
   BALLS: 'screen-balls',
+  SHOP: 'screen-shop',
   LEVELS: 'screen-levels',
   HOWTO: 'screen-howto',
   PREP: 'screen-prep',

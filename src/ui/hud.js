@@ -11,6 +11,7 @@ function refs() {
     lives: document.getElementById('hud-lives'),
     time: document.getElementById('hud-time'),
     score: document.getElementById('hud-score'),
+    coins: document.getElementById('hud-coins'),
     toast: document.getElementById('hud-toast'),
     hint: document.getElementById('hud-hint'),
     flash: document.getElementById('flash'),
@@ -36,6 +37,16 @@ export function setTime(seconds) {
 export function setScore(score) {
   const r = refs();
   if (r.score) r.score.textContent = `Puntos: ${score}`;
+}
+
+export function setCoins(n) {
+  const r = refs();
+  if (r.coins) {
+    r.coins.textContent = `🪙 ${n}`;
+    r.coins.classList.remove('pop');
+    void r.coins.offsetWidth; // reinicia la animación
+    r.coins.classList.add('pop');
+  }
 }
 
 let toastTimer = null;

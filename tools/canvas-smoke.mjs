@@ -42,10 +42,28 @@ await run('makeBoardTexture', () => tex.makeBoardTexture());
 await run('makeContactShadowTexture', () => tex.makeContactShadowTexture());
 await run('makeSkyTexture', () => tex.makeSkyTexture());
 
-console.log('\n[Fondos de bioma]');
+console.log('\n[Fondos de bioma + suelo]');
 for (const theme of Object.keys(tex.THEMES)) {
   await run('makeThemeSky(' + theme + ')', () => tex.makeThemeSky(theme));
+  await run('makeGroundTexture(' + theme + ')', () => tex.makeGroundTexture(theme));
 }
+
+console.log('\n[Construcción de tableros 3D (los 25 niveles)]');
+const { buildBoard } = await import('../src/scene/BoardBuilder.js');
+const { LEVELS } = await import('../src/levels/levels.js');
+for (const lvl of LEVELS) {
+  await run('buildBoard(' + lvl.id + ' · ' + lvl.name + ')', () => {
+    const { group } = buildBoard(lvl);
+    if (!group || !group.children || group.children.length === 0) throw new Error('grupo vacío');
+  });
+}
+
+console.log('\n[Recompensas 3D: monedas, estrella, ptero, tapa de trampa]');
+const art = await import('../src/scene/collectibleArt.js');
+await run('makeCoin', () => art.makeCoin());
+await run('makeStarToken', () => art.makeStarToken());
+await run('makeTrapCover', () => art.makeTrapCover(1.0));
+await run('makePtero', () => art.makePtero('#8a5a3a'));
 
 console.log('\n[Dino de celebración + confeti]');
 for (const b of BALLS) {

@@ -52,6 +52,30 @@ export const sfx = {
   },
   fail() { beep(180, 0.25, 'sawtooth', 0.1); },
   drop() { beep(120, 0.3, 'sine', 0.12); },
+  /** Moneda recogida: blip corto y brillante. */
+  coin() {
+    beep(880, 0.06, 'triangle', 0.1);
+    setTimeout(() => beep(1320, 0.1, 'triangle', 0.1), 55);
+  },
+  /** Estrella-token recogida: pequeño arpegio ascendente más vistoso. */
+  starGet() {
+    beep(660, 0.08, 'sine', 0.11);
+    setTimeout(() => beep(990, 0.08, 'sine', 0.11), 80);
+    setTimeout(() => beep(1320, 0.16, 'sine', 0.11), 165);
+  },
+  /** Compra en la tienda: chime positivo. */
+  buy() {
+    beep(523, 0.08, 'triangle', 0.1);
+    setTimeout(() => beep(784, 0.14, 'triangle', 0.1), 90);
+  },
+  /** No se puede (sin estrellas suficientes): tono corto grave. */
+  nope() { beep(160, 0.18, 'square', 0.08); },
+  /** Rescate del ptero: barrido descendente-ascendente "aleteo". */
+  rescue() {
+    beep(300, 0.12, 'sine', 0.1);
+    setTimeout(() => beep(500, 0.12, 'sine', 0.1), 110);
+    setTimeout(() => beep(760, 0.18, 'sine', 0.1), 230);
+  },
   roar() {
     // Rugido procedural: tono grave descendente con cuerpo.
     if (muted) return;
