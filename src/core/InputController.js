@@ -1,15 +1,17 @@
 // InputController.js — Inclinación del tablero desde varias fuentes que conviven:
-//   1) Joystick táctil virtual analógico (control móvil principal),
-//   2) D-pad de 4 botones (control móvil robusto / alternativo),
-//   3) Arrastre con puntero sobre el lienzo (ratón en desktop o dedo),
+//   1) D-pad de 4 botones (control móvil PRINCIPAL, robusto y siempre visible),
+//   2) Joystick táctil analógico (control móvil secundario / diagonales suaves),
+//   3) Arrastre con puntero sobre el lienzo (SOLO ratón en desktop),
 //   4) Teclado (flechas / WASD en desktop).
 //
 // Patrón robusto (como legendary-adventures): cada control escucha SUS PROPIOS
 // eventos de puntero con setPointerCapture + { passive:false } + preventDefault,
-// de modo que el navegador no convierte el gesto en scroll/zoom.
+// de modo que el navegador no convierte el gesto en scroll/zoom. En dispositivos
+// táctiles el arrastre del lienzo se DESACTIVA: era la causa de que el D-pad
+// "dejara de responder" cuando el dedo rozaba el tablero.
 //
-// Prioridad: joystick > arrastre > teclas (D-pad/teclado). El knob refleja siempre
-// la inclinación actual.
+// Prioridad: joystick > D-pad/teclas > arrastre. El D-pad pulsado SIEMPRE manda
+// sobre un arrastre accidental. El knob del joystick refleja la inclinación actual.
 //
 // Mapeo (coherente con BallPhysics):
 //   Derecha → +x → tiltZ negativo   ·   Izquierda → -x → tiltZ positivo
@@ -18,6 +20,7 @@
 import { PHYS } from '../utils/constants.js';
 
 const OPT = { passive: false };
+const DIRS = ['up', 'down', 'left', 'right'];
 
 export class InputController {
   constructor(canvasEl, joystickEl, knobEl, dpadEl) {
@@ -30,7 +33,11 @@ export class InputController {
     this.tiltZ = 0;
     this.keys = { up: false, down: false, left: false, right: false };
 
-    // Arrastre
+    // ¿Es un dispositivo táctil? Si lo es, NO escuchamos arrastre sobre el lienzo
+    // (el D-pad y el joystick son los controles); así nada secuestra el toque.
+    this._isTouch = detectTouch();
+
+    // Arrastre (solo desktop/ratón)
     this.dragging = false; this._dragId = null; this._dragTouch = false;
     this._sx = 0; this._sy = 0; this._dragX = 0; this._dragZ = 0;
 
@@ -50,6 +57,10 @@ export class InputController {
     this._jDown = (e) => this._joyDown(e);
     this._jMove = (e) => this._joyMove(e);
     this._jUp = (e) => this._joyUp(e);
+    // Si el navegador roba el foco (llamada, cambio de pestaña…) soltamos todo
+    // para que ninguna dirección se quede "pegada".
+    this._onBlur = () => this.reset();
+    this._onVisibility = () => { if (typeof document !== 'undefined' && document.hidden) this.reset(); };
   }
 
   enable() {
@@ -58,11 +69,18 @@ export class InputController {
     this._measure();
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
-    // Arrastre: el lienzo captura su propio puntero.
-    this.canvasEl.addEventListener('pointerdown', this._cDown, OPT);
-    this.canvasEl.addEventListener('pointermove', this._cMove, OPT);
-    this.canvasEl.addEventListener('pointerup', this._cUp, OPT);
-    this.canvasEl.addEventListener('pointercancel', this._cUp, OPT);
+    window.addEventListener('blur', this._onBlur);
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', this._onVisibility);
+    }
+    // Arrastre del lienzo: SOLO en desktop/ratón. En táctil sería un control que
+    // compite con el D-pad y secuestra el toque sobre el tablero.
+    if (!this._isTouch) {
+      this.canvasEl.addEventListener('pointerdown', this._cDown, OPT);
+      this.canvasEl.addEventListener('pointermove', this._cMove, OPT);
+      this.canvasEl.addEventListener('pointerup', this._cUp, OPT);
+      this.canvasEl.addEventListener('pointercancel', this._cUp, OPT);
+    }
     // Joystick: escucha en su propio elemento (con captura).
     if (this.joystickEl) {
       this.joystickEl.addEventListener('pointerdown', this._jDown, OPT);
@@ -79,10 +97,16 @@ export class InputController {
     this._enabled = false;
     window.removeEventListener('keydown', this._onKeyDown);
     window.removeEventListener('keyup', this._onKeyUp);
-    this.canvasEl.removeEventListener('pointerdown', this._cDown, OPT);
-    this.canvasEl.removeEventListener('pointermove', this._cMove, OPT);
-    this.canvasEl.removeEventListener('pointerup', this._cUp, OPT);
-    this.canvasEl.removeEventListener('pointercancel', this._cUp, OPT);
+    window.removeEventListener('blur', this._onBlur);
+    if (typeof document !== 'undefined' && document.removeEventListener) {
+      document.removeEventListener('visibilitychange', this._onVisibility);
+    }
+    if (!this._isTouch) {
+      this.canvasEl.removeEventListener('pointerdown', this._cDown, OPT);
+      this.canvasEl.removeEventListener('pointermove', this._cMove, OPT);
+      this.canvasEl.removeEventListener('pointerup', this._cUp, OPT);
+      this.canvasEl.removeEventListener('pointercancel', this._cUp, OPT);
+    }
     if (this.joystickEl) {
       this.joystickEl.removeEventListener('pointerdown', this._jDown, OPT);
       this.joystickEl.removeEventListener('pointermove', this._jMove, OPT);
@@ -105,11 +129,39 @@ export class InputController {
     this._renderKnob();
   }
 
+  /** Alias semántico: soltar todos los controles táctiles (pausa, cambio de pantalla…). */
+  resetTouchControls() { this.reset(); }
+
   _measure() {
     if (this.joystickEl) this._joyR = (this.joystickEl.clientWidth || 120) * 0.36;
   }
 
   refresh() { this._measure(); this._renderKnob(); }
+
+  // --- API de dirección (la usan D-pad y, si hiciera falta, otros controles) --
+  /** Inclina el tablero hacia `dir` ('up'|'down'|'left'|'right') y lo mantiene. */
+  pressDirection(dir) {
+    if (!DIRS.includes(dir)) return;
+    this.keys[dir] = true;
+    this.dragging = false; this._dragId = null; // el D-pad cancela cualquier arrastre
+    this._setBtnPressed(dir, true);
+  }
+
+  /** Suelta la dirección `dir`: esa componente vuelve a cero. */
+  releaseDirection(dir) {
+    if (!DIRS.includes(dir)) return;
+    this.keys[dir] = false;
+    this._setBtnPressed(dir, false);
+  }
+
+  _setBtnPressed(dir, on) {
+    if (!this.dpadEl) return;
+    const btn = this.dpadEl.querySelector ? this.dpadEl.querySelector(`[data-dir="${dir}"]`) : null;
+    if (btn) btn.classList.toggle('pressed', on);
+  }
+
+  /** Inclinación actual ya suavizada. */
+  getTiltInput() { return { tiltX: this.tiltX, tiltZ: this.tiltZ }; }
 
   // --- Teclado --------------------------------------------------------------
   _key(e, down) {
@@ -123,7 +175,8 @@ export class InputController {
     e.preventDefault();
   }
 
-  // --- D-pad (4 botones digitales) -----------------------------------------
+  // --- D-pad (4 botones digitales, control móvil principal) -----------------
+  // Cada botón es independiente: pulsar dos a la vez (multitouch) da diagonales.
   _wireDpad() {
     if (!this.dpadEl) return;
     this._dpadBound = [];
@@ -131,19 +184,19 @@ export class InputController {
       const dir = btn.dataset.dir;
       const down = (e) => {
         e.preventDefault();
-        this.keys[dir] = true;
-        btn.classList.add('pressed');
+        this.pressDirection(dir);
+        btn.classList.add('pressed'); // estado visual directo sobre el botón pulsado
         try { btn.setPointerCapture(e.pointerId); } catch (_) { /* noop */ }
       };
       const up = (e) => {
         if (e && e.preventDefault) e.preventDefault();
-        this.keys[dir] = false;
+        this.releaseDirection(dir);
         btn.classList.remove('pressed');
       };
       btn.addEventListener('pointerdown', down, OPT);
       btn.addEventListener('pointerup', up, OPT);
-      btn.addEventListener('pointercancel', up, OPT);
-      btn.addEventListener('lostpointercapture', up);
+      btn.addEventListener('pointercancel', up, OPT);   // dedo cancelado por el sistema
+      btn.addEventListener('lostpointercapture', up);   // pérdida de captura → soltar
       this._dpadBound.push({ btn, down, up });
     });
   }
@@ -158,7 +211,7 @@ export class InputController {
     this._dpadBound = [];
   }
 
-  // --- Arrastre sobre el lienzo --------------------------------------------
+  // --- Arrastre sobre el lienzo (solo desktop/ratón) ------------------------
   _dragDown(e) {
     if (this.joyActive) return;
     this.dragging = true;
@@ -186,7 +239,7 @@ export class InputController {
     this._dragX = 0; this._dragZ = 0;
   }
 
-  // --- Joystick analógico ---------------------------------------------------
+  // --- Joystick analógico (control móvil secundario) ------------------------
   _joyDown(e) {
     e.preventDefault();
     this.joyActive = true;
@@ -227,14 +280,21 @@ export class InputController {
 
   /** Avanza el suavizado de la inclinación hacia el objetivo del input activo. */
   update(dt) {
+    const keysActive = this.keys.up || this.keys.down || this.keys.left || this.keys.right;
     let targetX, targetZ;
     if (this.joyActive) {
+      // 1) Joystick analógico (máxima prioridad si el dedo lo está usando).
       targetX = this._joyX; targetZ = this._joyZ;
-    } else if (this.dragging) {
-      targetX = this._dragX; targetZ = this._dragZ;
-    } else {
+    } else if (keysActive) {
+      // 2) D-pad / teclado: SIEMPRE por encima del arrastre, para que un roce
+      //    accidental en el tablero no anule el D-pad.
       targetX = ((this.keys.down ? 1 : 0) + (this.keys.up ? -1 : 0)) * PHYS.MAX_TILT;
       targetZ = ((this.keys.left ? 1 : 0) + (this.keys.right ? -1 : 0)) * PHYS.MAX_TILT;
+    } else if (this.dragging) {
+      // 3) Arrastre con ratón (solo desktop).
+      targetX = this._dragX; targetZ = this._dragZ;
+    } else {
+      targetX = 0; targetZ = 0;
     }
     const a = Math.min(1, PHYS.TILT_LERP * dt);
     this.tiltX += (targetX - this.tiltX) * a;
@@ -257,4 +317,14 @@ export class InputController {
 
 function clamp(v, min, max) {
   return v < min ? min : v > max ? max : v;
+}
+
+/** Detección robusta de dispositivo táctil (sin romper en Node para los tests). */
+function detectTouch() {
+  try {
+    if (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) return true;
+    if (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) return true;
+    if (typeof window !== 'undefined' && 'ontouchstart' in window) return true;
+  } catch (_) { /* entorno sin DOM (tests) */ }
+  return false;
 }

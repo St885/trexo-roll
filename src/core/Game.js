@@ -281,7 +281,7 @@ export class Game {
     this.screens.show(SCREENS.GAME);
     sfx.start();
     hud.toast(lvl.hint, 1700);
-    hud.hint(this.isTouch ? '🕹️ Joystick (derecha) o flechas (izquierda) para inclinar' : 'Inclina: flechas/WASD o arrastra el tablero');
+    hud.hint(this.isTouch ? '🎮 D-pad (izquierda) o joystick (derecha) para inclinar el tablero' : 'Inclina: flechas/WASD o arrastra el tablero con el ratón');
   }
 
   _elapsed() {

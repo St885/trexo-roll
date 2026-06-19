@@ -2,6 +2,36 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.4.2] — 2026-06-19 — Control móvil definitivo: D-pad robusto
+
+### Corregido (el D-pad "dejaba de responder" al jugar en móvil real)
+- **Causa raíz:** el **arrastre sobre el lienzo** tenía prioridad sobre el D-pad. En
+  cuanto el dedo (o la palma) rozaba el tablero, el arrastre tomaba el control y el
+  D-pad quedaba anulado → sensación de "los controles no funcionan".
+- **Solución:**
+  - **Nueva prioridad** `joystick > D-pad/teclas > arrastre`. El D-pad pulsado **siempre**
+    manda sobre un arrastre accidental, y pulsarlo **cancela** cualquier arrastre activo.
+  - **Arrastre del lienzo desactivado en dispositivos táctiles** (era el origen del
+    conflicto): en móvil el control es el **D-pad** + **joystick**; el arrastre con ratón
+    se mantiene en desktop.
+
+### Mejorado
+- **D-pad principal**, grande (168px) y de **alto contraste** (verde al pulsar), siempre
+  visible; **diagonales** pulsando dos botones (multitouch). Joystick analógico queda como
+  **complemento** secundario (un poco más pequeño y discreto).
+- **Reset robusto del input**: al perder el foco (`blur`) o cambiar de pestaña
+  (`visibilitychange`) se sueltan todas las direcciones → ninguna tecla se queda "pegada".
+- API de control clara: `pressDirection`, `releaseDirection`, `resetTouchControls`,
+  `getTiltInput`.
+- "Cómo jugar" y la pista en partida actualizadas (D-pad como control móvil principal).
+
+### Validado
+- `npm test` ampliado: además de joystick/D-pad, ahora cubre **diagonales**, **prioridad
+  D-pad > arrastre** y **reset sin teclas pegadas**. Todo en verde.
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
 ## [0.4.1] — 2026-06-19 — Controles móviles funcionales
 
 ### Corregido (el control táctil no inclinaba el tablero)

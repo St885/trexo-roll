@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.4.1 — Controles móviles funcionales |
-| **Estado** | ✅ Publicado en GitHub Pages · ✅ controles móviles (joystick + D-pad) desplegados |
+| **Versión** | 0.4.2 — Control móvil definitivo: D-pad robusto |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.4.2) · control móvil (D-pad principal + joystick) desplegado para prueba en teléfono |
 | **Fecha** | 2026-06-19 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
