@@ -11,8 +11,9 @@
 | **Niveles** | 25 (Fácil → Experto), todos validados como superables |
 | **Bolas** | 5, cada una con **especie de dino distinta** (T-Rex, Raptor, Parasaurio, Triceratops, Braquiosaurio) |
 | **Biomas** | 8 ambientaciones jurásicas |
-| **Git** | No inicializado todavía |
-| **Deploy** | No (pendiente de confirmación de Stefano) |
+| **Git** | Repo local inicializado (`main`, commit inicial); remote `origin` → github.com/St885/trexo-roll |
+| **Deploy** | ⏳ Bloqueado: falta crear el repo remoto en GitHub (gh CLI no instalado) → luego push + activar Pages |
+| **URL prevista** | https://st885.github.io/trexo-roll/ |
 
 ---
 
