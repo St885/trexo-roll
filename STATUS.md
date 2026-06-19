@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | **Versión** | 0.3.1 — Una especie de dino por bola |
-| **Estado** | 🟢 Listo para probar localmente (pendiente verificación manual en navegador) |
+| **Estado** | ✅ Publicado en GitHub Pages |
 | **Fecha** | 2026-06-19 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
@@ -11,9 +11,8 @@
 | **Niveles** | 25 (Fácil → Experto), todos validados como superables |
 | **Bolas** | 5, cada una con **especie de dino distinta** (T-Rex, Raptor, Parasaurio, Triceratops, Braquiosaurio) |
 | **Biomas** | 8 ambientaciones jurásicas |
-| **Git** | Repo local inicializado (`main`, commit inicial); remote `origin` → github.com/St885/trexo-roll |
-| **Deploy** | ⏳ Bloqueado: falta crear el repo remoto en GitHub (gh CLI no instalado) → luego push + activar Pages |
-| **URL prevista** | https://st885.github.io/trexo-roll/ |
+| **Git** | Repo `github.com/St885/trexo-roll`, rama `main` |
+| **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ (2026-06-19) |
 
 ---
 
