@@ -1,0 +1,352 @@
+/* main.css — Estilo TREXoRoll: jurásico, moderno, limpio y responsive. */
+
+:root {
+  --jungle-0: #0e2417;
+  --jungle-1: #16321f;
+  --jungle-2: #1e4d2b;
+  --amber: #e9c46a;
+  --amber-2: #f4a261;
+  --green: #2ecc71;
+  --red: #e74c3c;
+  --cream: #f5f0e1;
+  --ink: #0e2417;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--jungle-0);
+  color: var(--cream);
+  touch-action: none;
+  user-select: none;
+}
+
+#game-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+#game-canvas canvas { display: block; width: 100%; height: 100%; }
+
+#ui { position: fixed; inset: 0; z-index: 1; }
+
+/* ---- Pantallas ---- */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px;
+}
+.screen.active { display: flex; }
+
+/* Fondo jurásico para las pantallas de menú (oculta el lienzo) */
+#screen-landing.active,
+#screen-menu.active,
+#screen-levels.active,
+#screen-howto.active,
+#screen-prep.active,
+#screen-win.active,
+#screen-gameover.active {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(126, 200, 227, 0.25), transparent 60%),
+    linear-gradient(180deg, var(--jungle-2), var(--jungle-1) 55%, var(--jungle-0));
+}
+
+/* La pantalla de juego es transparente y deja jugar con el lienzo */
+#screen-game.active {
+  display: block;
+  background: transparent;
+  pointer-events: none;
+}
+#screen-game .hud-chip,
+#screen-game .btn,
+#screen-game .hud-hint { pointer-events: auto; }
+
+/* ---- Paneles ---- */
+.panel {
+  width: min(560px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: rgba(14, 36, 23, 0.72);
+  border: 1px solid rgba(233, 196, 106, 0.35);
+  border-radius: 22px;
+  padding: 28px 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
+}
+.panel.center { text-align: center; }
+
+/* ---- Tipografía ---- */
+.title {
+  font-size: clamp(2.4rem, 9vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 8px 0 4px;
+  color: var(--amber);
+  text-shadow: 0 3px 0 #7a4f1d, 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.title span { color: var(--green); }
+.title.small { font-size: clamp(1.6rem, 6vw, 2.4rem); }
+.title.danger { color: var(--red); text-shadow: 0 3px 0 #6b1d16; }
+.subtitle { font-size: clamp(1rem, 4vw, 1.25rem); color: var(--cream); opacity: 0.92; margin: 0 0 22px; }
+.muted { color: rgba(245, 240, 225, 0.7); font-size: 0.95rem; margin-top: 14px; }
+.decor-line { letter-spacing: 6px; opacity: 0.6; margin-top: 18px; }
+
+/* ---- Emblema de la bola ---- */
+.ball-emblem {
+  width: 96px; height: 96px;
+  margin: 0 auto 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #d9dfe2);
+  display: grid; place-items: center;
+  font-size: 46px;
+  box-shadow: inset -8px -10px 18px rgba(0,0,0,0.18), 0 10px 22px rgba(0,0,0,0.4);
+  border: 3px solid var(--green);
+}
+.ball-emblem.big { width: 130px; height: 130px; font-size: 64px; }
+
+/* ---- Botones ---- */
+.btn {
+  appearance: none;
+  border: none;
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--cream);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(233, 196, 106, 0.4);
+  padding: 14px 22px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
+  min-width: 180px;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.18); }
+.btn:active { transform: scale(0.96); }
+.btn.primary {
+  background: linear-gradient(180deg, var(--green), #1ea355);
+  border-color: #1ea355;
+  color: #07301a;
+  box-shadow: 0 6px 0 #146e3a, var(--shadow);
+}
+.btn.primary:active { box-shadow: 0 2px 0 #146e3a; transform: translateY(3px) scale(0.99); }
+.btn.ghost { background: transparent; min-width: auto; opacity: 0.85; }
+.btn.tiny { min-width: auto; padding: 6px 12px; font-size: 1.2rem; }
+
+.menu-buttons { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-top: 8px; }
+.menu-buttons .btn { width: min(280px, 80vw); }
+
+/* ---- Niveles ---- */
+.levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.level-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(233, 196, 106, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cream);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.level-card:hover { background: rgba(255, 255, 255, 0.16); }
+.level-card:active { transform: scale(0.96); }
+.level-card.locked { opacity: 0.45; cursor: not-allowed; }
+.level-num { font-size: 1.6rem; font-weight: 900; color: var(--amber); }
+.level-card-name { font-size: 0.85rem; text-align: center; }
+.level-go { color: var(--green); }
+
+/* ---- Cómo jugar ---- */
+.howto { line-height: 1.7; padding-left: 4px; list-style: none; margin: 10px 0 18px; }
+.howto li { margin-bottom: 10px; }
+.howto kbd {
+  background: #0e2417; border: 1px solid var(--amber); border-radius: 6px;
+  padding: 1px 7px; font-size: 0.85rem; margin: 0 1px;
+}
+.goal-txt { color: var(--green); font-weight: 700; }
+.trap-txt { color: var(--red); font-weight: 700; }
+
+/* ---- Preparación ---- */
+.prep-lives { font-size: 1.8rem; margin: 6px 0; letter-spacing: 4px; }
+.prep-objective { font-size: 1.1rem; margin: 6px 0 4px; }
+.warn { color: var(--amber-2); margin-bottom: 18px; }
+#screen-prep .btn { display: block; margin: 10px auto 0; }
+
+/* ---- HUD en partida ---- */
+.hud-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; gap: 8px; align-items: center;
+  padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+  flex-wrap: wrap;
+}
+.hud-chip {
+  background: rgba(14, 36, 23, 0.78);
+  border: 1px solid rgba(233, 196, 106, 0.4);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hud-top .btn.tiny { margin-left: auto; background: rgba(14,36,23,0.78); }
+.hud-hint {
+  position: absolute; bottom: max(14px, env(safe-area-inset-bottom)); left: 0; right: 0;
+  text-align: center; font-size: 0.9rem; opacity: 0.7;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+.hud-toast {
+  position: absolute; top: 38%; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(14, 36, 23, 0.9);
+  border: 1px solid var(--amber);
+  border-radius: 14px;
+  padding: 12px 22px;
+  font-size: 1.15rem; font-weight: 800;
+  opacity: 0; transition: opacity 0.2s ease;
+  pointer-events: none; text-align: center;
+}
+.hud-toast.show { opacity: 1; }
+
+/* ---- Win / Game Over ---- */
+.big-score { font-size: 1.6rem; font-weight: 900; color: var(--amber); margin: 12px 0 6px; }
+#screen-win .btn, #screen-gameover .btn { display: block; margin: 10px auto 0; }
+
+/* ---- Error de arranque ---- */
+#boot-error {
+  display: none; position: fixed; bottom: 12px; left: 12px; right: 12px; z-index: 5;
+  background: var(--red); color: #fff; padding: 12px 16px; border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+/* ---- Responsive fino ---- */
+@media (max-width: 420px) {
+  .panel { padding: 22px 16px; border-radius: 18px; }
+  .btn { font-size: 1rem; padding: 13px 18px; }
+  .hud-chip { font-size: 0.82rem; padding: 6px 10px; }
+}
+@media (min-height: 720px) and (min-width: 600px) {
+  .menu-buttons .btn { font-size: 1.2rem; padding: 16px 24px; }
+}
+
+/* ===== Mejoras v0.2.0 ===== */
+
+/* Transición suave al mostrar una pantalla */
+.screen.active { animation: screenIn 0.25s ease both; }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* El HUD de juego no debe deslizarse */
+#screen-game.active { animation: none; }
+
+/* Viñeta cinematográfica sobre el lienzo (no captura puntero) */
+#vignette {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 42%, transparent 55%, rgba(7, 20, 12, 0.5) 100%);
+}
+
+/* Flash de feedback (pérdida de vida / victoria) */
+#flash {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+}
+#flash.show { animation: flashFade 0.36s ease-out; }
+#flash.danger { background: radial-gradient(120% 100% at 50% 50%, transparent 40%, rgba(231, 76, 60, 0.55)); }
+#flash.gold { background: radial-gradient(120% 100% at 50% 50%, rgba(46, 204, 113, 0.25), rgba(233, 196, 106, 0.35)); }
+@keyframes flashFade { from { opacity: 1; } to { opacity: 0; } }
+
+/* Indicador de inclinación (ayuda, sobre todo en móvil) */
+.tilt-ring {
+  position: absolute; left: 50%; bottom: max(46px, calc(env(safe-area-inset-bottom) + 40px));
+  transform: translateX(-50%);
+  width: 60px; height: 60px; border-radius: 50%;
+  border: 2px solid rgba(245, 240, 225, 0.35);
+  background: rgba(14, 36, 23, 0.35);
+  pointer-events: none;
+}
+.tilt-dot {
+  position: absolute; left: 50%; top: 50%;
+  width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
+  transition: transform 0.05s linear;
+}
+
+/* Chip de dificultad (preparación) */
+.tier-chip {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  background: rgba(233, 196, 106, 0.18); border: 1px solid var(--amber);
+  color: var(--amber); font-weight: 700; font-size: 0.85rem; margin-bottom: 4px;
+}
+
+/* Estrellas */
+.stars-row { font-size: 2.2rem; letter-spacing: 6px; color: var(--amber); margin: 4px 0; text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+.level-stars { color: var(--amber); font-size: 0.9rem; letter-spacing: 1px; }
+
+/* Badge de récord */
+.record-badge {
+  display: none; /* Game lo muestra cuando aplica */
+  color: #07301a; background: linear-gradient(180deg, #ffe08a, var(--amber-2));
+  font-weight: 900; padding: 6px 14px; border-radius: 999px; margin: 8px auto;
+  width: fit-content; animation: pop 0.4s ease;
+}
+@keyframes pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Pausa: ligeramente translúcido para ver el tablero detrás */
+#screen-pause.active {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(126, 200, 227, 0.18), transparent 60%),
+    linear-gradient(180deg, rgba(30, 77, 43, 0.86), rgba(14, 36, 23, 0.9));
+}
+#screen-pause .btn { display: block; margin: 10px auto 0; }
+
+/* ===== Selección de bola (v0.3.0) ===== */
+.ball-preview { display: flex; justify-content: center; margin: 0 auto 8px; }
+.ball-preview canvas { border-radius: 50%; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4); }
+.ball-preview.sm { margin: 0; }
+
+.balls-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px; margin: 16px 0;
+}
+.ball-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px 8px; border-radius: 18px;
+  border: 2px solid rgba(233, 196, 106, 0.35);
+  background: rgba(255, 255, 255, 0.06); color: var(--cream);
+  font-family: inherit; cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.ball-card:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-2px); }
+.ball-card:active { transform: scale(0.95); }
+.ball-card.selected {
+  border-color: var(--green);
+  background: rgba(46, 204, 113, 0.16);
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.45) inset, 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+.ball-card .ball-thumb { border-radius: 50%; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35); }
+.ball-name { font-weight: 700; font-size: 0.92rem; }
+.ball-dino { font-size: 0.75rem; color: var(--amber); opacity: 0.9; }
+
+.prep-ball-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 8px 0 6px; flex-wrap: wrap; }
+.prep-ball-label { font-size: 0.95rem; }
+
+/* Mini icono de bola en el HUD */
+.hud-ball-mini { display: inline-flex; align-items: center; }
+.hud-ball-mini canvas { border-radius: 50%; box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45); border: 2px solid rgba(255, 255, 255, 0.5); }
+
+/* ===== Polish general de paneles/botones ===== */
+.panel { box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.btn.primary:hover { filter: brightness(1.06); }
+.big-score { animation: pop 0.45s ease; }
+.stars-row { animation: pop 0.5s ease; }

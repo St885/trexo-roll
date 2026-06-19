@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#16321f" />
+    <meta name="description" content="TREXoRoll — Inclina, rueda y conquista cada tablero. Juego 3D de habilidad con temática jurásica." />
+    <title>TREXoRoll — Inclina, rueda y conquista</title>
+    <link rel="stylesheet" href="styles/main.css" />
+
+    <!-- Three.js vendorizado localmente: sin dependencias de red en runtime. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./libs/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body data-screen="screen-landing">
+    <!-- Lienzo 3D (detrás de la interfaz) -->
+    <div id="game-canvas"></div>
+
+    <!-- Interfaz / pantallas -->
+    <div id="ui">
+      <!-- 1. Landing -->
+      <section class="screen active" id="screen-landing">
+        <div class="panel center">
+          <div class="ball-emblem big" aria-hidden="true">🦖</div>
+          <h1 class="title">TREX<span>o</span>Roll</h1>
+          <p class="subtitle">Inclina, rueda y conquista cada tablero.</p>
+          <button class="btn primary" id="btn-enter">Entrar</button>
+          <p class="muted" id="landing-highscore">Mejor: 0</p>
+        </div>
+      </section>
+
+      <!-- 2. Menú principal -->
+      <section class="screen" id="screen-menu">
+        <div class="panel center">
+          <div class="ball-preview" id="menu-ball" aria-hidden="true"></div>
+          <h2 class="title small">TREXoRoll</h2>
+          <div class="menu-buttons">
+            <button class="btn primary" id="btn-play">▶ Jugar</button>
+            <button class="btn" id="btn-balls">🦕 Elegir bola</button>
+            <button class="btn" id="btn-levels">🗺️ Niveles</button>
+            <button class="btn" id="btn-howto">❓ Cómo jugar</button>
+            <button class="btn" id="btn-sound">🔊 Sonido: ON</button>
+          </div>
+          <p class="muted" id="menu-highscore">Mejor: 0</p>
+          <p class="decor-line">🦴 🥚 🌿 🦴 🥚 🌿</p>
+        </div>
+      </section>
+
+      <!-- 2b. Selección de bola -->
+      <section class="screen" id="screen-balls">
+        <div class="panel">
+          <h2 class="title small">Elige tu bola</h2>
+          <p class="muted center">Cada bola lleva su propio dinosaurio… ¡que sale a celebrar al ganar!</p>
+          <div id="balls-list" class="balls-grid"></div>
+          <button class="btn ghost" id="btn-balls-back">← Volver</button>
+        </div>
+      </section>
+
+      <!-- 3. Selección de niveles -->
+      <section class="screen" id="screen-levels">
+        <div class="panel">
+          <h2 class="title small">Niveles</h2>
+          <div id="levels-list" class="levels-grid"></div>
+          <button class="btn ghost" id="btn-levels-back">← Volver</button>
+        </div>
+      </section>
+
+      <!-- 4. Cómo jugar -->
+      <section class="screen" id="screen-howto">
+        <div class="panel">
+          <h2 class="title small">Cómo jugar</h2>
+          <ul class="howto">
+            <li>🎯 <strong>Objetivo:</strong> lleva la bola al <span class="goal-txt">hoyo verde</span>.</li>
+            <li>⚠️ <strong>Evita:</strong> los <span class="trap-txt">hoyos rojos</span> y caer fuera del tablero.</li>
+            <li>🖥️ <strong>Teclado:</strong> Flechas o <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> para inclinar.</li>
+            <li>📱 <strong>Móvil / ratón:</strong> arrastra sobre la pantalla para inclinar.</li>
+            <li>⏸️ <strong>Pausa:</strong> botón ⏸ o tecla <kbd>P</kbd> / <kbd>Esc</kbd>.</li>
+            <li>🦕 <strong>Bola:</strong> elige entre 5 dinos; el tuyo celebra al ganar.</li>
+            <li>⭐ Gana <strong>3 estrellas</strong> por nivel: sin perder vidas y bajo el tiempo objetivo.</li>
+            <li>🥚 Tienes <strong>3 vidas</strong>. Completa los <strong>25 tableros</strong> para ganar.</li>
+          </ul>
+          <button class="btn ghost" id="btn-howto-back">← Volver</button>
+        </div>
+      </section>
+
+      <!-- 5. Preparación de partida -->
+      <section class="screen" id="screen-prep">
+        <div class="panel center">
+          <span class="tier-chip" id="prep-tier">Fácil</span>
+          <h2 class="title small" id="prep-level">Nivel 1</h2>
+          <p class="prep-lives" id="prep-lives">🥚🥚🥚</p>
+          <p class="prep-objective" id="prep-objective">Lleva la bola al hoyo.</p>
+          <div class="prep-ball-row">
+            <div class="ball-preview sm" id="prep-ball" aria-hidden="true"></div>
+            <span class="prep-ball-label">Tu bola: <strong id="prep-ball-name">Blanca</strong></span>
+            <button class="btn tiny ghost" id="btn-prep-ball">Cambiar</button>
+          </div>
+          <p class="warn">⚠️ Evita los hoyos trampa y no caigas del tablero.</p>
+          <button class="btn primary" id="btn-prep-start">Iniciar nivel</button>
+          <button class="btn ghost" id="btn-prep-back">← Menú</button>
+        </div>
+      </section>
+
+      <!-- 6. HUD en partida (transparente, deja pasar el puntero al lienzo) -->
+      <section class="screen" id="screen-game">
+        <div id="vignette"></div>
+        <div id="flash"></div>
+        <div class="hud-top">
+          <span class="hud-ball-mini" id="hud-ball" aria-hidden="true"></span>
+          <span class="hud-chip" id="hud-level">Nivel 1</span>
+          <span class="hud-chip" id="hud-lives">🥚🥚🥚</span>
+          <span class="hud-chip" id="hud-time">⏱️ 0.0s</span>
+          <span class="hud-chip" id="hud-score">Puntos: 0</span>
+          <button class="btn tiny" id="btn-pause" aria-label="Pausa">⏸</button>
+        </div>
+        <div class="hud-toast" id="hud-toast"></div>
+        <div class="tilt-ring" aria-hidden="true"><div class="tilt-dot" id="tilt-dot"></div></div>
+        <div class="hud-hint">Inclina el tablero — arrastra o usa las flechas</div>
+      </section>
+
+      <!-- 6b. Pausa -->
+      <section class="screen" id="screen-pause">
+        <div class="panel center">
+          <h2 class="title small">⏸ Pausa</h2>
+          <p class="muted" id="pause-level">Nivel 1</p>
+          <button class="btn primary" id="btn-resume">▶ Continuar</button>
+          <button class="btn" id="btn-restart">↻ Reiniciar nivel</button>
+          <button class="btn ghost" id="btn-pause-menu">Menú</button>
+        </div>
+      </section>
+
+      <!-- 7. Victoria de nivel -->
+      <section class="screen" id="screen-win">
+        <div class="panel center">
+          <h2 class="title small" id="win-title">¡Nivel superado!</h2>
+          <p class="stars-row" id="win-stars">★★★</p>
+          <p class="record-badge" id="win-record">🏅 ¡Nuevo récord!</p>
+          <p class="big-score" id="win-score">Puntos: 0</p>
+          <p class="muted" id="win-detail"></p>
+          <p class="muted" id="win-time"></p>
+          <p class="muted" id="win-progress"></p>
+          <button class="btn primary" id="btn-win-next">Siguiente nivel ▶</button>
+          <button class="btn ghost" id="btn-win-menu">Menú</button>
+        </div>
+      </section>
+
+      <!-- 8. Game Over -->
+      <section class="screen" id="screen-gameover">
+        <div class="panel center">
+          <h2 class="title small danger">Game Over</h2>
+          <p class="record-badge" id="over-record">🏅 ¡Nuevo récord!</p>
+          <p class="big-score" id="over-score">Puntos: 0</p>
+          <p class="muted" id="over-high">Mejor: 0</p>
+          <button class="btn primary" id="btn-over-retry">↻ Reintentar</button>
+          <button class="btn ghost" id="btn-over-menu">Menú</button>
+        </div>
+      </section>
+
+      <!-- Mensaje de error de arranque (oculto por defecto) -->
+      <div id="boot-error"></div>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
