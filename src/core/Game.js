@@ -9,7 +9,7 @@ import { ScreenManager } from './ScreenManager.js';
 import { LEVELS, getLevel } from '../levels/levels.js';
 import { BALLS, getBall } from '../data/balls.js';
 import { getDino } from '../data/dinos.js';
-import { SCREENS, LIVES_START, SCORE, PHYS } from '../utils/constants.js';
+import { SCREENS, LIVES_START, SCORE } from '../utils/constants.js';
 import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
 import { makeBallThumbnail } from '../scene/textures.js';
@@ -32,8 +32,15 @@ export class Game {
     this.selectedBall = getSelectedBall();
     this.ball = new Ball(getBall(this.selectedBall));
     this.physics = new BallPhysics();
-    this.input = new InputController(this.scene.renderer.domElement);
+    this.input = new InputController(
+      this.scene.renderer.domElement,
+      document.getElementById('joystick'),
+      document.getElementById('joystick-knob'),
+      document.getElementById('dpad'),
+    );
     this.screens = new ScreenManager();
+    this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    document.body.classList.toggle('is-touch', this.isTouch);
 
     this.levelIndex = 0;
     this.lives = LIVES_START;
@@ -51,7 +58,9 @@ export class Game {
     this.muted = false;
 
     this._wireUI();
-    window.addEventListener('resize', () => this.scene.resize());
+    window.addEventListener('resize', () => { this.scene.resize(); this.input.refresh(); });
+    // Al rotar el móvil el layout tarda un instante en estabilizarse.
+    window.addEventListener('orientationchange', () => setTimeout(() => { this.scene.resize(); this.input.refresh(); }, 200));
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
         if (this.playing) { e.preventDefault(); this._togglePause(); }
@@ -78,6 +87,7 @@ export class Game {
     click('btn-levels', () => this._showLevels());
     click('btn-howto', () => this.screens.show(SCREENS.HOWTO));
     click('btn-sound', () => this._toggleSound());
+    click('btn-fullscreen', () => this._toggleFullscreen());
 
     click('btn-prep-start', () => this._startLevel());
     click('btn-prep-ball', () => this._cyclePrepBall());
@@ -116,6 +126,20 @@ export class Game {
     sfx.setMuted(this.muted);
     const btn = document.getElementById('btn-sound');
     if (btn) btn.textContent = this.muted ? '🔇 Sonido: OFF' : '🔊 Sonido: ON';
+  }
+
+  /** Pantalla completa (Android/desktop). En iOS Safari no siempre es posible. */
+  _toggleFullscreen() {
+    const el = document.documentElement;
+    try {
+      if (!document.fullscreenElement) {
+        const req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req) req.call(el);
+      } else {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
+      }
+    } catch (_) { /* no soportado: se ignora */ }
   }
 
   _updateHighScoreLabels() {
@@ -243,7 +267,6 @@ export class Game {
     hud.setLives(this.lives);
     hud.setScore(this.score);
     hud.setTime(0);
-    hud.setTilt(0, 0);
     setThumb('hud-ball', getBall(this.selectedBall), 34);
     setLastLevel(this.levelIndex + 1);
 
@@ -258,6 +281,7 @@ export class Game {
     this.screens.show(SCREENS.GAME);
     sfx.start();
     hud.toast(lvl.hint, 1700);
+    hud.hint(this.isTouch ? '🕹️ Joystick (derecha) o flechas (izquierda) para inclinar' : 'Inclina: flechas/WASD o arrastra el tablero');
   }
 
   _elapsed() {
@@ -293,9 +317,8 @@ export class Game {
 
   // --- Bucle de juego -------------------------------------------------------
   _stepPlay(dt) {
-    this.input.update(dt);
+    this.input.update(dt); // mueve también el knob del joystick (refleja la inclinación)
     this.scene.setTilt(this.input.tiltX, this.input.tiltZ);
-    hud.setTilt(-this.input.tiltZ / PHYS.MAX_TILT, this.input.tiltX / PHYS.MAX_TILT);
 
     const ev = this.physics.update(dt, this.input.tiltX, this.input.tiltZ);
     this.ball.setPlanePosition(this.physics.x, this.physics.z);

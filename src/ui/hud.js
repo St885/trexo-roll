@@ -1,5 +1,6 @@
 // hud.js — Actualización del HUD en partida (nivel, vidas, tiempo, puntuación,
-// indicador de inclinación, toasts y flashes de feedback). Funciones puras sobre el DOM.
+// toasts, pista y flashes de feedback). Funciones puras sobre el DOM.
+// El knob del joystick lo gestiona InputController, no este módulo.
 
 let el = null;
 
@@ -11,7 +12,7 @@ function refs() {
     time: document.getElementById('hud-time'),
     score: document.getElementById('hud-score'),
     toast: document.getElementById('hud-toast'),
-    tiltDot: document.getElementById('tilt-dot'),
+    hint: document.getElementById('hud-hint'),
     flash: document.getElementById('flash'),
   };
   return el;
@@ -37,14 +38,6 @@ export function setScore(score) {
   if (r.score) r.score.textContent = `Puntos: ${score}`;
 }
 
-/** Mueve el punto del indicador de inclinación. nx, ny en [-1, 1]. */
-export function setTilt(nx, ny) {
-  const r = refs();
-  if (!r.tiltDot) return;
-  const R = 20; // radio en píxeles
-  r.tiltDot.style.transform = `translate(${(nx * R).toFixed(1)}px, ${(ny * R).toFixed(1)}px)`;
-}
-
 let toastTimer = null;
 export function toast(text, ms = 1100) {
   const r = refs();
@@ -55,14 +48,24 @@ export function toast(text, ms = 1100) {
   toastTimer = setTimeout(() => r.toast.classList.remove('show'), ms);
 }
 
+let hintTimer = null;
+/** Muestra una pista breve al inicio del nivel y la desvanece (no estorba en partida). */
+export function hint(text, ms = 3500) {
+  const r = refs();
+  if (!r.hint) return;
+  r.hint.textContent = text;
+  r.hint.classList.remove('hidden');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => r.hint.classList.add('hidden'), ms);
+}
+
 let flashTimer = null;
 /** Destello de pantalla para feedback. kind: 'danger' | 'gold'. */
 export function flash(kind) {
   const r = refs();
   if (!r.flash) return;
   r.flash.className = '';
-  // forzar reflow para reiniciar la animación
-  void r.flash.offsetWidth;
+  void r.flash.offsetWidth; // reinicia la animación
   r.flash.className = 'show ' + kind;
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => { r.flash.className = ''; }, 360);

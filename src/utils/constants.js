@@ -20,6 +20,10 @@ export const PHYS = {
   CAPTURE_FACTOR: 0.66, // % del radio del hoyo dentro del cual la bola "cae"
   CAPTURE_PULL: 13,     // atracción suave hacia el centro del hoyo al entrar
   FALL_GRACE: 0.12,     // s de perdón que la bola puede teetear fuera del borde antes de caer
+  // Sensibilidad del arrastre: píxeles para alcanzar la inclinación máxima.
+  // Móvil más sensible (dedos, pantallas pequeñas) que ratón en desktop.
+  DRAG_FULL_PX_DESKTOP: 110,
+  DRAG_FULL_PX_MOBILE: 78,
 };
 
 // --- Puntuación ---

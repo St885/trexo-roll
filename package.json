@@ -1,12 +1,12 @@
 {
   "name": "trexo-roll",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "description": "TREXoRoll — juego 3D de habilidad (inclina el tablero y rueda la bola al hoyo). Three.js, temática jurásica.",
   "type": "module",
   "scripts": {
     "start": "npx serve . -p 3000",
     "dev": "npx serve . -p 3000",
-    "test": "node tools/physics-smoke-test.mjs && node tools/level-validator.mjs",
+    "test": "node tools/physics-smoke-test.mjs && node tools/level-validator.mjs && node tools/input-smoke.mjs",
     "test:graph": "node --import ./tools/register-three.mjs tools/check-graph.mjs",
     "test:visual": "node --import ./tools/register-three.mjs tools/canvas-smoke.mjs"
   },

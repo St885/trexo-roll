@@ -2,6 +2,54 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.4.1] — 2026-06-19 — Controles móviles funcionales
+
+### Corregido (el control táctil no inclinaba el tablero)
+- **Causa raíz:** el lienzo y contenedores no tenían `touch-action: none`, así que el
+  navegador interpretaba el gesto como scroll y **cancelaba el puntero**; además el
+  joystick escuchaba `pointermove` en `window` y **sin `preventDefault`**.
+- **Solución (patrón de legendary-adventures):** cada control escucha **sus propios**
+  eventos de puntero con `setPointerCapture` + `{ passive: false }` + `preventDefault`;
+  `touch-action: none` en `#game-canvas`, su `<canvas>`, `#ui` y `.screen`.
+
+### Añadido
+- **D-pad** de 4 botones (abajo-izquierda) como control robusto que alimenta el sistema
+  de teclas — funciona aunque el joystick no responda perfecto. Joystick analógico
+  reubicado abajo-derecha (pulgar derecho).
+- Controles táctiles **solo en dispositivos táctiles** (`body.is-touch`); desktop queda limpio.
+- **Botón “⛶ Pantalla completa”** en el menú y **metas PWA** (`apple-mobile-web-app-capable`,
+  `mobile-web-app-capable`, `status-bar-style`) para mejor experiencia en móvil.
+- Smoke-test del pipeline de control (`tools/input-smoke.mjs`, en `npm test`): valida que
+  joystick y D-pad **modifican la inclinación** y resetean al soltar.
+
+### Mejorado
+- **Cámara móvil vertical:** menos margen → **tablero más grande**, y un leve desplazamiento
+  para dejar sitio a los controles de abajo.
+
+## [0.4.0] — 2026-06-19 — Mobile & responsive
+
+### Añadido
+- **Joystick táctil virtual** como control móvil principal: inclina en 8 direcciones,
+  vuelve suave al centro al soltar, indicador visual activo. Convive con arrastre
+  (ratón/táctil) y teclado; prioridad joystick > arrastre > teclado. El knob refleja
+  siempre la inclinación actual.
+- **Sensibilidad separada** móvil vs. desktop para el arrastre (`PHYS.DRAG_FULL_PX_*`).
+- **Pista contextual** al iniciar nivel (“Arrastra el joystick…” en táctil) que se desvanece.
+- Manejo de **`orientationchange`** además de `resize` (cámara y joystick se reajustan).
+
+### Mejorado
+- **HUD responsive**: chips compactos en pantallas estrechas, botón de pausa con área
+  táctil ≥44px, joystick reubicado a un lado en paisaje (alcance del pulgar).
+- **Canvas/cámara**: más margen de encuadre en vertical (tablero completo + aire para el joystick).
+- **Pantallas**: objetivos táctiles grandes (`pointer: coarse`), grids más compactas en móvil,
+  paneles compactos en paisaje bajo.
+- **Anti-fricción táctil**: `touch-action: none`, `overscroll-behavior: none`,
+  `-webkit-touch-callout: none`, sin zoom por doble toque; respeto de *safe areas* (notch).
+
+### Notas
+- Controles desktop (flechas/WASD + arrastre con ratón) intactos.
+- Sin dependencias nuevas; sin push/deploy (pendiente de confirmación de Stefano).
+
 ## [0.3.1] — 2026-06-19 — Una especie de dino por bola
 
 ### Corregido

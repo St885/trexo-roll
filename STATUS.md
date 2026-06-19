@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.3.1 — Una especie de dino por bola |
-| **Estado** | ✅ Publicado en GitHub Pages |
+| **Versión** | 0.4.1 — Controles móviles funcionales (v0.3.1 en producción; 0.4.1 pendiente de push) |
+| **Estado** | ✅ Publicado en GitHub Pages · 🛠️ controles móviles (joystick + D-pad) listos para probar (sin push aún) |
 | **Fecha** | 2026-06-19 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |

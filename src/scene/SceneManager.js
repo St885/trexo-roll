@@ -212,10 +212,16 @@ export class SceneManager {
     const vFov = THREE.MathUtils.degToRad(this.camera.fov);
     const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
     const limiting = Math.min(vFov, hFov);
-    const dist = radius / Math.tan(limiting / 2) + radius * 0.4;
+    const portrait = aspect < 1;
+    // En vertical (móvil) el tablero se ve MÁS GRANDE (menos margen) y se sube un
+    // poco para dejar sitio a los controles táctiles de abajo.
+    const margin = portrait ? radius * 0.18 : radius * 0.32;
+    const dist = radius / Math.tan(limiting / 2) + margin;
+    const target = this._boardCenter.clone();
+    target.z += portrait ? radius * 0.1 : 0; // sube el tablero en pantalla
     const pos = CAM_DIR.clone().multiplyScalar(dist).add(this._boardCenter);
     this.camera.position.copy(pos);
-    this.camera.lookAt(this._boardCenter);
+    this.camera.lookAt(target);
     if (this.sun) this.sun.target.position.copy(this._boardCenter);
   }
 
