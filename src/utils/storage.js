@@ -10,6 +10,7 @@ import { STORAGE_KEY } from './constants.js';
 const DEFAULT = {
   highScore: 0, unlocked: 1, stars: {}, bestTimes: {}, selectedBall: 'blanca', lastLevel: 1,
   starTokens: 0, extraLives: 0, trapBlocks: 0, fallShields: 0,
+  livesBank: 0, // reserva de vidas (compradas/ganadas por vídeo) para continuar partidas
 };
 let memoryFallback = clone(DEFAULT);
 
@@ -32,6 +33,7 @@ export function load() {
       extraLives: nonNeg(data.extraLives),
       trapBlocks: nonNeg(data.trapBlocks),
       fallShields: nonNeg(data.fallShields),
+      livesBank: nonNeg(data.livesBank),
     };
   } catch (_) {
     return clone(memoryFallback);
@@ -154,4 +156,24 @@ export function consumePowerup(item) {
   if (!POWERUPS.includes(item) || nonNeg(c[item]) <= 0) return false;
   save({ ...c, [item]: c[item] - 1 });
   return true;
+}
+
+// --- Banco de vidas (monetización: vídeo recompensado / packs de vidas) -------
+
+export function getLivesBank() {
+  return load().livesBank;
+}
+
+/** Añade vidas a la reserva (compra de pack o recompensa por vídeo). */
+export function addLivesBank(n) {
+  const c = load();
+  save({ ...c, livesBank: Math.max(0, c.livesBank + n) });
+}
+
+/** Saca hasta `n` vidas de la reserva. @returns {number} vidas realmente sacadas. */
+export function takeFromLivesBank(n) {
+  const c = load();
+  const take = Math.min(c.livesBank, Math.max(0, n));
+  if (take > 0) save({ ...c, livesBank: c.livesBank - take });
+  return take;
 }

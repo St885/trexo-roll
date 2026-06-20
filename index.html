@@ -102,7 +102,8 @@
       <section class="screen" id="screen-levels">
         <div class="panel">
           <h2 class="title small">Niveles</h2>
-          <div id="levels-list" class="levels-grid"></div>
+          <p class="muted center">5 mundos · 25 tableros. Gana ⭐ para canjear ayudas.</p>
+          <div id="levels-list" class="levels-list"></div>
           <button class="btn ghost" id="btn-levels-back">← Volver</button>
         </div>
       </section>
@@ -131,10 +132,12 @@
       <!-- 5. Preparación de partida -->
       <section class="screen" id="screen-prep">
         <div class="panel center">
+          <p class="prep-world" id="prep-world">🌿 Mundo 1 · Valle Jurásico</p>
           <span class="tier-chip" id="prep-tier">Fácil</span>
           <h2 class="title small" id="prep-level">Nivel 1</h2>
           <p class="prep-lives" id="prep-lives">🥚🥚🥚</p>
           <p class="prep-objective" id="prep-objective">Lleva la bola al hoyo.</p>
+          <p class="prep-rewards" id="prep-rewards">🪙 3 monedas</p>
           <div class="prep-ball-row">
             <div class="ball-preview sm" id="prep-ball" aria-hidden="true"></div>
             <span class="prep-ball-label">Tu bola: <strong id="prep-ball-name">Blanca</strong></span>
@@ -162,6 +165,7 @@
           <span class="hud-chip" id="hud-time">⏱️ 0.0s</span>
           <span class="hud-chip" id="hud-score">Puntos: 0</span>
           <span class="hud-chip" id="hud-coins">🪙 0</span>
+          <span class="hud-chip hud-powers" id="hud-powers" style="display:none"></span>
           <button class="btn tiny" id="btn-pause" aria-label="Pausa">⏸</button>
         </div>
         <div class="hud-toast" id="hud-toast"></div>
@@ -186,8 +190,10 @@
             <span class="stat-chip" id="pause-lives">🥚🥚🥚</span>
             <span class="stat-chip" id="pause-score"><b>0</b> pts</span>
           </div>
+          <p class="muted pause-powers" id="pause-powers"></p>
           <button class="btn primary" id="btn-resume">▶ Continuar</button>
           <button class="btn" id="btn-restart">↻ Reiniciar nivel</button>
+          <button class="btn" id="btn-pause-shop">🛒 Canje</button>
           <button class="btn" id="btn-pause-sound">🔊 Sonido: ON</button>
           <button class="btn ghost" id="btn-pause-menu">Menú</button>
         </div>
@@ -209,7 +215,9 @@
           <p class="stars-row" id="win-stars">★★★</p>
           <p class="record-badge" id="win-record">🏅 ¡Nuevo récord!</p>
           <p class="big-score" id="win-score">Puntos: 0</p>
+          <p class="win-unlock" id="win-unlock" style="display:none">🔓 ¡Nivel desbloqueado!</p>
           <p class="muted" id="win-detail"></p>
+          <p class="muted win-rewards" id="win-rewards"></p>
           <p class="muted" id="win-time"></p>
           <p class="muted" id="win-progress"></p>
           <button class="btn primary" id="btn-win-next">Siguiente nivel ▶</button>
@@ -218,20 +226,56 @@
         </div>
       </section>
 
-      <!-- 8. Game Over -->
+      <!-- 8. Sin vidas (Game Over + monetización) -->
       <section class="screen" id="screen-gameover">
         <div class="panel center">
           <div class="over-emoji" aria-hidden="true">🦴</div>
-          <h2 class="title small danger">Game Over</h2>
-          <p class="subtitle" id="over-motivate">¡Estuviste cerca! Los grandes exploradores nunca se rinden.</p>
+          <h2 class="title small danger">¡Sin vidas!</h2>
+          <p class="subtitle" id="over-motivate">¡Estuviste cerca! Sigue y conquista el tablero.</p>
           <p class="record-badge" id="over-record">🏅 ¡Nuevo récord!</p>
           <p class="big-score" id="over-score">Puntos: 0</p>
           <p class="muted" id="over-level">Nivel alcanzado: 1</p>
           <p class="muted" id="over-high">Mejor: 0</p>
-          <button class="btn primary" id="btn-over-retry">↻ Reintentar</button>
+          <div class="revive-box">
+            <p class="revive-title">¿Seguir jugando?</p>
+            <button class="btn primary" id="btn-over-video">📺 Ver vídeo · +3 vidas</button>
+            <button class="btn amber" id="btn-over-buylives">🛒 Comprar vidas</button>
+            <button class="btn" id="btn-over-continue" style="display:none">⏩ Continuar · banco: 0</button>
+          </div>
+          <button class="btn" id="btn-over-retry">↻ Reintentar (3 vidas)</button>
           <button class="btn ghost" id="btn-over-menu">Menú</button>
         </div>
       </section>
+
+      <!-- 8b. Vídeo recompensado (placeholder / SIMULACIÓN, sin anuncios reales) -->
+      <section class="screen" id="screen-adview">
+        <div class="panel center">
+          <p class="ad-tag">Simulación interna · sin anuncios reales</p>
+          <div class="ad-screen" aria-hidden="true">
+            <div class="ad-dino">🦖</div>
+            <div class="ad-bars"><span></span><span></span><span></span></div>
+          </div>
+          <h2 class="title small">📺 Vídeo recompensado</h2>
+          <p class="ad-countdown" id="ad-countdown">Recompensa en 3…</p>
+          <button class="btn ghost" id="btn-ad-cancel">Saltar (sin recompensa)</button>
+        </div>
+      </section>
+
+      <!-- 8c. Tienda de paquetes de vidas (compra SIMULADA) -->
+      <section class="screen" id="screen-lifepacks">
+        <div class="panel">
+          <h2 class="title small">🛒 Paquetes de vidas</h2>
+          <p class="muted center">Compra <strong>simulada</strong> (MVP) — aún sin pago real.</p>
+          <p class="shop-balance" id="lifepacks-bank">Banco de vidas: 0</p>
+          <div id="lifepacks-list" class="shop-list"></div>
+          <p class="shop-feedback" id="lifepacks-feedback"></p>
+          <button class="btn primary" id="btn-lifepacks-continue">⏩ Continuar con el banco</button>
+          <button class="btn ghost" id="btn-lifepacks-back">← Volver</button>
+        </div>
+      </section>
+
+      <!-- Capa de efectos flotantes (popups de puntos "+100"/"+500") -->
+      <div id="fx-layer" aria-hidden="true"></div>
 
       <!-- Mensaje de error de arranque (oculto por defecto) -->
       <div id="boot-error"></div>

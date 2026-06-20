@@ -2,6 +2,159 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.11.1] — 2026-06-20 — Fix crítico: la victoria se congelaba
+
+### Corregido
+- **Causa raíz:** en v0.11.0 se añadió un *aura de victoria* en `SceneManager.spawnCelebration`
+  usando `makeGlowTexture`, pero **no se importó** esa función en `SceneManager.js`. Al ganar,
+  `spawnCelebration` lanzaba `ReferenceError: makeGlowTexture is not defined` → la excepción
+  **mataba el bucle `requestAnimationFrame`** → el juego se quedaba congelado, sin dino de
+  celebración ni pantalla de victoria. (La derrota no usa esa función → el mono seguía bien.)
+  Los smoke-tests no lo detectaban porque no instancian WebGL/celebración.
+- **Solución:** importar `makeGlowTexture` en `SceneManager.js`.
+- **Blindaje (tolerancia a fallos):**
+  - `Game._startCelebration` envuelve la celebración en `try/catch`: aunque el visual falle,
+    el estado pasa a `celebrating` y se llega a la pantalla de victoria igualmente.
+  - `Game._loop` envuelve el frame en `try/catch`: un error puntual **ya no detiene** el
+    render loop (se registra y continúa).
+- **Regresión:** nuevo `tools/imports-check.mjs` (en `npm test`) verifica que toda función
+  de `textures.js` **usada** en un módulo esté **importada** → caza esta clase de error.
+
+### Verificado
+- Flujo de victoria: meta → física controlada → celebración → overlay → recompensas →
+  desbloqueo → continuar. `npm test` (con imports-check), `test:graph`, `test:visual`: verde.
+  **Mono de derrota, controles, música, tienda y progresión intactos.**
+
+## [0.11.0] — 2026-06-20 — Economía, mono burlón, dino de victoria y monetización mobile
+
+Iteración (5 ciclos internos) con foco **mobile-first**. Sin romper controles, música,
+tienda/canje, progresión ni inventario.
+
+### Economía (monedas = 1 punto · estrellas acumulables)
+- **Moneda: 100 → 1 punto.** Deja de inflar la puntuación.
+- **Estrella: ya no da puntos**; suma **+1 estrella de canje** (recurso acumulable para la
+  tienda). HUD y mensajes clarificados ("⭐ +1 de canje" vs "Puntos"). Ver `docs/economia.md`.
+- Costes de tienda revisados (2/3/4 ⭐) — equilibrados con ~12 ⭐ por recorrido; sin cambios.
+
+### Dino de victoria (más impacto)
+- **Emergencia con impacto**: overshoot al salir del hoyo, **polvo** al emerger, **primer
+  salto más alto** y **aura de victoria** brillante bajo el dino (late y se desvanece).
+- (Sobre las mejoras de v0.10.0: ojos con brillo, garras, cejas, fosas, materiales.)
+
+### Mono prehistórico burlón (al fallar)
+- Nuevo `src/effects/tauntMonkey.js`: al caer en **trampa** o salirte del tablero **sin
+  escudo**, aparece un instante un **simio primitivo** (dibujado en Canvas 2D) que se ríe
+  y se burla (bocadillo + meneo), con **risita** sintetizada, y desaparece solo (~1,5 s).
+  Es un overlay ligero: **no bloquea** el juego ni la pérdida de vida.
+
+### Monetización mobile (MVP conceptual, flujos SIMULADOS)
+- **Pantalla "¡Sin vidas!"** con opciones para seguir jugando:
+  **📺 Ver vídeo (+3 vidas)**, **🛒 Comprar vidas**, **⏩ Continuar (banco)**, Reintentar, Menú.
+- **Vídeo recompensado** placeholder (`screen-adview`): cuenta atrás → concede vidas →
+  continúa. Etiquetado "simulación · sin anuncios reales" (con opción Saltar).
+- **Tienda de packs de vidas** (`screen-lifepacks`): 5/15/50 con precios de muestra; compra
+  **simulada** que llena el **banco de vidas** (`localStorage.livesBank`).
+- Documentación completa en **`docs/monetizacion.md`** (modelo, arquitectura, integración
+  futura de ads/IAP y otras vías: cosméticos, retención/diario, pase jurásico).
+
+### Validado
+- `npm test`, `test:graph` (incl. `tauntMonkey.js`), `test:visual`, cross-check de IDs (60)
+  y CSS: verde. **Controles móviles, música, tienda, progresión e inventario intactos.**
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.10.0] — 2026-06-20 — Calidad visual: dinos, monedas, estrella, FX y sonido
+
+Iteración de calidad visual/audio centrada en el gameplay, **sin tocar** controles,
+música de fondo, tienda/inventario, progresión ni física.
+
+### Dinosaurios (modelos 3D de celebración y ptero)
+- **Más carácter y forma de dinosaurio**: ojos con **brillo especular**, **garras** en los
+  pies (3 uñas por pata), **cejas** y **fosas nasales** en T-Rex y Velociraptor, materiales
+  con leve *sheen* y realce de color (emisivo suave) bajo el tone mapping. Mantiene la
+  identidad por especie (no son el mismo recoloreado).
+- **Pterosaurio del rescate** rehecho: **alas membranosas** con hueso de borde, **cresta**
+  larga, **ojos** y cuerpo de dos tonos (lomo/vientre).
+
+### Monedas
+- Disco grueso con **relieve central** y **borde**, ligeramente inclinado para que **destelle
+  al girar**; **material dorado** mejor (metálico + emisivo cálido) y **aura** dorada en el
+  suelo. Animación idle de giro + flote + leve respiración del aura.
+
+### Estrella especial
+- Estrella de 5 puntas **extruida con bisel**, **emisivo intenso** y **aura** más grande y
+  brillante que la moneda; giro elegante. Se lee claramente como "más especial".
+
+### Efectos de recolección (FX)
+- **Popup de puntos flotante** "+100" / "+500" en la posición del coleccionable (proyección
+  3D→pantalla respetando la inclinación del tablero) en una nueva capa `#fx-layer`.
+- **Partículas**: ráfaga dorada al recoger la estrella (ya existía) + destello/aura.
+
+### Sonido (Web Audio sintetizado, sin copyright)
+- **Moneda**: "¡ding!" arcade **original** — dos notas ascendentes (Do6→Sol6) con leve *bend*
+  al alza; corto y satisfactorio. **No** reproduce el sonido protegido de ningún juego.
+- **Estrella**: arpegio ascendente de 4 notas + **chispa** final (más brillante y especial
+  que la moneda). Volumen balanceado, suena junto a la música; cada recogida crea sus
+  osciladores (sin duplicación); respeta el autoplay del navegador (suena tras gesto).
+
+### Sistema de pickups/FX/audio (breve)
+- `src/levels/collectibles.js` coloca monedas/estrella; `src/scene/collectibleArt.js` los
+  modela en 3D; `SceneManager` los anima, recoge (pop), proyecta a pantalla (`projectBoardPoint`)
+  y lanza partículas (`spawnBurst`); `Game._checkPickups` detecta la recogida, suma puntos,
+  persiste estrellas-token, muestra el popup (`_popPoints`) y dispara el sonido (`sfx.coin/starGet`).
+  Para **cambiar un sonido**: editar `src/effects/sfx.js`. Para el **aspecto** de moneda/estrella:
+  `src/scene/collectibleArt.js` + `makeGlowTexture` en `src/scene/textures.js`.
+
+### Rendimiento
+- Materiales emisivos y auras (planos con blending aditivo) son ligeros; las texturas de
+  brillo se **liberan** al cambiar de nivel (sin fugas). Apto para móvil.
+
+### Validado
+- `npm test`, `test:graph`, `test:visual` (incl. `makeGlowTexture` + construcción de
+  monedas/estrella/ptero/dinos), cross-check de IDs (56) y CSS: verde. **Controles móviles,
+  música, tienda, progresión e inventario intactos.**
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.9.0] — 2026-06-20 — Pulido profundo de pantallas (3 ciclos)
+
+Iteración de UX/visual en todas las pantallas, **sin tocar** controles móviles, música,
+progresión, tienda/inventario ni física.
+
+### Ciclo 1 — alto impacto
+- **Selector de niveles por MUNDOS**: 25 niveles agrupados en 5 mundos (Valle Jurásico,
+  Pantano Raptor, Cráter Volcánico, Ruinas Fósiles, Isla TREXo) con cabecera, estrellas por
+  mundo y candado; tarjetas con ✓ de completado.
+- **Preparación enriquecida**: muestra el **mundo**, las **monedas** del nivel y avisa si hay
+  **estrella especial** aquí.
+- **Selector de bola** con **personalidad** (frase breve por dino).
+- **Victoria**: recap de lo recogido (🪙 monedas, ⭐ estrella) y **mensaje de desbloqueo**
+  ("🔓 ¡Nivel X desbloqueado!").
+- **Game Over**: sugerencia de canje + botón **🛒 Ir a Canje**.
+- **Pausa**: resumen de **poderes activos** + botón **🛒 Canje**.
+- **HUD**: chip de **poderes activos** (🪨/🦅) cuando aplican.
+
+### Ciclo 2 — animaciones y feedback
+- **Feedback de compra** en la tienda animado (éxito en verde / falta en rojo) — corregido
+  un caso en que el mensaje se borraba al re-render.
+- **Partículas**: ráfaga dorada al recoger la **estrella** y al **ptero-rescate** (aterrizaje).
+- Hover con relieve en tarjetas de tienda, ✓ de nivel completado, realces al pulsar.
+
+### Ciclo 3 — QA visual / mobile
+- **HUD anti-saturación**: nombre de nivel truncado, gaps compactos; en pantallas muy
+  estrechas (<380px) se prioriza nivel/vidas/puntos/monedas (se oculta el tiempo).
+- **Anti-overflow**: nombres de mundo con elipsis; pantalla de niveles con scroll cómodo.
+- Objetivos táctiles ≥44px mantenidos; sin solapes con el tablero ni los controles.
+
+### Validado
+- `npm test`, `test:graph`, `test:visual`, cross-check de IDs (55) y balance CSS: verde.
+  **Controles móviles, música, progresión, tienda e inventario intactos.**
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
 ## [0.8.0] — 2026-06-19 — Recompensas: monedas, estrellas-token y Tienda de Canje
 
 ### Añadido — recompensas en el tablero

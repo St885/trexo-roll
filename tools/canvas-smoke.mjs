@@ -41,6 +41,7 @@ for (const b of BALLS) {
 await run('makeBoardTexture', () => tex.makeBoardTexture());
 await run('makeContactShadowTexture', () => tex.makeContactShadowTexture());
 await run('makeSkyTexture', () => tex.makeSkyTexture());
+await run('makeGlowTexture', () => tex.makeGlowTexture('#ffd86b'));
 
 console.log('\n[Fondos de bioma + suelo]');
 for (const theme of Object.keys(tex.THEMES)) {

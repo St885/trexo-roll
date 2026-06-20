@@ -2,7 +2,7 @@
 // del tablero. Aísla todo lo "3D" del resto del juego.
 
 import * as THREE from 'three';
-import { makeSkyTexture, makeContactShadowTexture, makeThemeSky, getTheme, makeGroundTexture } from './textures.js';
+import { makeSkyTexture, makeContactShadowTexture, makeThemeSky, getTheme, makeGroundTexture, makeGlowTexture } from './textures.js';
 import { buildBoard } from './BoardBuilder.js';
 import { buildDino, buildConfetti } from './CelebrationDino.js';
 import { makeCoin, makeStarToken, makeTrapCover, makePtero } from './collectibleArt.js';
@@ -52,6 +52,7 @@ export class SceneManager {
     this._collectibles = []; // {mesh, x, z, type, taken}
     this._pickFx = [];       // efectos "pop" al recoger
     this._ptero = null;      // estado del ptero-rescate
+    this._bursts = [];       // ráfagas de partículas (estrella, rescate)
 
     // Sombra de contacto bajo la bola (da sensación de peso y apoyo).
     this._contactShadow = new THREE.Mesh(
@@ -175,6 +176,7 @@ export class SceneManager {
     this._celebration = null; // sus objetos se liberan con el árbol del tablero
     this._collectibles = [];  // sus meshes colgaban del tablero (ya liberados)
     this._pickFx = [];
+    this._bursts = [];        // sus puntos colgaban del tablero (ya liberados)
     if (this._ptero) { this.scene.remove(this._ptero.group); disposeTree(this._ptero.group); this._ptero = null; }
   }
 
@@ -205,6 +207,16 @@ export class SceneManager {
     if (!c || c.taken) return;
     c.taken = true;
     this._pickFx.push({ mesh: c.mesh, t: 0, dur: 0.3 });
+  }
+
+  /** Ráfaga de partículas (confeti) en un punto del tablero. */
+  spawnBurst(x, y, z, colorHex) {
+    if (!this.boardGroup) return;
+    const { points, velocities } = buildConfetti(colorHex || '#ffd86b');
+    points.position.set(x, y, z);
+    points.frustumCulled = false;
+    this.boardGroup.add(points);
+    this._bursts.push({ points, velocities, t: 0 });
   }
 
   /** Tapa una trampa bloqueada con una piedra gris (se ve "apagada"). */
@@ -258,6 +270,7 @@ export class SceneManager {
       if (ball) ball.position.set(bx, by, bz);
       ptero.position.set(bx, by + 0.85, bz);
     } else if (t < OUT) {
+      if (!P.burstDone) { this.spawnBurst(P.safeX, PHYS.BALL_RADIUS + 0.3, P.safeZ, '#bfe3ff'); P.burstDone = true; }
       const p = (t - CARRY) / (OUT - CARRY);
       if (ball) ball.position.set(P.safeX, PHYS.BALL_RADIUS, P.safeZ);
       ptero.position.set(lerp(P.safeX, P.safeX + 5, p), lerp(PHYS.BALL_RADIUS + 0.85, 7, p), lerp(P.safeZ, P.safeZ - 5, p));
@@ -278,14 +291,25 @@ export class SceneManager {
     dino.position.set(x, -1.4, z);
     const { points, velocities } = buildConfetti(ballDef.dino);
     points.position.set(x, 0.6, z);
-    // Se añaden después del traverse de mountLevel: desactivar su culling aquí para
-    // que el dino y el confeti no se recorten al moverse durante la celebración.
+    // Aura de victoria: halo brillante bajo el dino (refuerza la presencia).
+    const aura = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.4, 3.4),
+      new THREE.MeshBasicMaterial({
+        map: makeGlowTexture('#ffe7a0'), transparent: true, depthWrite: false,
+        blending: THREE.AdditiveBlending, opacity: 0,
+      })
+    );
+    aura.rotation.x = -Math.PI / 2; aura.position.set(x, 0.04, z);
+    // Se añaden después del traverse de mountLevel: desactivar su culling aquí.
     dino.traverse((o) => { o.frustumCulled = false; });
-    points.frustumCulled = false;
+    points.frustumCulled = false; aura.frustumCulled = false;
     this.boardGroup.add(dino);
     this.boardGroup.add(points);
+    this.boardGroup.add(aura);
+    // Polvo al emerger del hoyo (impacto visual).
+    this.spawnBurst(x, 0.15, z, '#d8c39a');
     this._celebration = {
-      dino, points, velocities, t: 0, baseY: 0.0, baseX: x, baseZ: z,
+      dino, points, velocities, aura, t: 0, baseY: 0.0, baseX: x, baseZ: z,
       anim: dino.userData.anim, head: dino.userData.head, neck: dino.userData.neck,
       tail: dino.userData.tail, arms: dino.userData.arms || [],
     };
@@ -293,7 +317,8 @@ export class SceneManager {
 
   clearCelebration() {
     if (!this._celebration || !this.boardGroup) { this._celebration = null; return; }
-    for (const obj of [this._celebration.dino, this._celebration.points]) {
+    for (const obj of [this._celebration.dino, this._celebration.points, this._celebration.aura]) {
+      if (!obj) continue;
       this.boardGroup.remove(obj);
       disposeTree(obj);
     }
@@ -307,16 +332,25 @@ export class SceneManager {
     const t = c.t;
     const d = c.dino;
 
-    // Salida del hoyo (0–0.4 s) y luego saltitos.
+    // Salida del hoyo (0–0.4 s) con overshoot, y luego saltitos (primer salto fuerte).
     let y = c.baseY;
     if (t < 0.4) {
-      y = -1.4 + (c.baseY + 1.4) * (1 - Math.pow(1 - t / 0.4, 3));
+      const e = 1 - Math.pow(1 - t / 0.4, 3);
+      y = -1.4 + (c.baseY + 1.4) * e + Math.sin(e * Math.PI) * 0.35; // overshoot = impacto
     } else {
       const hop = c.anim === 'neck' ? 0.12 : 0.3; // el braquiosaurio salta menos
-      y = c.baseY + Math.abs(Math.sin((t - 0.4) * 7)) * hop;
+      const boost = t < 0.95 ? 1.7 : 1; // primer salto más alto
+      y = c.baseY + Math.abs(Math.sin((t - 0.4) * 7)) * hop * boost;
     }
     d.position.set(c.baseX, y, c.baseZ);
     d.rotation.set(0, d.rotation.y + dt * 1.2, 0); // giro base lento
+
+    // Aura de victoria: aparece, late y se desvanece al final.
+    if (c.aura) {
+      const fade = t < 1.3 ? Math.min(1, t * 3) : Math.max(0, (1.7 - t) / 0.4);
+      c.aura.material.opacity = 0.8 * fade * (0.75 + 0.25 * Math.sin(t * 6));
+      c.aura.scale.setScalar(1 + 0.12 * Math.sin(t * 4));
+    }
 
     // Animación específica de la especie.
     if (t > 0.4) {
@@ -404,12 +438,13 @@ export class SceneManager {
     }
     if (this._celebration) this._animateCelebration(dt);
 
-    // Coleccionables: giro suave + flote.
+    // Coleccionables: giro suave + flote + respiración del aura.
     for (const c of this._collectibles) {
       if (c.taken) continue;
       c.mesh.rotation.y += dt * (c.type === 'star' ? 1.9 : 2.6);
       const baseY = c.type === 'star' ? 0.64 : 0.55;
       c.mesh.position.y = baseY + Math.sin(this._t * 3 + c.x) * 0.08;
+      c.mesh.scale.setScalar(1 + Math.sin(this._t * 4 + c.x) * (c.type === 'star' ? 0.06 : 0.045));
     }
     // Efecto "pop" al recoger: crece, sube y desaparece.
     for (let i = this._pickFx.length - 1; i >= 0; i--) {
@@ -427,6 +462,26 @@ export class SceneManager {
     }
     // Ptero-rescate (escudo de caída).
     if (this._ptero) this._animatePtero(dt);
+
+    // Ráfagas de partículas (estrella, rescate): caen con gravedad y se desvanecen.
+    for (let i = this._bursts.length - 1; i >= 0; i--) {
+      const b = this._bursts[i];
+      b.t += dt;
+      const pos = b.points.geometry.attributes.position;
+      for (let j = 0; j < pos.count; j++) {
+        b.velocities[j * 3 + 1] -= 6 * dt;
+        pos.setX(j, pos.getX(j) + b.velocities[j * 3] * dt);
+        pos.setY(j, pos.getY(j) + b.velocities[j * 3 + 1] * dt);
+        pos.setZ(j, pos.getZ(j) + b.velocities[j * 3 + 2] * dt);
+      }
+      pos.needsUpdate = true;
+      b.points.material.opacity = Math.max(0, 1 - b.t / 1.2);
+      if (b.t >= 1.2) {
+        if (this.boardGroup) this.boardGroup.remove(b.points);
+        disposeTree(b.points);
+        this._bursts.splice(i, 1);
+      }
+    }
 
     // La sombra de contacto sigue a la bola y se atenúa cuando la bola se hunde/cae.
     if (this._ballMesh && this._contactShadow.parent) {
@@ -466,7 +521,21 @@ export class SceneManager {
     this.camera.updateProjectionMatrix();
     if (this._bounds) this._frame(this._bounds); // reencuadrar al rotar/redimensionar
   }
+
+  /** Proyecta un punto del PLANO del tablero (local) a píxeles de pantalla. */
+  projectBoardPoint(x, z, y = 0.6) {
+    if (!this.boardGroup) return { visible: false, x: 0, y: 0 };
+    _tmpVec.set(x, y, z);
+    this.boardGroup.localToWorld(_tmpVec); // respeta la inclinación del tablero
+    _tmpVec.project(this.camera);
+    const el = this.renderer.domElement;
+    const w = el.clientWidth || window.innerWidth;
+    const h = el.clientHeight || window.innerHeight;
+    return { visible: _tmpVec.z < 1, x: (_tmpVec.x * 0.5 + 0.5) * w, y: (-_tmpVec.y * 0.5 + 0.5) * h };
+  }
 }
+
+const _tmpVec = new THREE.Vector3();
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);

@@ -7,8 +7,9 @@
 import { isInsideFootprint, footprintBounds } from '../physics/footprint.js';
 
 export const PICKUP_RADIUS = 0.95; // distancia centro-bola ↔ centro-objeto para recoger
-export const COIN_POINTS = 100;
-export const STAR_POINTS = 500;
+// Economía: una moneda = 1 PUNTO de puntuación. La estrella NO da puntos; suma 1 al
+// recurso ACUMULABLE (estrella de canje) que se gasta en la Tienda de Canje.
+export const COIN_POINTS = 1;
 
 /** ¿Es (x,z) un sitio válido y "limpio" para un coleccionable? */
 function isValidSpot(level, x, z, placed) {

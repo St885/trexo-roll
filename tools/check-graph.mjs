@@ -27,6 +27,7 @@ const modules = [
   '../src/levels/collectibles.js',
   '../src/effects/sfx.js',
   '../src/effects/music.js',
+  '../src/effects/tauntMonkey.js',
   '../src/ui/hud.js',
   '../src/scene/textures.js',
   '../src/scene/decor.js',

@@ -56,6 +56,8 @@ export const SCREENS = {
   PAUSE: 'screen-pause',
   WIN: 'screen-win',
   GAMEOVER: 'screen-gameover',
+  ADVIEW: 'screen-adview',     // vídeo recompensado (placeholder/simulación)
+  LIFEPACKS: 'screen-lifepacks', // tienda de paquetes de vidas
 };
 
 export const STORAGE_KEY = 'trexoroll.save.v1';

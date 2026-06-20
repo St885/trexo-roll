@@ -383,6 +383,25 @@ export function makeGroundTexture(name) {
   return tex;
 }
 
+/** Aura/halo radial (brillo) para monedas y estrella. Pensado para blending aditivo. */
+export function makeGlowTexture(colorHex = '#ffd86b') {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const n = parseInt((colorHex || '#ffd86b').slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 2, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
+  grad.addColorStop(0.45, `rgba(${r},${g},${b},0.35)`);
+  grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /** Cielo jurásico: degradado vertical cálido. Devuelve una THREE.Texture para fondo. */
 export function makeSkyTexture() {
   const w = 16, h = 256;

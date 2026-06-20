@@ -12,6 +12,7 @@ function refs() {
     time: document.getElementById('hud-time'),
     score: document.getElementById('hud-score'),
     coins: document.getElementById('hud-coins'),
+    powers: document.getElementById('hud-powers'),
     toast: document.getElementById('hud-toast'),
     hint: document.getElementById('hud-hint'),
     flash: document.getElementById('flash'),
@@ -46,6 +47,18 @@ export function setCoins(n) {
     r.coins.classList.remove('pop');
     void r.coins.offsetWidth; // reinicia la animación
     r.coins.classList.add('pop');
+  }
+}
+
+/** Muestra los poderes activos del nivel (array de iconos). Oculta el chip si vacío. */
+export function setPowers(icons) {
+  const r = refs();
+  if (!r.powers) return;
+  if (icons && icons.length) {
+    r.powers.textContent = icons.join(' ');
+    r.powers.style.display = '';
+  } else {
+    r.powers.style.display = 'none';
   }
 }
 

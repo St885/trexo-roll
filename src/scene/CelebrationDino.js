@@ -6,30 +6,59 @@ import * as THREE from 'three';
 import { getDino } from '../data/dinos.js';
 
 function makeMats(ballDef) {
+  const skinColor = new THREE.Color(ballDef.dino);
   return {
-    skin: new THREE.MeshStandardMaterial({ color: new THREE.Color(ballDef.dino), roughness: 0.6 }),
-    belly: new THREE.MeshStandardMaterial({ color: new THREE.Color(ballDef.dino).lerp(new THREE.Color('#ffffff'), 0.4), roughness: 0.6 }),
+    // Piel un poco más lisa (sheen sutil) y con leve realce de color bajo el tone mapping.
+    skin: new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.5, metalness: 0.04, emissive: skinColor.clone().multiplyScalar(0.12), emissiveIntensity: 0.5 }),
+    belly: new THREE.MeshStandardMaterial({ color: skinColor.clone().lerp(new THREE.Color('#ffffff'), 0.42), roughness: 0.55 }),
     dark: new THREE.MeshStandardMaterial({ color: new THREE.Color(ballDef.dark), roughness: 0.5 }),
-    white: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }),
+    white: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 }),
+    claw: new THREE.MeshStandardMaterial({ color: 0xf2ead2, roughness: 0.5 }),
   };
 }
 
 function leg(mats, x, z, h = 0.42, r = 0.15) {
   const g = new THREE.Group();
-  const l = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.85, h, 8), mats.skin);
+  const l = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.85, h, 10), mats.skin);
   l.position.y = h / 2; l.castShadow = true; g.add(l);
-  const foot = new THREE.Mesh(new THREE.SphereGeometry(r * 1.15, 10, 8), mats.skin);
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(r * 1.15, 12, 10), mats.skin);
   foot.scale.set(1.2, 0.5, 1.6); foot.position.set(0, 0.02, r * 0.7); g.add(foot);
+  // Garras: tres uñas claras al frente del pie (más forma de dinosaurio).
+  for (const cx of [-0.55, 0, 0.55]) {
+    const claw = new THREE.Mesh(new THREE.ConeGeometry(r * 0.18, r * 0.5, 6), mats.claw);
+    claw.rotation.x = Math.PI / 2.4;
+    claw.position.set(cx * r, 0.0, r * 1.5);
+    g.add(claw);
+  }
   g.position.set(x, 0, z);
   return g;
 }
 
 function addEyes(head, mats, z, y, spread, r) {
   for (const sx of [-spread, spread]) {
-    const w = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 10), mats.white);
+    const w = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12), mats.white);
     w.position.set(sx, y, z); head.add(w);
-    const p = new THREE.Mesh(new THREE.SphereGeometry(r * 0.5, 8, 8), mats.dark);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(r * 0.5, 10, 10), mats.dark);
     p.position.set(sx, y, z + r * 0.6); head.add(p);
+    // Brillo especular (chispa) que da vida a la mirada.
+    const hi = new THREE.Mesh(new THREE.SphereGeometry(r * 0.2, 6, 6), mats.white);
+    hi.position.set(sx + r * 0.22, y + r * 0.25, z + r * 0.72); head.add(hi);
+  }
+}
+
+/** Cresta/ceja sobre los ojos: da carácter (depredadores). */
+function addBrow(head, mats, z, y, spread, w = 0.14) {
+  for (const sx of [-spread, spread]) {
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, 0.16), mats.dark);
+    brow.position.set(sx, y, z); brow.rotation.z = sx < 0 ? 0.2 : -0.2; head.add(brow);
+  }
+}
+
+/** Fosas nasales en el hocico. */
+function addNostrils(head, mats, z, y, spread, r = 0.03) {
+  for (const sx of [-spread, spread]) {
+    const n = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), mats.dark);
+    n.position.set(sx, y, z); head.add(n);
   }
 }
 
@@ -80,6 +109,8 @@ function buildTRex(mats) {
     t.rotation.x = Math.PI; t.position.set(-0.16 + i * 0.1, -0.04, 0.66); head.add(t);
   }
   addEyes(head, mats, 0.34, 0.18, 0.18, 0.08);
+  addBrow(head, mats, 0.36, 0.31, 0.18, 0.16);
+  addNostrils(head, mats, 0.68, 0.04, 0.07);
   return { group, head, tail, arms };
 }
 
@@ -98,6 +129,8 @@ function buildRaptor(mats) {
   const snout = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.42, 8), mats.skin);
   snout.rotation.x = Math.PI * 0.5; snout.position.set(0, -0.02, 0.32); head.add(snout);
   addEyes(head, mats, 0.2, 0.07, 0.12, 0.06);
+  addBrow(head, mats, 0.22, 0.16, 0.12, 0.11);
+  addNostrils(head, mats, 0.46, 0.0, 0.05, 0.025);
   const arms = [];
   for (const sx of [-0.28, 0.28]) {
     const a = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.18, 4, 8), mats.skin);

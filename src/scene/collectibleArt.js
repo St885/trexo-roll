@@ -1,53 +1,88 @@
 // collectibleArt.js — Modelos 3D procedurales de las recompensas: moneda dorada,
 // estrella-token, el pterosaurio del "escudo de caída" y la tapa de trampa
-// bloqueada. Todo con primitivas de Three.js (sin assets externos).
+// bloqueada. Todo con primitivas de Three.js (sin assets externos). Pensado para
+// leerse claro desde la cámara cenital y con buen rendimiento en móvil.
 
 import * as THREE from 'three';
+import { makeGlowTexture } from './textures.js';
 
-const COIN_MAT = new THREE.MeshStandardMaterial({
-  color: 0xffcf3f, metalness: 0.65, roughness: 0.28,
-  emissive: 0x6b4a00, emissiveIntensity: 0.4,
-});
-COIN_MAT.userData.shared = true;
-const COIN_RIM = new THREE.MeshStandardMaterial({ color: 0xb5791f, metalness: 0.6, roughness: 0.4 });
-COIN_RIM.userData.shared = true;
+// --- Materiales compartidos (no se liberan al cambiar de nivel) -------------
+const COIN_MAT = shared(new THREE.MeshStandardMaterial({
+  color: 0xffd24a, metalness: 0.85, roughness: 0.22,
+  emissive: 0x7a5200, emissiveIntensity: 0.45,
+}));
+const COIN_FACE = shared(new THREE.MeshStandardMaterial({
+  color: 0xffe27a, metalness: 0.8, roughness: 0.25, emissive: 0x6b4a00, emissiveIntensity: 0.3,
+}));
+const COIN_RIM = shared(new THREE.MeshStandardMaterial({ color: 0xc8861f, metalness: 0.75, roughness: 0.35 }));
+const STAR_MAT = shared(new THREE.MeshStandardMaterial({
+  color: 0xffe46a, metalness: 0.45, roughness: 0.2, emissive: 0xffb000, emissiveIntensity: 0.7,
+}));
+const COVER_MAT = shared(new THREE.MeshStandardMaterial({ color: 0x7d7d76, roughness: 1 }));
 
-const STAR_MAT = new THREE.MeshStandardMaterial({
-  color: 0xffe26a, metalness: 0.4, roughness: 0.25,
-  emissive: 0xffae00, emissiveIntensity: 0.55,
-});
-STAR_MAT.userData.shared = true;
+function shared(mat) { mat.userData.shared = true; return mat; }
 
-const COVER_MAT = new THREE.MeshStandardMaterial({ color: 0x7d7d76, roughness: 1 });
-COVER_MAT.userData.shared = true;
-
-/** Moneda dorada: disco grueso ligeramente inclinado, con borde. Gira y brilla. */
-export function makeCoin() {
-  const g = new THREE.Group();
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.12, 22), COIN_MAT);
-  disc.castShadow = true;
-  g.add(disc);
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 22), COIN_RIM);
-  rim.rotation.x = Math.PI / 2;
-  g.add(rim);
-  g.rotation.x = 0.5; // ligeramente inclinada para que se vea la cara desde arriba
-  g.userData.spin = true;
-  return g;
+function glowMesh(colorHex, size) {
+  const mat = new THREE.MeshBasicMaterial({
+    map: makeGlowTexture(colorHex), transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, opacity: 0.9,
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
+  m.rotation.x = -Math.PI / 2; // tumbado sobre el tablero (halo)
+  return m;
 }
 
-/** Estrella-token: estrella de 5 puntas extruida, dorada y brillante. Más vistosa. */
+/**
+ * Moneda dorada: disco grueso con relieve y borde, ligeramente inclinado para que
+ * "destelle" al girar, con un aura dorada en el suelo. Gira sobre Y (lo anima la escena).
+ */
+export function makeCoin() {
+  const group = new THREE.Group();
+
+  const pivot = new THREE.Group();
+  pivot.rotation.x = 0.5; // inclinación: la cara capta luz y se ve girar
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.14, 28), COIN_MAT);
+  disc.castShadow = true;
+  pivot.add(disc);
+  const boss = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.17, 22), COIN_FACE);
+  pivot.add(boss); // relieve central
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.06, 10, 28), COIN_RIM);
+  rim.rotation.x = Math.PI / 2;
+  pivot.add(rim);
+  group.add(pivot);
+
+  const glow = glowMesh('#ffd86b', 1.35);
+  glow.position.y = -0.5; // se apoya como halo en el tablero
+  group.add(glow);
+
+  group.userData.spin = true;
+  return group;
+}
+
+/**
+ * Estrella-token: estrella de 5 puntas extruida con bisel, dorada e intensa, con un
+ * aura más grande y brillante que la moneda. Gira sobre Y con elegancia.
+ */
 export function makeStarToken() {
-  const shape = starShape(0.5, 0.22, 5);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.14, bevelEnabled: false });
+  const group = new THREE.Group();
+
+  const shape = starShape(0.52, 0.23, 5);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.13, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2,
+  });
   geo.center();
   const star = new THREE.Mesh(geo, STAR_MAT);
   star.castShadow = true;
-  const g = new THREE.Group();
-  star.rotation.x = -Math.PI / 2; // tumbada: se ve la estrella desde la cámara cenital
-  g.add(star);
-  g.userData.spin = true;
-  g.userData.star = true;
-  return g;
+  star.rotation.x = -Math.PI / 2; // tumbada: se lee la estrella desde la cámara cenital
+  group.add(star);
+
+  const glow = glowMesh('#ffe26a', 1.9);
+  glow.position.y = -0.5;
+  group.add(glow);
+
+  group.userData.spin = true;
+  group.userData.star = true;
+  return group;
 }
 
 /** Tapa gris para una trampa bloqueada (piedra plana con aro): se ve "apagada". */
@@ -63,47 +98,67 @@ export function makeTrapCover(radius) {
   return g;
 }
 
-/** Pterosaurio simple (no ave): cuerpo, cabeza con pico y cresta, y dos alas
- *  membranosas que pueden aletear. userData.wings = [izq, der]. */
+/**
+ * Pterosaurio (no ave): cuerpo, cabeza con pico y cresta larga, ojos, y dos alas
+ * membranosas con hueso de borde. userData.wings = [izq, der] para aletear.
+ */
 export function makePtero(colorHex = '#8a5a3a') {
-  const skin = new THREE.MeshStandardMaterial({ color: new THREE.Color(colorHex), roughness: 0.7 });
+  const base = new THREE.Color(colorHex);
+  const skin = new THREE.MeshStandardMaterial({ color: base, roughness: 0.7 });
+  const belly = new THREE.MeshStandardMaterial({ color: base.clone().lerp(new THREE.Color('#ffffff'), 0.35), roughness: 0.7 });
   const wingMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(colorHex).lerp(new THREE.Color('#2b1c12'), 0.25),
-    roughness: 0.8, side: THREE.DoubleSide,
+    color: base.clone().lerp(new THREE.Color('#2b1c12'), 0.3), roughness: 0.85, side: THREE.DoubleSide,
   });
-  const beakMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.6 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x2a1d12, roughness: 0.6 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
 
   const g = new THREE.Group();
 
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.5, 6, 10), skin);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.5, 6, 12), skin);
   body.rotation.x = Math.PI / 2; body.castShadow = true; g.add(body);
+  const chest = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), belly);
+  chest.scale.set(0.9, 0.8, 1.1); chest.position.set(0, -0.04, 0.18); g.add(chest);
 
-  // Cabeza adelante (+z) con pico largo y cresta hacia atrás (rasgos de pterosaurio).
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), skin);
-  head.position.set(0, 0.05, 0.42); g.add(head);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.4, 8), beakMat);
-  beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.04, 0.68); g.add(beak);
-  const crest = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.3, 6), skin);
-  crest.rotation.x = -Math.PI * 0.7; crest.position.set(0, 0.18, 0.34); g.add(crest);
+  // Cabeza, pico largo y cresta (rasgos de pterosaurio).
+  const head = new THREE.Group(); head.position.set(0, 0.05, 0.42); g.add(head);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), skin);
+  skull.scale.set(1, 0.95, 1.15); head.add(skull);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.46, 10), dark);
+  beak.rotation.x = Math.PI / 2; beak.position.set(0, -0.01, 0.3); head.add(beak);
+  const crest = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.4, 8), skin);
+  crest.rotation.x = -Math.PI * 0.72; crest.position.set(0, 0.16, -0.06); head.add(crest);
+  // Ojos con brillo.
+  for (const sx of [-0.09, 0.09]) {
+    const w = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), white);
+    w.position.set(sx, 0.04, 0.08); head.add(w);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 8), dark);
+    p.position.set(sx, 0.04, 0.11); head.add(p);
+  }
 
-  // Alas membranosas: triángulos finos a cada lado, pivotando en el "hombro".
+  // Alas membranosas con hueso de borde (pivotan en el hombro).
   const wings = [];
   for (const side of [-1, 1]) {
     const wing = new THREE.Group();
-    const tri = new THREE.Shape();
-    tri.moveTo(0, 0); tri.lineTo(1.1, 0.15); tri.lineTo(0.95, -0.25); tri.closePath();
-    const wgeo = new THREE.ExtrudeGeometry(tri, { depth: 0.02, bevelEnabled: false });
+    const membrane = new THREE.Shape();
+    membrane.moveTo(0, 0.06);
+    membrane.quadraticCurveTo(0.7, 0.22, 1.18, 0.12);
+    membrane.quadraticCurveTo(0.8, -0.06, 0.55, -0.22);
+    membrane.quadraticCurveTo(0.25, -0.12, 0, -0.04);
+    membrane.closePath();
+    const wgeo = new THREE.ExtrudeGeometry(membrane, { depth: 0.015, bevelEnabled: false });
     const wmesh = new THREE.Mesh(wgeo, wingMat);
-    wmesh.scale.x = side; // espejo para el ala derecha
+    wmesh.scale.x = side;
     wing.add(wmesh);
-    wing.position.set(side * 0.12, 0.05, 0.05);
+    // Hueso del borde de ataque.
+    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.012, 1.2, 6), skin);
+    bone.rotation.z = Math.PI / 2; bone.position.set(side * 0.6, 0.09, 0); wing.add(bone);
+    wing.position.set(side * 0.12, 0.06, 0.04);
     g.add(wing);
     wings.push(wing);
   }
 
-  const legMat = beakMat;
   for (const side of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.02, 0.28, 6), legMat);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.02, 0.28, 6), dark);
     leg.position.set(side * 0.08, -0.16, -0.05); g.add(leg);
   }
 

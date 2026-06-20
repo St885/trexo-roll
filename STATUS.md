@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.8.0 — Recompensas (monedas + estrellas-token) y Tienda de Canje |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.8.0) · monedas/estrellas en niveles, tienda de canje y 3 potenciadores (vida extra, bloqueo de trampa, escudo de caída con ptero-rescate) en producción |
+| **Versión** | 0.11.1 — Fix: la victoria se congelaba (import faltante) — v0.8.0 en producción; 0.9.0→0.11.1 sin push aún |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.8.0) · 🛠️ v0.11.1 corrige el congelamiento al ganar (+ blindaje del bucle y check de imports); economía/mono/dino/monetización de v0.11.0 — lista para probar local (sin push) |
 | **Fecha** | 2026-06-19 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
