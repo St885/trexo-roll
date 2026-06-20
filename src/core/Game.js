@@ -15,6 +15,7 @@ import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
 import { music } from '../effects/music.js';
 import { showTaunt } from '../effects/tauntMonkey.js';
+import { t, tf, getLang, setLang, applyTranslations, onLangChange } from '../utils/i18n.js';
 import { makeBallThumbnail } from '../scene/textures.js';
 import {
   getHighScore, setHighScore, getUnlocked, unlockLevel,
@@ -48,7 +49,21 @@ const WORLDS = [
   { name: 'Isla TREXo',       emoji: '🏝️' },
 ];
 const worldOf = (index) => WORLDS[Math.min(WORLDS.length - 1, Math.floor(index / 5))];
+const worldIdx = (index) => Math.min(WORLDS.length - 1, Math.floor(index / 5));
 const worldNum = (index) => Math.min(WORLDS.length, Math.floor(index / 5) + 1);
+
+// Accesores de contenido traducible: en EN usan el diccionario; en ES caen al texto
+// original (de los datos) para no duplicar el español.
+const tLevelName = (lvl) => t('lvl.' + lvl.id + '.name', lvl.name);
+const tLevelHint = (lvl) => t('lvl.' + lvl.id + '.hint', lvl.hint);
+const tTier = (tier) => t('tier.' + tier, tier);
+const tWorldName = (i) => t('world.' + i, WORLDS[i].name);
+const tBallLabel = (def) => t('ball.' + def.id + '.label', def.label || def.name);
+const tBallColor = (def) => t('ball.' + def.id + '.name', def.name);
+const tBallBlurb = (def) => t('ball.' + def.id + '.blurb', def.blurb);
+const tDinoName = (species) => t('dino.' + species, getDino(species).name);
+const tShopName = (item) => t('pwr.' + item.key + '.name', item.name);
+const tShopDesc = (item) => t('pwr.' + item.key + '.desc', item.desc);
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -96,6 +111,8 @@ export class Game {
     this._pendingFallShield = false;// armar escudo de caída al empezar
 
     this._wireUI();
+    // Al cambiar de idioma: traducir el DOM estático y refrescar lo dinámico.
+    onLangChange(() => this._onLangChanged());
     window.addEventListener('resize', () => { this.scene.resize(); this.input.refresh(); });
     // Al rotar el móvil el layout tarda un instante en estabilizarse.
     window.addEventListener('orientationchange', () => setTimeout(() => { this.scene.resize(); this.input.refresh(); }, 200));
@@ -108,10 +125,44 @@ export class Game {
   }
 
   start() {
+    applyTranslations();        // traduce el DOM al idioma guardado (ES por defecto)
+    this._syncLangButtons();
+    this._syncSoundLabels();
     this._updateHighScoreLabels();
     this._updateBallPreviews();
     this.screens.show(SCREENS.LANDING);
     requestAnimationFrame(this._loop);
+  }
+
+  /** Tras cambiar de idioma: re-traduce estáticos y refresca textos dinámicos. */
+  _onLangChanged() {
+    applyTranslations();
+    this._syncLangButtons();
+    this._syncSoundLabels();
+    this._updateHighScoreLabels();
+    this._updateBallPreviews();
+    this._updateMenuProgress();
+    if (this.screens.isActive(SCREENS.BALLS)) this._renderBallCards();
+    if (this.screens.isActive(SCREENS.LEVELS)) this._renderLevelCards();
+    if (this.screens.isActive(SCREENS.SHOP)) this._renderShop();
+    if (this.screens.isActive(SCREENS.LIFEPACKS)) this._renderLifePacks();
+    if (this.screens.isActive(SCREENS.PREP)) this._showPrep();
+  }
+
+  _syncLangButtons() {
+    const cur = getLang();
+    for (const id of ['btn-lang-es', 'btn-lang-en']) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', el.dataset.lang === cur);
+    }
+  }
+
+  _syncSoundLabels() {
+    const label = this.muted ? t('sound.off') : t('sound.on');
+    for (const id of ['btn-sound', 'btn-pause-sound']) {
+      const btn = document.getElementById(id);
+      if (btn) btn.textContent = label;
+    }
   }
 
   // --- Cableado de la interfaz ---------------------------------------------
@@ -119,6 +170,8 @@ export class Game {
     const click = (id, fn) => this.screens.onClick(id, () => { sfx.click(); fn(); });
 
     click('btn-enter', () => this._showMenu());
+    click('btn-lang-es', () => setLang('es'));
+    click('btn-lang-en', () => setLang('en'));
     click('btn-continue', () => this._continueRun());
     click('btn-play', () => this._newRun());
     click('btn-balls', () => this._showBalls());
@@ -180,12 +233,12 @@ export class Game {
     const pct = Math.round((total / MAX_STARS) * 100);
     const fill = document.getElementById('menu-progress-fill');
     if (fill) fill.style.width = pct + '%';
-    setText('menu-progress-label', `⭐ ${total}/${MAX_STARS}  ·  Nivel ${unlocked}/${LEVELS.length} desbloqueado`);
+    setText('menu-progress-label', tf('menu.progressLabel', total, MAX_STARS, unlocked, LEVELS.length));
     const hasProgress = unlocked > 1 || getLastLevel() > 1 || total > 0;
     const cont = document.getElementById('btn-continue');
     if (cont) cont.style.display = hasProgress ? 'block' : 'none';
     const shopBtn = document.getElementById('btn-shop');
-    if (shopBtn) shopBtn.textContent = `🛒 Canje · ⭐ ${getStarTokens()}`;
+    if (shopBtn) shopBtn.textContent = tf('menu.shopBtn', getStarTokens());
   }
 
   /** "Continuar": empieza en el último nivel jugado (o el más avanzado desbloqueado). */
@@ -205,11 +258,7 @@ export class Game {
     sfx.setMuted(this.muted);
     music.setMuted(this.muted);
     if (!this.muted && !music.isPlaying()) music.start();
-    const label = this.muted ? '🔇 Sonido: OFF' : '🔊 Sonido: ON';
-    for (const id of ['btn-sound', 'btn-pause-sound']) {
-      const btn = document.getElementById(id);
-      if (btn) btn.textContent = label;
-    }
+    this._syncSoundLabels();
   }
 
   /** Pantalla completa (Android/desktop). En iOS Safari no siempre es posible. */
@@ -231,7 +280,7 @@ export class Game {
     const stars = getTotalStars();
     for (const id of ['menu-highscore', 'landing-highscore']) {
       const el = document.getElementById(id);
-      if (el) el.textContent = `Mejor: ${hs}  ·  ⭐ ${stars}/${MAX_STARS}`;
+      if (el) el.textContent = tf('best.label', hs, stars, MAX_STARS);
     }
   }
 
@@ -255,9 +304,9 @@ export class Game {
         card.innerHTML =
           `<div class="shop-icon" aria-hidden="true">${item.icon}</div>` +
           '<div class="shop-info">' +
-            `<span class="shop-name">${item.name}</span>` +
-            `<span class="shop-desc">${item.desc}</span>` +
-            `<span class="shop-owned">Tienes: <b>${owned}</b></span>` +
+            `<span class="shop-name">${tShopName(item)}</span>` +
+            `<span class="shop-desc">${tShopDesc(item)}</span>` +
+            `<span class="shop-owned">${t('shop.owned')} <b>${owned}</b></span>` +
           '</div>' +
           `<button class="btn tiny shop-buy" data-key="${item.key}">⭐ ${item.cost}</button>`;
         const buyBtn = card.querySelector('.shop-buy');
@@ -279,7 +328,7 @@ export class Game {
     if (fb) {
       fb.className = 'shop-feedback';
       void fb.offsetWidth; // reinicia la animación
-      fb.textContent = bought ? `✅ ¡${item.name} comprado!` : `❌ Te faltan estrellas (necesitas ⭐ ${item.cost}).`;
+      fb.textContent = bought ? tf('shop.boughtOk', tShopName(item)) : tf('shop.notEnough', item.cost);
       fb.classList.add('show', bought ? 'ok' : 'bad');
     }
   }
@@ -302,16 +351,16 @@ export class Game {
       card.appendChild(thumb);
       const name = document.createElement('span');
       name.className = 'ball-name';
-      name.textContent = def.label || def.name;
+      name.textContent = tBallLabel(def);
       card.appendChild(name);
       const dino = document.createElement('span');
       dino.className = 'ball-dino';
-      dino.textContent = `${getDino(def.species).name} · ${def.name}`;
+      dino.textContent = `${tDinoName(def.species)} · ${tBallColor(def)}`;
       card.appendChild(dino);
       if (def.blurb) {
         const blurb = document.createElement('span');
         blurb.className = 'ball-blurb';
-        blurb.textContent = def.blurb;
+        blurb.textContent = tBallBlurb(def);
         card.appendChild(blurb);
       }
       card.addEventListener('click', () => this._selectBall(def.id));
@@ -332,7 +381,7 @@ export class Game {
     const def = getBall(this.selectedBall);
     setThumb('menu-ball', def, 56);
     setThumb('prep-ball', def, 64);
-    setText('prep-ball-name', `${def.label || def.name} · ${getDino(def.species).name}`);
+    setText('prep-ball-name', `${tBallLabel(def)} · ${tDinoName(def.species)}`);
   }
 
   /** Cambia rápidamente a la siguiente bola sin salir de la preparación. */
@@ -363,8 +412,8 @@ export class Game {
       header.className = 'world-header' + (worldUnlocked ? '' : ' locked');
       header.innerHTML =
         `<span class="world-emoji" aria-hidden="true">${world.emoji}</span>` +
-        `<span class="world-name">Mundo ${w + 1} · ${world.name}</span>` +
-        `<span class="world-stars">${worldUnlocked ? `⭐ ${earned}/${max}` : '🔒'}</span>`;
+        `<span class="world-name">${tf('prep.world', w + 1, tWorldName(w))}</span>` +
+        `<span class="world-stars">${worldUnlocked ? tf('levels.worldStars', earned, max) : '🔒'}</span>`;
       list.appendChild(header);
 
       const grid = document.createElement('div');
@@ -380,7 +429,7 @@ export class Game {
         btn.disabled = locked;
         btn.innerHTML =
           `<span class="level-num">${i + 1}</span>` +
-          `<span class="level-card-name">${lvl.name}</span>` +
+          `<span class="level-card-name">${tLevelName(lvl)}</span>` +
           (locked
             ? '<span class="level-lock">🔒</span>'
             : `<span class="level-stars">${starString(stars)}</span>`);
@@ -410,16 +459,16 @@ export class Game {
   _showPrep() {
     const lvl = getLevel(this.levelIndex);
     const w = worldOf(this.levelIndex);
-    setText('prep-world', `${w.emoji} Mundo ${worldNum(this.levelIndex)} · ${w.name}`);
-    setText('prep-level', `Nivel ${this.levelIndex + 1}: ${lvl.name}`);
-    setText('prep-tier', lvl.tier || '');
+    setText('prep-world', `${w.emoji} ${tf('prep.world', worldNum(this.levelIndex), tWorldName(worldIdx(this.levelIndex)))}`);
+    setText('prep-level', tf('prep.levelN', this.levelIndex + 1, tLevelName(lvl)));
+    setText('prep-tier', tTier(lvl.tier || ''));
     const tierEl = document.getElementById('prep-tier');
-    if (tierEl) tierEl.dataset.tier = lvl.tier || '';
+    if (tierEl) tierEl.dataset.tier = lvl.tier || ''; // raw para el color por CSS
     setText('prep-lives', '🥚'.repeat(this.lives));
-    setText('prep-objective', lvl.hint);
+    setText('prep-objective', tLevelHint(lvl));
     // Recompensas disponibles en este nivel (monedas + estrella si toca).
     const { coins, star } = generateCollectibles(lvl, this.levelIndex);
-    setText('prep-rewards', `🪙 ${coins.length} monedas${star ? '   ·   ⭐ ¡Estrella especial aquí!' : ''}`);
+    setText('prep-rewards', tf('prep.rewards', coins.length, !!star));
     this._updateBallPreviews();
     // Potenciadores: se eligen de nuevo para cada nivel.
     this._pendingTrapBlock = false;
@@ -451,13 +500,13 @@ export class Game {
     if (tb) {
       tb.style.display = inv.trapBlocks > 0 ? 'inline-flex' : 'none';
       tb.classList.toggle('active', this._pendingTrapBlock);
-      tb.textContent = `🪨 Bloqueo (${inv.trapBlocks})`;
+      tb.textContent = tf('prep.trapBlock', inv.trapBlocks);
     }
     const fs = document.getElementById('btn-prep-shield');
     if (fs) {
       fs.style.display = inv.fallShields > 0 ? 'inline-flex' : 'none';
       fs.classList.toggle('active', this._pendingFallShield);
-      fs.textContent = `🦅 Escudo (${inv.fallShields})`;
+      fs.textContent = tf('prep.shield', inv.fallShields);
     }
   }
 
@@ -491,17 +540,17 @@ export class Game {
         this.physics.traps = this.physics.traps.filter((x) => x !== t); // deja de ser trampa
         this.scene.coverTrap(t);                                         // se ve tapada/gris
         this._trapBlockedThisLevel = true;
-        hud.toast('🪨 Trampa bloqueada', 1400);
+        hud.toast(t('msg.trapBlocked'), 1400);
       }
     }
     if (this._pendingFallShield && consumePowerup('fallShields')) {
       this._fallShieldActive = true;
-      hud.toast('🦅 Escudo de caída activo', 1400);
+      hud.toast(t('msg.shieldOn'), 1400);
     }
     this._pendingTrapBlock = false;
     this._pendingFallShield = false;
 
-    hud.setLevel(lvl.name, this.levelIndex + 1, LEVELS.length);
+    hud.setLevel(tLevelName(lvl), this.levelIndex + 1, LEVELS.length);
     hud.setLives(this.lives);
     hud.setScore(this.score);
     hud.setCoins(0);
@@ -520,8 +569,8 @@ export class Game {
     this.playing = true;
     this.screens.show(SCREENS.GAME);
     sfx.start();
-    hud.toast(lvl.hint, 1700);
-    hud.hint(this.isTouch ? '🎮 D-pad (izquierda) o joystick (derecha) para inclinar el tablero' : 'Inclina: flechas/WASD o arrastra el tablero con el ratón');
+    hud.toast(tLevelHint(lvl), 1700);
+    hud.hint(this.isTouch ? t('hud.hintTouch') : t('hud.hintDesktop'));
   }
 
   _elapsed() {
@@ -539,12 +588,12 @@ export class Game {
     this._pauseStart = performance.now();
     this.input.reset();
     this.scene.setTilt(0, 0);
-    setText('pause-level', `Nivel ${this.levelIndex + 1} · ${getLevel(this.levelIndex).name}`);
+    setText('pause-level', tf('pause.levelN', this.levelIndex + 1, tLevelName(getLevel(this.levelIndex))));
     setText('pause-lives', '🥚'.repeat(Math.max(0, this.lives)) || '—');
     const ps = document.getElementById('pause-score');
     if (ps) ps.innerHTML = `<b>${this.score}</b> pts`;
     const powers = this._activePowers();
-    setText('pause-powers', powers.length ? `Poderes activos: ${powers.join('  ')}` : '');
+    setText('pause-powers', powers.length ? tf('pause.powers', powers.join('  ')) : '');
     this.screens.show(SCREENS.PAUSE);
   }
 
@@ -598,7 +647,7 @@ export class Game {
         this._popPoints(c.x, c.z, '⭐ +1', 'star');
         sfx.starGet();
         hud.flash('gold');
-        hud.toast('⭐ ¡Estrella de canje! +1 (para la tienda)', 1500);
+        hud.toast(t('msg.starGet'), 1500);
       } else {
         this.score += COIN_POINTS; // 1 punto por moneda
         this._coinsThisLevel += 1;
@@ -643,7 +692,7 @@ export class Game {
     this.scene.setTilt(0, 0);
     sfx.rescue();
     hud.flash('gold');
-    hud.toast('🦅 ¡Rescate jurásico! El escudo te salvó', 1700);
+    hud.toast(t('msg.rescue'), 1700);
     const lvl = getLevel(this.levelIndex);
     const color = getBall(this.selectedBall).dino;
     this.scene.startPteroRescue(lvl.start.x, lvl.start.z, color, () => {
@@ -739,7 +788,7 @@ export class Game {
     sfx.roar();
     this.scene.shake(0.18);
     hud.flash('gold');
-    hud.toast('¡Nivel completado!', 1500);
+    hud.toast(t('msg.levelDone'), 1500);
     this._celebT = 0;
     this.ballState = 'celebrating';
   }
@@ -763,7 +812,7 @@ export class Game {
         this.lives = 1;
         hud.setLives(this.lives);
         hud.flash('gold');
-        hud.toast('🥚 ¡Vida extra! Sigues en juego', 1500);
+        hud.toast(t('msg.extraLife'), 1500);
         this.physics.reset(lvl.start);
         this.ball.reset(lvl.start.x, lvl.start.z);
         this.input.reset();
@@ -773,7 +822,7 @@ export class Game {
       this._noLives();
       return;
     }
-    hud.toast(kind === 'fall' ? `¡Caíste! Intentos: ${this.lives}` : `¡Trampa! Intentos: ${this.lives}`, 1300);
+    hud.toast(kind === 'fall' ? tf('msg.fell', this.lives) : tf('msg.trap', this.lives), 1300);
     this.physics.reset(lvl.start);
     this.ball.reset(lvl.start.x, lvl.start.z);
     this.input.reset();
@@ -803,18 +852,18 @@ export class Game {
     if (isRecord) sfx.record();
 
     const isLast = this.levelIndex >= LEVELS.length - 1;
-    setText('win-title', isLast ? '🏆 ¡Juego completado!' : '¡Nivel superado!');
+    setText('win-title', isLast ? t('win.titleDone') : t('win.titleWin'));
     setText('win-stars', starString(stars));
-    setText('win-score', `Puntos: ${this.score}`);
-    setText('win-detail', `+${SCORE.BASE_LEVEL} nivel  ·  +${lifeBonus} vidas  ·  +${timeBonus} tiempo`);
+    setText('win-score', tf('win.score', this.score));
+    setText('win-detail', tf('win.detail', SCORE.BASE_LEVEL, lifeBonus, timeBonus));
     // Recap de recompensas recogidas este nivel.
-    const starTxt = this._starGotThisLevel ? '   ·   ⭐ estrella de canje' : (this._levelHasStar ? '   ·   ⭐ estrella perdida' : '');
-    setText('win-rewards', `Recogido: 🪙 ${this._coinsThisLevel}${starTxt}`);
-    setText('win-time', `Tiempo: ${time.toFixed(1)}s  ·  Mejor: ${(getBestTime(lvl.id) ?? time).toFixed(1)}s`);
-    setText('win-progress', `Progreso: ${this.levelIndex + 1}/${LEVELS.length}  ·  ⭐ ${getTotalStars()}/${MAX_STARS}`);
+    const starTxt = this._starGotThisLevel ? t('win.rewardStar') : (this._levelHasStar ? t('win.rewardStarLost') : '');
+    setText('win-rewards', tf('win.rewards', this._coinsThisLevel, starTxt));
+    setText('win-time', tf('win.time', time.toFixed(1), (getBestTime(lvl.id) ?? time).toFixed(1)));
+    setText('win-progress', tf('win.progress', this.levelIndex + 1, LEVELS.length, getTotalStars(), MAX_STARS));
     // Mensaje de desbloqueo (si este nivel abrió uno nuevo).
     const unlockedNew = newUnlocked > prevUnlocked && !isLast;
-    if (unlockedNew) setText('win-unlock', `🔓 ¡Nivel ${Math.min(newUnlocked, LEVELS.length)} desbloqueado!`);
+    if (unlockedNew) setText('win-unlock', tf('win.unlock', Math.min(newUnlocked, LEVELS.length)));
     showEl('win-unlock', unlockedNew);
     showEl('win-record', isRecord);
     showEl('btn-win-next', !isLast);
@@ -833,9 +882,9 @@ export class Game {
     this.input.disable();
     const isRecord = setHighScore(this.score);
     if (isRecord) sfx.record();
-    setText('over-score', `Puntos: ${this.score}`);
-    setText('over-level', `Nivel alcanzado: ${this.levelIndex + 1}/${LEVELS.length}`);
-    setText('over-high', `Mejor: ${getHighScore()}`);
+    setText('over-score', tf('over.score', this.score));
+    setText('over-level', tf('over.levelReached', this.levelIndex + 1, LEVELS.length));
+    setText('over-high', tf('over.high', getHighScore()));
     showEl('over-record', isRecord);
     this._renderReviveBox();
     this.screens.show(SCREENS.GAMEOVER);
@@ -846,7 +895,7 @@ export class Game {
     const cont = document.getElementById('btn-over-continue');
     if (cont) {
       cont.style.display = bank > 0 ? 'block' : 'none';
-      cont.textContent = `⏩ Continuar · banco: ${bank}`;
+      cont.textContent = tf('over.continueBank', bank);
     }
   }
 
@@ -866,13 +915,13 @@ export class Game {
   _watchAd() {
     this.screens.show(SCREENS.ADVIEW);
     let n = 3;
-    setText('ad-countdown', `Recompensa en ${n}…`);
+    setText('ad-countdown', tf('ad.countdown', n));
     clearInterval(this._adTimer);
     this._adTimer = setInterval(() => {
       n -= 1;
-      if (n > 0) { setText('ad-countdown', `Recompensa en ${n}…`); return; }
+      if (n > 0) { setText('ad-countdown', tf('ad.countdown', n)); return; }
       clearInterval(this._adTimer);
-      setText('ad-countdown', `🎁 ¡+${REVIVE_LIVES} vidas!`);
+      setText('ad-countdown', tf('ad.reward', REVIVE_LIVES));
       setTimeout(() => this._reviveWith(REVIVE_LIVES), 750);
     }, 1000);
   }
@@ -889,18 +938,19 @@ export class Game {
   }
 
   _renderLifePacks() {
-    setText('lifepacks-bank', `Banco de vidas: ${getLivesBank()}`);
+    setText('lifepacks-bank', tf('packs.bank', getLivesBank()));
     const list = document.getElementById('lifepacks-list');
     if (list) {
       list.innerHTML = '';
       for (const p of LIFE_PACKS) {
+        const tag = p.tag === 'Popular' ? t('packs.tagPopular') : (p.tag === 'Mejor valor' ? t('packs.tagBest') : '');
         const card = document.createElement('div');
         card.className = 'pack-card';
         card.innerHTML =
           `<div class="pack-lives" aria-hidden="true">❤️<b>${p.lives}</b></div>` +
           '<div class="pack-info">' +
-            `<span class="pack-name">${p.lives} vidas</span>` +
-            (p.tag ? `<span class="pack-tag">${p.tag}</span>` : '<span class="pack-sub">para tu banco</span>') +
+            `<span class="pack-name">${tf('packs.lives', p.lives)}</span>` +
+            (tag ? `<span class="pack-tag">${tag}</span>` : `<span class="pack-sub">${t('packs.forBank')}</span>`) +
           '</div>' +
           `<button class="btn tiny pack-buy">${p.price}</button>`;
         card.querySelector('.pack-buy').addEventListener('click', () => this._buyLifePack(p.lives));
@@ -919,7 +969,7 @@ export class Game {
     if (fb) {
       fb.className = 'shop-feedback';
       void fb.offsetWidth;
-      fb.textContent = `✅ +${n} vidas a tu banco (simulado)`;
+      fb.textContent = tf('packs.bought', n);
       fb.classList.add('show', 'ok');
     }
   }

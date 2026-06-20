@@ -32,6 +32,8 @@
   --ring-green: 0 0 0 3px rgba(52, 210, 123, 0.4);
   --panel-bg: rgba(13, 33, 22, 0.78);
   --panel-border: rgba(242, 193, 78, 0.4);
+  /* Imagen de fondo jurásica (ruta relativa a styles/main.css). Centralizada aquí. */
+  --bg-jurassic: url('../assets/images/backgrounds/jurassic-world-bg.png');
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   font-family: var(--font);
 }
@@ -58,8 +60,18 @@ html, body {
   inset: 0;
   z-index: 0;
   touch-action: none;
+  /* Fondo del GAMEPLAY: la imagen jurásica se ve detrás del lienzo 3D (transparente).
+     Overlay suave (más claro que en menús) para que el paisaje luzca sin restar
+     legibilidad al tablero; mobile-first: cover/center sin deformar. */
+  background-color: var(--jungle-0);
+  background-image:
+    linear-gradient(180deg, rgba(9, 27, 18, 0.30) 0%, rgba(9, 27, 18, 0.14) 38%, rgba(9, 27, 18, 0.5) 100%),
+    var(--bg-jurassic);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
 }
-#game-canvas canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#game-canvas canvas { display: block; width: 100%; height: 100%; touch-action: none; background: transparent; }
 
 #ui { position: fixed; inset: 0; z-index: 1; touch-action: none; }
 
@@ -75,19 +87,27 @@ html, body {
 }
 .screen.active { display: flex; }
 
-/* Fondo jurásico de las pantallas de menú (capas: cielo, bruma, fronda, suelo) */
+/* Fondo de las pantallas de menú: IMAGEN jurásica + overlay oscuro para legibilidad.
+   mobile-first: cover (sin deformar) + center + no-repeat; color de fallback si la
+   imagen no carga. El gameplay (#screen-game) NO la usa: conserva su cielo 3D por bioma. */
 #screen-landing.active,
 #screen-menu.active,
 #screen-balls.active,
+#screen-shop.active,
 #screen-levels.active,
 #screen-howto.active,
 #screen-prep.active,
 #screen-win.active,
-#screen-gameover.active {
-  background:
-    radial-gradient(130% 90% at 50% -16%, rgba(126, 200, 227, 0.28), transparent 58%),
-    radial-gradient(100% 70% at 50% 116%, rgba(34, 96, 57, 0.55), transparent 60%),
-    linear-gradient(180deg, var(--jungle-3) 0%, var(--jungle-2) 38%, var(--jungle-1) 72%, var(--jungle-0) 100%);
+#screen-gameover.active,
+#screen-adview.active,
+#screen-lifepacks.active {
+  background-color: var(--jungle-0); /* fallback */
+  background-image:
+    linear-gradient(180deg, rgba(9, 27, 18, 0.5) 0%, rgba(9, 27, 18, 0.66) 55%, rgba(9, 27, 18, 0.84) 100%),
+    var(--bg-jurassic);
+  background-position: center, center;
+  background-size: cover, cover;
+  background-repeat: no-repeat, no-repeat;
 }
 
 /* Banda de "suelo/horizonte" sutil al pie de los menús */
@@ -242,6 +262,23 @@ html, body {
 
 .menu-buttons { display: flex; flex-direction: column; gap: 11px; align-items: center; margin-top: 10px; }
 .menu-buttons .btn { width: min(300px, 84vw); }
+
+/* Selector de idioma (menú) */
+.lang-select { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.lang-label { font-size: 0.85rem; color: var(--muted); }
+.lang-btn {
+  appearance: none; cursor: pointer;
+  min-width: 46px; min-height: 38px; padding: 6px 14px;
+  font-family: inherit; font-weight: 800; font-size: 0.92rem; letter-spacing: 0.5px;
+  color: var(--cream); background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(242, 193, 78, 0.4); border-radius: 10px;
+  transition: background 0.15s ease, transform 0.08s ease, color 0.15s ease;
+}
+.lang-btn:active { transform: scale(0.95); }
+.lang-btn.active {
+  background: linear-gradient(180deg, #4ade8c, var(--green-deep));
+  color: var(--green-ink); border-color: #1a9450;
+}
 
 /* Fila de chips/stats reutilizable (menú, prep, win) */
 .stat-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }

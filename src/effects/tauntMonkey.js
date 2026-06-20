@@ -3,7 +3,12 @@
 // que se ríe y señala, y luego desaparece. Es un OVERLAY 2D (Canvas) ligero: no
 // toca la escena 3D ni bloquea la jugabilidad. Original, sin assets externos.
 
-const TAUNTS = ['¡Ñaca ñaca!', '¡Otra vez será!', '¡Ja, ja!', '¡Casi!', '¡Buuu!', '¡Uh uh ah ah!'];
+import { getLang } from '../utils/i18n.js';
+
+const TAUNTS = {
+  es: ['¡Ñaca ñaca!', '¡Otra vez será!', '¡Ja, ja!', '¡Casi!', '¡Buuu!', '¡Uh uh ah ah!'],
+  en: ['Nyah nyah!', 'Maybe next time!', 'Ha, ha!', 'So close!', 'Booo!', 'Ooh ooh aah aah!'],
+};
 let _active = false;
 
 /** Aparición breve del mono burlón. No bloquea: se quita solo. */
@@ -21,9 +26,10 @@ export function showTaunt() {
   canvas.className = 'taunt-monkey-art';
   wrap.appendChild(canvas);
 
+  const list = TAUNTS[getLang()] || TAUNTS.es;
   const bubble = document.createElement('div');
   bubble.className = 'taunt-bubble';
-  bubble.textContent = TAUNTS[(Math.random() * TAUNTS.length) | 0];
+  bubble.textContent = list[(Math.random() * list.length) | 0];
   wrap.appendChild(bubble);
 
   layer.appendChild(wrap);

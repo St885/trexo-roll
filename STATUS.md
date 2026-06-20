@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.11.1 — Fix: la victoria se congelaba (import faltante) — v0.8.0 en producción; 0.9.0→0.11.1 sin push aún |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.8.0) · 🛠️ v0.11.1 corrige el congelamiento al ganar (+ blindaje del bucle y check de imports); economía/mono/dino/monetización de v0.11.0 — lista para probar local (sin push) |
+| **Versión** | 0.12.0 — Selector de idioma ES/EN (v0.11.1 en producción; 0.11.2→0.12.0 sin push aún) |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.11.1) · 🛠️ v0.12.0 i18n completo (ES por defecto / EN), fondo jurásico en gameplay, economía/monetización/mono — lista para probar local (sin push) |
 | **Fecha** | 2026-06-19 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |

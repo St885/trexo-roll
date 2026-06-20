@@ -38,12 +38,12 @@
           <span class="floaty f5">🦕</span>
         </div>
         <div class="panel center">
-          <span class="brand-tag">Aventura jurásica</span>
+          <span class="brand-tag" data-i18n="landing.tag">Aventura jurásica</span>
           <div class="ball-emblem big floaty-ball" aria-hidden="true">🦖</div>
           <h1 class="title">TREX<span>o</span>Roll</h1>
-          <p class="subtitle">Inclina el tablero, rueda tu dino y conquista 25 mundos prehistóricos.</p>
-          <button class="btn primary cta" id="btn-enter">▶ Entrar a la aventura</button>
-          <p class="cta-hint">Apto para móvil · sin descargas</p>
+          <p class="subtitle" data-i18n="landing.subtitle">Inclina el tablero, rueda tu dino y conquista 25 mundos prehistóricos.</p>
+          <button class="btn primary cta" id="btn-enter" data-i18n="landing.enter">▶ Entrar a la aventura</button>
+          <p class="cta-hint" data-i18n="landing.ctaHint">Apto para móvil · sin descargas</p>
           <p class="muted" id="landing-highscore">Mejor: 0</p>
         </div>
       </section>
@@ -63,69 +63,74 @@
             <p class="progress-label" id="menu-progress-label">Progreso</p>
           </div>
           <div class="menu-buttons">
-            <button class="btn primary" id="btn-continue" style="display:none">⏩ Continuar</button>
-            <button class="btn primary" id="btn-play">▶ Jugar</button>
-            <button class="btn" id="btn-balls">🦕 Elegir dino</button>
+            <button class="btn primary" id="btn-continue" style="display:none" data-i18n="menu.continue">⏩ Continuar</button>
+            <button class="btn primary" id="btn-play" data-i18n="menu.play">▶ Jugar</button>
+            <button class="btn" id="btn-balls" data-i18n="menu.balls">🦕 Elegir dino</button>
             <button class="btn" id="btn-shop">🛒 Canje</button>
-            <button class="btn" id="btn-levels">🗺️ Niveles</button>
-            <button class="btn" id="btn-howto">❓ Cómo jugar</button>
+            <button class="btn" id="btn-levels" data-i18n="menu.levels">🗺️ Niveles</button>
+            <button class="btn" id="btn-howto" data-i18n="menu.howto">❓ Cómo jugar</button>
             <button class="btn" id="btn-sound">🔊 Sonido: ON</button>
-            <button class="btn" id="btn-fullscreen">⛶ Pantalla completa</button>
+            <button class="btn" id="btn-fullscreen" data-i18n="menu.fullscreen">⛶ Pantalla completa</button>
           </div>
           <p class="muted" id="menu-highscore">Mejor: 0</p>
+          <div class="lang-select">
+            <span class="lang-label" data-i18n="lang.label">Idioma</span>
+            <button class="lang-btn" id="btn-lang-es" data-lang="es" aria-label="Español">ES</button>
+            <button class="lang-btn" id="btn-lang-en" data-lang="en" aria-label="English">EN</button>
+          </div>
         </div>
       </section>
 
       <!-- 2b. Selección de bola -->
       <section class="screen" id="screen-balls">
         <div class="panel">
-          <h2 class="title small">Elige tu dino</h2>
-          <p class="muted center">Cada bola es una especie distinta… ¡que sale a celebrar contigo al ganar!</p>
+          <h2 class="title small" data-i18n="balls.title">Elige tu dino</h2>
+          <p class="muted center" data-i18n="balls.subtitle">Cada bola es una especie distinta… ¡que sale a celebrar contigo al ganar!</p>
           <div id="balls-list" class="balls-grid"></div>
-          <button class="btn ghost" id="btn-balls-back">← Volver</button>
+          <button class="btn ghost" id="btn-balls-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
 
       <!-- 2c. Tienda de Canje -->
       <section class="screen" id="screen-shop">
         <div class="panel">
-          <h2 class="title small">🛒 Tienda de Canje</h2>
-          <p class="muted center">Cambia tus <strong>estrellas especiales</strong> por ayudas. Consíguelas cada 2 niveles.</p>
-          <p class="shop-balance">Disponibles: <span id="shop-tokens">⭐ 0</span></p>
+          <h2 class="title small" data-i18n="shop.title">🛒 Tienda de Canje</h2>
+          <p class="muted center" data-i18n-html="shop.subtitle">Cambia tus <strong>estrellas especiales</strong> por ayudas. Consíguelas cada 2 niveles.</p>
+          <p class="shop-balance"><span data-i18n="shop.available">Disponibles:</span> <span id="shop-tokens">⭐ 0</span></p>
           <div id="shop-list" class="shop-list"></div>
           <p class="shop-feedback" id="shop-feedback"></p>
-          <button class="btn ghost" id="btn-shop-back">← Volver</button>
+          <button class="btn ghost" id="btn-shop-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
 
       <!-- 3. Selección de niveles -->
       <section class="screen" id="screen-levels">
         <div class="panel">
-          <h2 class="title small">Niveles</h2>
-          <p class="muted center">5 mundos · 25 tableros. Gana ⭐ para canjear ayudas.</p>
+          <h2 class="title small" data-i18n="levels.title">Niveles</h2>
+          <p class="muted center" data-i18n="levels.subtitle">5 mundos · 25 tableros. Gana ⭐ para canjear ayudas.</p>
           <div id="levels-list" class="levels-list"></div>
-          <button class="btn ghost" id="btn-levels-back">← Volver</button>
+          <button class="btn ghost" id="btn-levels-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
 
       <!-- 4. Cómo jugar -->
       <section class="screen" id="screen-howto">
         <div class="panel">
-          <h2 class="title small">Cómo jugar</h2>
+          <h2 class="title small" data-i18n="howto.title">Cómo jugar</h2>
           <ul class="howto">
-            <li>🎯 <strong>Objetivo:</strong> lleva la bola al <span class="goal-txt">hoyo verde</span>.</li>
-            <li>⚠️ <strong>Evita:</strong> los <span class="trap-txt">hoyos rojos</span> y caer fuera del tablero.</li>
-            <li>🖥️ <strong>Teclado:</strong> Flechas o <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> para inclinar.</li>
-            <li>📱 <strong>Móvil:</strong> usa el <strong>D-pad</strong> (izquierda) o el <strong>joystick</strong> (derecha). Mantén pulsada una dirección para inclinar; pulsa dos para diagonal.</li>
-            <li>🖱️ <strong>Ratón:</strong> arrastra sobre el tablero para inclinar.</li>
-            <li>⏸️ <strong>Pausa:</strong> botón ⏸ o tecla <kbd>P</kbd> / <kbd>Esc</kbd>.</li>
-            <li>🦕 <strong>Bola:</strong> elige entre 5 dinos; el tuyo celebra al ganar.</li>
-            <li>🪙 <strong>Monedas:</strong> rueda cerca para recogerlas y sumar puntos extra.</li>
-            <li>⭐ <strong>Estrella especial</strong> (cada 2 niveles): súmala y cánjeala por ayudas en la <strong>🛒 Tienda de Canje</strong>.</li>
-            <li>⭐ Gana <strong>3 estrellas</strong> de nivel: sin perder vidas y bajo el tiempo objetivo.</li>
-            <li>🥚 Tienes <strong>3 vidas</strong>. Completa los <strong>25 tableros</strong> para ganar.</li>
+            <li data-i18n-html="howto.1">🎯 <strong>Objetivo:</strong> lleva la bola al <span class="goal-txt">hoyo verde</span>.</li>
+            <li data-i18n-html="howto.2">⚠️ <strong>Evita:</strong> los <span class="trap-txt">hoyos rojos</span> y caer fuera del tablero.</li>
+            <li data-i18n-html="howto.3">🖥️ <strong>Teclado:</strong> Flechas o <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> para inclinar.</li>
+            <li data-i18n-html="howto.4">📱 <strong>Móvil:</strong> usa el <strong>D-pad</strong> (izquierda) o el <strong>joystick</strong> (derecha). Mantén pulsada una dirección para inclinar; pulsa dos para diagonal.</li>
+            <li data-i18n-html="howto.5">🖱️ <strong>Ratón:</strong> arrastra sobre el tablero para inclinar.</li>
+            <li data-i18n-html="howto.6">⏸️ <strong>Pausa:</strong> botón ⏸ o tecla <kbd>P</kbd> / <kbd>Esc</kbd>.</li>
+            <li data-i18n-html="howto.7">🦕 <strong>Bola:</strong> elige entre 5 dinos; el tuyo celebra al ganar.</li>
+            <li data-i18n-html="howto.8">🪙 <strong>Monedas:</strong> rueda cerca para recogerlas y sumar puntos extra.</li>
+            <li data-i18n-html="howto.9">⭐ <strong>Estrella especial</strong> (cada 2 niveles): súmala y cánjeala por ayudas en la <strong>🛒 Tienda de Canje</strong>.</li>
+            <li data-i18n-html="howto.10">⭐ Gana <strong>3 estrellas</strong> de nivel: sin perder vidas y bajo el tiempo objetivo.</li>
+            <li data-i18n-html="howto.11">🥚 Tienes <strong>3 vidas</strong>. Completa los <strong>25 tableros</strong> para ganar.</li>
           </ul>
-          <button class="btn ghost" id="btn-howto-back">← Volver</button>
+          <button class="btn ghost" id="btn-howto-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
 
@@ -140,17 +145,17 @@
           <p class="prep-rewards" id="prep-rewards">🪙 3 monedas</p>
           <div class="prep-ball-row">
             <div class="ball-preview sm" id="prep-ball" aria-hidden="true"></div>
-            <span class="prep-ball-label">Tu bola: <strong id="prep-ball-name">Blanca</strong></span>
-            <button class="btn tiny ghost" id="btn-prep-ball">Cambiar</button>
+            <span class="prep-ball-label"><span data-i18n="prep.yourBall">Tu bola:</span> <strong id="prep-ball-name">Blanca</strong></span>
+            <button class="btn tiny ghost" id="btn-prep-ball" data-i18n="prep.change">Cambiar</button>
           </div>
-          <p class="warn">⚠️ Evita los hoyos trampa y no caigas del tablero.</p>
+          <p class="warn" data-i18n="prep.warn">⚠️ Evita los hoyos trampa y no caigas del tablero.</p>
           <div class="prep-powerups" id="prep-powerups" style="display:none">
-            <span class="prep-powerups-label">Usar ayuda:</span>
+            <span class="prep-powerups-label" data-i18n="prep.useHelp">Usar ayuda:</span>
             <button class="btn tiny power-toggle" id="btn-prep-trapblock" style="display:none">🪨 Bloqueo</button>
             <button class="btn tiny power-toggle" id="btn-prep-shield" style="display:none">🦅 Escudo</button>
           </div>
-          <button class="btn primary" id="btn-prep-start">Iniciar nivel</button>
-          <button class="btn ghost" id="btn-prep-back">← Menú</button>
+          <button class="btn primary" id="btn-prep-start" data-i18n="prep.start">Iniciar nivel</button>
+          <button class="btn ghost" id="btn-prep-back" data-i18n="prep.backMenu">← Menú</button>
         </div>
       </section>
 
@@ -184,18 +189,18 @@
       <!-- 6b. Pausa -->
       <section class="screen" id="screen-pause">
         <div class="panel center">
-          <h2 class="title small">⏸ Pausa</h2>
+          <h2 class="title small" data-i18n="pause.title">⏸ Pausa</h2>
           <p class="muted" id="pause-level">Nivel 1</p>
           <div class="pause-mini">
             <span class="stat-chip" id="pause-lives">🥚🥚🥚</span>
             <span class="stat-chip" id="pause-score"><b>0</b> pts</span>
           </div>
           <p class="muted pause-powers" id="pause-powers"></p>
-          <button class="btn primary" id="btn-resume">▶ Continuar</button>
-          <button class="btn" id="btn-restart">↻ Reiniciar nivel</button>
-          <button class="btn" id="btn-pause-shop">🛒 Canje</button>
+          <button class="btn primary" id="btn-resume" data-i18n="pause.resume">▶ Continuar</button>
+          <button class="btn" id="btn-restart" data-i18n="pause.restart">↻ Reiniciar nivel</button>
+          <button class="btn" id="btn-pause-shop" data-i18n="pause.shop">🛒 Canje</button>
           <button class="btn" id="btn-pause-sound">🔊 Sonido: ON</button>
-          <button class="btn ghost" id="btn-pause-menu">Menú</button>
+          <button class="btn ghost" id="btn-pause-menu" data-i18n="common.menu">Menú</button>
         </div>
       </section>
 
@@ -213,16 +218,16 @@
           <div class="win-emoji" aria-hidden="true">🏆</div>
           <h2 class="title small" id="win-title">¡Nivel superado!</h2>
           <p class="stars-row" id="win-stars">★★★</p>
-          <p class="record-badge" id="win-record">🏅 ¡Nuevo récord!</p>
+          <p class="record-badge" id="win-record" data-i18n="win.record">🏅 ¡Nuevo récord!</p>
           <p class="big-score" id="win-score">Puntos: 0</p>
           <p class="win-unlock" id="win-unlock" style="display:none">🔓 ¡Nivel desbloqueado!</p>
           <p class="muted" id="win-detail"></p>
           <p class="muted win-rewards" id="win-rewards"></p>
           <p class="muted" id="win-time"></p>
           <p class="muted" id="win-progress"></p>
-          <button class="btn primary" id="btn-win-next">Siguiente nivel ▶</button>
-          <button class="btn" id="btn-win-retry">↻ Repetir nivel</button>
-          <button class="btn ghost" id="btn-win-menu">Menú</button>
+          <button class="btn primary" id="btn-win-next" data-i18n="win.next">Siguiente nivel ▶</button>
+          <button class="btn" id="btn-win-retry" data-i18n="win.retry">↻ Repetir nivel</button>
+          <button class="btn ghost" id="btn-win-menu" data-i18n="common.menu">Menú</button>
         </div>
       </section>
 
@@ -230,47 +235,47 @@
       <section class="screen" id="screen-gameover">
         <div class="panel center">
           <div class="over-emoji" aria-hidden="true">🦴</div>
-          <h2 class="title small danger">¡Sin vidas!</h2>
-          <p class="subtitle" id="over-motivate">¡Estuviste cerca! Sigue y conquista el tablero.</p>
-          <p class="record-badge" id="over-record">🏅 ¡Nuevo récord!</p>
+          <h2 class="title small danger" data-i18n="over.title">¡Sin vidas!</h2>
+          <p class="subtitle" id="over-motivate" data-i18n="over.motivate">¡Estuviste cerca! Sigue y conquista el tablero.</p>
+          <p class="record-badge" id="over-record" data-i18n="win.record">🏅 ¡Nuevo récord!</p>
           <p class="big-score" id="over-score">Puntos: 0</p>
           <p class="muted" id="over-level">Nivel alcanzado: 1</p>
           <p class="muted" id="over-high">Mejor: 0</p>
           <div class="revive-box">
-            <p class="revive-title">¿Seguir jugando?</p>
-            <button class="btn primary" id="btn-over-video">📺 Ver vídeo · +3 vidas</button>
-            <button class="btn amber" id="btn-over-buylives">🛒 Comprar vidas</button>
+            <p class="revive-title" data-i18n="over.reviveTitle">¿Seguir jugando?</p>
+            <button class="btn primary" id="btn-over-video" data-i18n="over.video">📺 Ver vídeo · +3 vidas</button>
+            <button class="btn amber" id="btn-over-buylives" data-i18n="over.buyLives">🛒 Comprar vidas</button>
             <button class="btn" id="btn-over-continue" style="display:none">⏩ Continuar · banco: 0</button>
           </div>
-          <button class="btn" id="btn-over-retry">↻ Reintentar (3 vidas)</button>
-          <button class="btn ghost" id="btn-over-menu">Menú</button>
+          <button class="btn" id="btn-over-retry" data-i18n="over.retry">↻ Reintentar (3 vidas)</button>
+          <button class="btn ghost" id="btn-over-menu" data-i18n="common.menu">Menú</button>
         </div>
       </section>
 
       <!-- 8b. Vídeo recompensado (placeholder / SIMULACIÓN, sin anuncios reales) -->
       <section class="screen" id="screen-adview">
         <div class="panel center">
-          <p class="ad-tag">Simulación interna · sin anuncios reales</p>
+          <p class="ad-tag" data-i18n="ad.tag">Simulación interna · sin anuncios reales</p>
           <div class="ad-screen" aria-hidden="true">
             <div class="ad-dino">🦖</div>
             <div class="ad-bars"><span></span><span></span><span></span></div>
           </div>
-          <h2 class="title small">📺 Vídeo recompensado</h2>
+          <h2 class="title small" data-i18n="ad.title">📺 Vídeo recompensado</h2>
           <p class="ad-countdown" id="ad-countdown">Recompensa en 3…</p>
-          <button class="btn ghost" id="btn-ad-cancel">Saltar (sin recompensa)</button>
+          <button class="btn ghost" id="btn-ad-cancel" data-i18n="ad.cancel">Saltar (sin recompensa)</button>
         </div>
       </section>
 
       <!-- 8c. Tienda de paquetes de vidas (compra SIMULADA) -->
       <section class="screen" id="screen-lifepacks">
         <div class="panel">
-          <h2 class="title small">🛒 Paquetes de vidas</h2>
-          <p class="muted center">Compra <strong>simulada</strong> (MVP) — aún sin pago real.</p>
+          <h2 class="title small" data-i18n="packs.title">🛒 Paquetes de vidas</h2>
+          <p class="muted center" data-i18n-html="packs.subtitle">Compra <strong>simulada</strong> (MVP) — aún sin pago real.</p>
           <p class="shop-balance" id="lifepacks-bank">Banco de vidas: 0</p>
           <div id="lifepacks-list" class="shop-list"></div>
           <p class="shop-feedback" id="lifepacks-feedback"></p>
-          <button class="btn primary" id="btn-lifepacks-continue">⏩ Continuar con el banco</button>
-          <button class="btn ghost" id="btn-lifepacks-back">← Volver</button>
+          <button class="btn primary" id="btn-lifepacks-continue" data-i18n="packs.continue">⏩ Continuar con el banco</button>
+          <button class="btn ghost" id="btn-lifepacks-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
 

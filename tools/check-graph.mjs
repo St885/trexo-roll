@@ -21,6 +21,7 @@ if (typeof globalThis.document === 'undefined') {
 const modules = [
   '../src/utils/constants.js',
   '../src/utils/storage.js',
+  '../src/utils/i18n.js',
   '../src/physics/footprint.js',
   '../src/physics/BallPhysics.js',
   '../src/levels/levels.js',

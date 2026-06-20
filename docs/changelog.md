@@ -2,6 +2,76 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.12.0] — 2026-06-21 — Selector de idioma (Español / Inglés)
+
+### Añadido
+- **Sistema de i18n** (`src/utils/i18n.js`): por defecto **Español**; el jugador puede
+  cambiar a **Inglés** desde un **selector en el menú** y **todo el juego** se traduce.
+  El idioma se **guarda en `localStorage`** (`getLang/setLang`).
+- **Cobertura completa**: textos estáticos (vía `data-i18n` / `data-i18n-html`) y dinámicos
+  (vía `t()/tf()`): menús, cómo jugar, preparación, HUD, pausa, tienda/canje, victoria,
+  pantalla "sin vidas" + monetización, vídeo y packs, mensajes/toasts, y **contenido**
+  (25 niveles: nombre + pista, 5 mundos, 5 bolas: nombre/etiqueta/personalidad, especies de
+  dino, dificultades, ítems de tienda) y las frases del **mono burlón**.
+- Cambio de idioma **en caliente**: re-traduce el DOM (`applyTranslations`) y refresca lo
+  dinámico de la pantalla activa sin recargar.
+
+### Arquitectura
+- Para el **contenido**, EN usa el diccionario y **ES cae al texto original** de los datos
+  (`t(key, fallback)`), evitando duplicar el español. La **UI** tiene ES+EN en el diccionario.
+- Nuevo check `tools/i18n-check.mjs` (en `npm test`): valida que cada clave `data-i18n`
+  exista como cadena en ES y EN, y la **paridad** ES→EN.
+
+### Validado
+- `npm test` (física + niveles + control + coleccionables + imports + **i18n**), `test:graph`
+  (incl. `i18n.js`), `test:visual`, cross-check de IDs (60) y CSS: verde. Prueba funcional de
+  cambio ES↔EN correcta. **Controles, música, tienda, progresión e inventario intactos.**
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.11.3] — 2026-06-20 — Imagen jurásica también de fondo en el GAMEPLAY
+
+### Cambiado — fondo de la pantalla de juego
+- Ahora el **paisaje jurásico** (`jurassic-world-bg.png`) se ve **durante la partida**,
+  detrás del tablero 3D (antes se veía el cielo procedural + suelo verde plano).
+- **Cómo (Opción A — fondo CSS detrás del lienzo):**
+  - Renderer Three.js **transparente** (`alpha: true` + `setClearColor(…, 0)`).
+  - `scene.background = null` (la escena ya no pinta cielo propio).
+  - Se **retira el plano de suelo verde** dominante (era lo que tapaba el fondo); el
+    tablero queda como **plataforma flotante** sobre el paisaje, anclado por su
+    **sombra** proyectada (blob suave) y la sombra de contacto de la bola.
+  - La imagen se aplica como `background-image` de `#game-canvas` (cover/center/no-repeat)
+    con un **overlay suave** (más claro que en menús) para que el paisaje luzca sin restar
+    legibilidad al tablero; la **viñeta** existente refuerza el foco central.
+- `applyTheme()` ahora solo ajusta la **niebla** por bioma (ya no pinta cielo ni suelo 3D).
+
+### Notas
+- El tablero sigue recibiendo la **sombra real** de la bola en su superficie.
+- Se mantiene el mismo asset que en menús → coherencia visual y **una sola descarga**
+  (cacheada). Sigue pendiente optimizar el PNG (~2,1 MB → WebP/JPG) en una pasada de
+  rendimiento. Sin push/deploy (pendiente de confirmación de Stefano).
+
+## [0.11.2] — 2026-06-20 — Imagen de fondo jurásica en menús
+
+### Añadido
+- **Imagen de fondo** `assets/images/backgrounds/jurassic-world-bg.png` (1672×941) aplicada
+  a las **pantallas de menú/overlay**: landing, menú, selección de bola, canje, niveles,
+  cómo jugar, preparación, victoria, game over, vídeo y packs de vidas.
+- Integración **mobile-first**: `cover` (sin deformar) + `center` + `no-repeat`, con
+  **overlay oscuro** (gradiente 0.5→0.84) para mantener legibilidad de textos/botones, y
+  **color de fallback** si la imagen no cargara. Ruta **centralizada** en la variable CSS
+  `--bg-jurassic`.
+
+### Decisión de diseño
+- El **gameplay** (`#screen-game`) **no** usa la imagen: conserva su **cielo 3D por bioma**
+  (la imagen quedaría oculta tras el lienzo WebGL y restaría claridad al tablero). El menú
+  de **pausa** mantiene su fondo translúcido para ver el tablero detrás.
+
+### Nota
+- La imagen pesa **~2,1 MB (PNG)**; candidata a optimizar (WebP/JPG ~300–500 KB) en una
+  pasada futura de rendimiento. Sin push/deploy (pendiente de confirmación de Stefano).
+
 ## [0.11.1] — 2026-06-20 — Fix crítico: la victoria se congelaba
 
 ### Corregido

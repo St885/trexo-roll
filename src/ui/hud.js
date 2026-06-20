@@ -2,6 +2,8 @@
 // toasts, pista y flashes de feedback). Funciones puras sobre el DOM.
 // El knob del joystick lo gestiona InputController, no este módulo.
 
+import { t } from '../utils/i18n.js';
+
 let el = null;
 
 function refs() {
@@ -22,7 +24,7 @@ function refs() {
 
 export function setLevel(name, number, total) {
   const r = refs();
-  if (r.level) r.level.textContent = `Nivel ${number}/${total} · ${name}`;
+  if (r.level) r.level.textContent = `${t('hud.level')} ${number}/${total} · ${name}`;
 }
 
 export function setLives(lives) {
@@ -37,7 +39,7 @@ export function setTime(seconds) {
 
 export function setScore(score) {
   const r = refs();
-  if (r.score) r.score.textContent = `Puntos: ${score}`;
+  if (r.score) r.score.textContent = `${t('hud.points')}: ${score}`;
 }
 
 export function setCoins(n) {

@@ -2,7 +2,7 @@
 // del tablero. Aísla todo lo "3D" del resto del juego.
 
 import * as THREE from 'three';
-import { makeSkyTexture, makeContactShadowTexture, makeThemeSky, getTheme, makeGroundTexture, makeGlowTexture } from './textures.js';
+import { makeContactShadowTexture, getTheme, makeGlowTexture } from './textures.js';
 import { buildBoard } from './BoardBuilder.js';
 import { buildDino, buildConfetti } from './CelebrationDino.js';
 import { makeCoin, makeStarToken, makeTrapCover, makePtero } from './collectibleArt.js';
@@ -14,12 +14,17 @@ const V_FOV = 48;
 // Banda de decoración alrededor del tablero (debe coincidir con decorate() en
 // BoardBuilder). El encuadre la incluye para que la decoración no se "corte".
 const DECOR_MARGIN = 2.0;
+// Altura del "suelo" (donde se proyecta la sombra del tablero). Ya no hay plano de
+// suelo opaco: el fondo del gameplay es la imagen jurásica (CSS) detrás del lienzo.
+const GROUND_Y = -4.2;
 
 export class SceneManager {
   constructor(container) {
     this.container = container;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    // alpha: lienzo TRANSPARENTE → se ve la imagen jurásica (fondo CSS) detrás del tablero.
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setClearColor(0x000000, 0); // sin color de fondo (transparente)
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // Tone mapping cinematográfico para un acabado más profesional.
@@ -29,10 +34,11 @@ export class SceneManager {
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this._bgTexture = makeSkyTexture();
-    this.scene.background = this._bgTexture;
-    // Niebla LEJANA: deja el tablero (y la decoración cercana) nítidos y solo
-    // difumina el suelo/horizonte → profundidad de jungla sin "empañar" el juego.
+    // El fondo del gameplay es la IMAGEN jurásica (CSS, detrás del lienzo transparente):
+    // la escena 3D NO pinta cielo propio.
+    this.scene.background = null;
+    this._bgTexture = null;
+    // Niebla LEJANA y sutil: solo afecta a geometría muy distante (no "empaña" el tablero).
     this.scene.fog = new THREE.Fog(0xbfe3d0, 80, 220);
 
     this.camera = new THREE.PerspectiveCamera(V_FOV, 1, 0.1, 260);
@@ -40,7 +46,7 @@ export class SceneManager {
     this.camera.lookAt(0, 0, 0);
 
     this._addLights();
-    this._addGround();
+    this.ground = null; // sin plano de suelo opaco: se ve la imagen jurásica detrás
 
     this.boardGroup = null;
     this.animated = [];
@@ -99,34 +105,10 @@ export class SceneManager {
     this.scene.add(rim);
   }
 
-  _addGround() {
-    const geo = new THREE.PlaneGeometry(240, 240);
-    this.groundTex = makeGroundTexture('valle');
-    const mat = new THREE.MeshStandardMaterial({ map: this.groundTex, roughness: 1 });
-    const ground = new THREE.Mesh(geo, mat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -4.2; // más abajo que antes (-3.2): separa el tablero sin exagerar
-    ground.receiveShadow = true;
-    ground.frustumCulled = false; // suelo grande: nunca debe culearse
-    this.scene.add(ground);
-    this.ground = ground;
-  }
-
-  /** Aplica la ambientación del bioma: fondo, color de suelo y niebla. */
+  /** Ambientación del bioma: ahora solo ajusta la NIEBLA (el fondo es la imagen
+   *  jurásica vía CSS; no se pinta cielo ni suelo 3D). */
   applyTheme(name) {
     const theme = getTheme(name);
-    const old = this._bgTexture;
-    this._bgTexture = makeThemeSky(name);
-    this.scene.background = this._bgTexture;
-    if (old) old.dispose();
-    if (this.ground) {
-      const oldG = this.groundTex;
-      this.groundTex = makeGroundTexture(name);
-      this.ground.material.map = this.groundTex;
-      this.ground.material.color.set(0xffffff); // el color real lo aporta la textura
-      this.ground.material.needsUpdate = true;
-      if (oldG) oldG.dispose();
-    }
     if (this.scene.fog) this.scene.fog.color.set(theme.fog);
   }
 
@@ -150,9 +132,9 @@ export class SceneManager {
     this._bounds = b;
     this._boardCenter.set((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2);
 
-    // Sombra grande del tablero sobre el suelo (anclaje + sensación de elevación).
+    // Sombra grande del tablero (anclaje sobre el paisaje + sensación de elevación).
     this._boardShadow.scale.set(b.width + 6, b.depth + 6, 1);
-    this._boardShadow.position.set(this._boardCenter.x, this.ground.position.y + 0.06, this._boardCenter.z);
+    this._boardShadow.position.set(this._boardCenter.x, GROUND_Y + 0.06, this._boardCenter.z);
     this._boardShadow.visible = true;
 
     this._frame(b);
