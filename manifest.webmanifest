@@ -1,0 +1,29 @@
+{
+  "name": "TREXoRoll — Inclina, rueda y conquista",
+  "short_name": "TREXoRoll",
+  "description": "Juego 3D de habilidad con temática jurásica: inclina el tablero y rueda la bola hasta el hoyo.",
+  "lang": "es",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#0a3a20",
+  "theme_color": "#16321f",
+  "categories": ["games", "kids"],
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ]
+}

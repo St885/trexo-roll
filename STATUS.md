@@ -2,19 +2,53 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.12.0 — Selector de idioma ES/EN (v0.11.1 en producción; 0.11.2→0.12.0 sin push aún) |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.11.1) · 🛠️ v0.12.0 i18n completo (ES por defecto / EN), fondo jurásico en gameplay, economía/monetización/mono — lista para probar local (sin push) |
-| **Fecha** | 2026-06-19 |
+| **Versión** | 0.15.2 — Triceratops v2: más detalle, volumen y anatomía (sin push aún) |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.12.0) · 🛠️ Local v0.15.2 lista para **revisión de Stefano** antes de desplegar (acumula 0.15.x + 0.14.x + 0.13.0 + 0.12.1) |
+| **Fecha** | 2026-06-21 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
 | **Dependencias runtime** | 0 (Three.js en `libs/`) |
-| **Niveles** | 25 (Fácil → Experto), todos validados como superables |
+| **Niveles** | 50 (Fácil → Experto) en 10 mundos, todos validados como superables |
 | **Bolas** | 5, cada una con **especie de dino distinta** (T-Rex, Raptor, Parasaurio, Triceratops, Braquiosaurio) |
 | **Biomas** | 8 ambientaciones jurásicas |
 | **Git** | Repo `github.com/St885/trexo-roll`, rama `main` |
 | **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · v0.8.0 (2026-06-19) |
 
 ---
+
+## Novedades v0.15.0 — Responsive móvil real + familia Triceratops
+
+- **Responsive por dispositivo**: perfil de viewport en JS (clases en `<body>`) + ajuste de
+  cámara (tablero más grande en teléfonos pequeños verticales; aprovecha el ancho en
+  horizontal) + `visualViewport` (barra del navegador) + paneles `dvh` + HUD/controles
+  compactos en pantallas pequeñas (sin recortar la pausa).
+- **Evento Triceratops**: al recoger 3 monedas, un adulto + 2 bebés caminan por el borde
+  inferior y se van. Una vez por nivel; overlay que no toca física/HUD/controles ni el input.
+- Validado con `npm test` (incl. checks de Triceratops y responsive), `test:graph`,
+  `test:visual`, cross-check de IDs y smoke de servidor. ⚠️ **No desplegado**.
+
+## Novedades v0.14.0 — 50 niveles, portales y eventos jurásicos
+
+- **50 niveles** (25 nuevos, 26–50) en **10 mundos** (5 nuevos), dificultad creciente.
+- **Portales naranjas** (2/nivel, enlazados): teletransporte con efecto de invocación,
+  cooldown anti-loop y salida segura. No matan ni ganan.
+- **Pterodáctilos** (2 vuelos/nivel) y **Diplodocus** (al coger estrella) como eventos
+  ambientales en overlay DOM/SVG, sin tapar HUD/controles ni bloquear el input.
+- HUD **Nivel X/50**; progresión, mundos y desbloqueos cubren los 50 niveles.
+- Economía/tienda/poderes intactos. Validado con `npm test` (incl. física de portales +
+  events-smoke), `test:graph`, `test:visual`, cross-check de IDs y smoke de servidor.
+- ⚠️ **No desplegado**: pendiente de revisión manual de Stefano.
+
+## Novedades v0.13.0 — Juego completo (revisión integral de pantallas)
+
+- **Ajustes (⚙️)**: Música y Efectos **separados** y persistentes; **Reiniciar progreso**
+  con confirmación; acceso a **Créditos**.
+- **Créditos** (autoría + tecnología).
+- **Cierre de campaña**: mensaje especial al completar los **25 niveles** con ⭐ y récord.
+- **PWA**: `manifest.webmanifest` + **favicon SVG** original → instalable y con icono propio.
+- Botón **🛒 Canje** ahora traducido; paridad i18n ES/EN completa.
+- Validado con `npm test` / `test:graph` / `test:visual` + cross-check de IDs + smoke de servidor.
+- ⚠️ **No desplegado**: pendiente de revisión manual de Stefano.
 
 ## Novedades v0.3.0
 

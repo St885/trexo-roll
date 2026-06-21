@@ -148,3 +148,50 @@ fallo, y caída en hoyo. Silenciable desde el menú.
 
 Multijugador, editor de niveles, modelos 3D detallados (.glb), música de fondo,
 tablas de clasificación online, monetización. Ver `mvp.md` y `backlog.md`.
+
+---
+
+## 10. Expansión v0.14.0 — 50 niveles, portales y eventos jurásicos
+
+### 10.1 Contenido
+- **50 niveles** en **10 mundos** (5 niveles cada uno). Mundos 6–10:
+  Cañón del Pterodáctilo, Selva Perdida, Cavernas de Ámbar, Pantano de Sombras,
+  Corona del T-Rex. Dificultad creciente: media-alta (26–30) → experto/final (46–50).
+
+### 10.2 Portales naranjas (nueva mecánica)
+- Cada nivel 26–50 tiene **2 hoyos naranjas enlazados**. Entrar en uno teletransporta
+  la bola al otro. **No mata ni gana**; la bola continúa.
+- La salida **conserva la dirección** (amortiguada `EXIT_DAMP`, con velocidad mínima
+  `EXIT_MIN_SPEED` para abandonar la boca) y se coloca en un **punto seguro** validado
+  (dentro de la huella, sin pared ni trampa). El **cooldown** (`COOLDOWN`) evita ping-pong.
+- Diseño: atajos, rutas alternativas, acceso a recompensas y puzzles (incl. niveles de
+  **islas** que requieren el portal). Efecto de **invocación**: vórtice naranja giratorio,
+  aro de luz expansivo, chispas y sonido de teletransporte.
+
+### 10.3 Eventos ambientales (no intrusivos)
+- **Pterodáctilos**: 2 vuelos por nivel (ida y vuelta) cruzando el cielo.
+- **Diplodocus**: al recoger una **estrella**, se asoma desde un lateral, come una hoja
+  y se va.
+- **Familia Triceratops** (v0.15.0): al recoger la **3.ª moneda** del nivel, un adulto
+  (gola + 3 cuernos + cuerpo robusto + patas + cola) con **2 bebés** camina por el borde
+  inferior y desaparece por el otro lado. **Una vez por nivel** (bandera rearmada por nivel).
+- Todos viven en una **capa overlay DOM/SVG** (`#critter-layer`) con `pointer-events:none`
+  y z-index **por debajo del HUD/controles** → nunca tapan la interfaz ni bloquean el input,
+  no tocan la física y son ligeros en móvil.
+
+> La economía (monedas = 1 punto, estrellas acumulables para la Tienda de Canje) y los
+> potenciadores se mantienen **sin cambios**.
+
+---
+
+## 11. Responsive / mobile-first (v0.15.0)
+
+- **Perfil de viewport** (`Game.getViewportProfile/isSmallPhone/isTallPhone/isLandscapeMobile`)
+  → clases en `<body>`; se recalcula en `resize`, `orientationchange` y `visualViewport`.
+- **Cámara por dispositivo** (`SceneManager.setViewportFit`): tablero más grande y elevado
+  en teléfono pequeño vertical; aprovecha el ancho en móvil horizontal. El encaje por esfera
+  mantiene el tablero completo a cualquier inclinación.
+- **Layout**: `html/body` con `overflow:hidden` + `touch-action:none` (sin scroll en partida);
+  paneles con `dvh`; safe-areas (`env(safe-area-inset-*)`); HUD y D-pad/joystick compactos en
+  pantallas pequeñas sin perder el toque cómodo (mín. 44px) ni recortar la pausa.
+- Soportado: iPhone/Android pequeños y grandes, vertical y horizontal, pantallas altas/anchas.

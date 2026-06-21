@@ -113,5 +113,32 @@ console.log('\n[3] Jugabilidad: piloto automático intenta cada nivel');
     'la bola siempre reacciona a la inclinación (ningún nivel se queda inmóvil)');
 }
 
+// --- 4) Portales: teletransporte correcto (no mata/gana, salida controlada) --
+console.log('\n[4] Portales (teletransporte)');
+{
+  const lvl = {
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 44, d: 8 }],
+    walls: [], goal: { x: 999, z: 999, r: 1 }, traps: [],
+    portals: [{ x: -10, z: 0, r: 1.0 }, { x: 10, z: 0, r: 1.0 }],
+    start: { x: -16, z: 0 },
+  };
+  const p = new BallPhysics();
+  p.loadLevel(lvl);
+  let teleports = 0, badEvent = null, jumped = false, exitSpeed = 0;
+  for (let i = 0; i < 600; i++) {
+    const before = p.x;
+    const ev = p.update(1 / 60, 0, -PHYS.MAX_TILT); // empuja +x hacia el portal A
+    const fx = p.consumePortalFx();
+    if (fx) { teleports++; if (before < -5 && p.x > 5) jumped = true; exitSpeed = p.speed; }
+    if (ev === 'goal' || ev === 'trap') badEvent = ev;
+    if (ev === 'goal' || ev === 'trap' || ev === 'fall') break;
+  }
+  ok(teleports >= 1, `la bola entra en un portal y se teletransporta (teleports=${teleports})`);
+  ok(jumped, 'reaparece por el portal hermano (salto de −10 a +10)');
+  ok(badEvent === null, `el portal NO cuenta como meta ni trampa (evento indebido=${badEvent})`);
+  ok(exitSpeed <= PHYS.MAX_SPEED + 0.01, `velocidad de salida controlada (${exitSpeed.toFixed(1)} ≤ ${PHYS.MAX_SPEED})`);
+  ok(teleports <= 2, `sin ping-pong infinito gracias al cooldown (teleports=${teleports})`);
+}
+
 console.log(`\n${failures === 0 ? '✅ TODO OK' : '❌ ' + failures + ' fallo(s)'}\n`);
 process.exit(failures === 0 ? 0 : 1);

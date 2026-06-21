@@ -105,6 +105,29 @@
 | J-07 | Polish visual (paneles, tarjetas de bola, animaciones) | Media | ✅ |
 | J-08 | Smoke-test de dibujo/3D sin navegador | Media | ✅ |
 
+## Iteración v0.14.0 (completada) — Expansión de contenido y mecánicas
+| ID | Historia | Prioridad | Estado |
+|----|----------|-----------|--------|
+| X-01 | 25 niveles nuevos (26–50) → **50 niveles**, dificultad creciente | Alta | ✅ |
+| X-02 | 5 mundos nuevos (6–10) → **10 mundos**; progresión/desbloqueos/HUD X/50 | Alta | ✅ |
+| X-03 | Mecánica de **portales naranjas** (2/nivel, enlazados) con cooldown y salida segura | Alta | ✅ |
+| X-04 | Efecto de **invocación** del portal (vórtice + aro + chispas + sonido) | Alta | ✅ |
+| X-05 | **Pterodáctilos** ambientales (2 vuelos/nivel) sin tapar HUD/controles | Media | ✅ |
+| X-06 | **Diplodocus** al recoger estrella (overlay lateral, no bloquea input) | Media | ✅ |
+| X-07 | Validador **portal-aware** + checks de portales; `events-smoke`; test de física de portales | Alta | ✅ |
+| X-08 | i18n ES/EN de niveles/mundos nuevos; copys "50 niveles / 10 mundos" | Media | ✅ |
+
+## Iteración v0.15.0 (completada) — Responsive móvil + evento Triceratops
+| ID | Historia | Prioridad | Estado |
+|----|----------|-----------|--------|
+| R-01 | Perfil de viewport en JS (clases en body) + `visualViewport` | Alta | ✅ |
+| R-02 | Encuadre de cámara por dispositivo (`setViewportFit`): tablero grande en móvil | Alta | ✅ |
+| R-03 | Paneles `dvh` + HUD/controles compactos en teléfonos pequeños (sin recortar pausa) | Alta | ✅ |
+| R-04 | QA responsive (vertical/horizontal, iPhone/Android) sin scroll en partida | Alta | ✅ |
+| X-09 | Evento **Triceratops** (adulto + 2 bebés) al recoger 3 monedas, 1 vez/nivel | Media | ✅ |
+| X-10 | Triceratops no intrusivo (overlay, sin tocar física/HUD/controles/input) | Alta | ✅ |
+| X-11 | Tests: SVG Triceratops bien formado + checks responsive en `events-smoke` | Media | ✅ |
+
 ## Post-MVP (pendientes)
 | ID | Historia | Prioridad |
 |----|----------|-----------|

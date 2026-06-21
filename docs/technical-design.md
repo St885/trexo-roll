@@ -184,7 +184,19 @@ npm test                 # node tools/physics-smoke-test.mjs
   `celebrating` antes de la victoria. Sonido `sfx.roar()`.
 - **Biomas** (`scene/textures.js` `THEMES`, `makeThemeSky`): 8 ambientaciones; cada nivel
   declara `theme`. `SceneManager.applyTheme()` cambia fondo, color de suelo y niebla.
-- **25 niveles** (`levels/levels.js`) con `theme` y dificultad creciente; validados por
-  `tools/level-validator.mjs`.
+- **50 niveles** (`levels/levels.js`) en **10 mundos**, con `theme` y dificultad creciente;
+  validados por `tools/level-validator.mjs` (BFS **portal-aware**).
+- **Portales** (`level.portals`: 2 hoyos enlazados): el teletransporte se resuelve en
+  `physics/BallPhysics.js` (`_teleport`/`consumePortalFx`, cooldown anti-loop, salida
+  segura); render en `scene/BoardBuilder.js` (hoyo + aro + vórtice) y FX de invocación en
+  `scene/SceneManager.js` (`spawnPortalFx`). Sonido `sfx.portal()`.
+- **Eventos ambientales** (`effects/critters.js`, capa DOM `#critter-layer`,
+  `pointer-events:none`, z-index < HUD): **pterodáctilos** (2 vuelos/nivel), **diplodocus**
+  (al recoger estrella) y **familia Triceratops** (`triceratops(dir)`, al recoger 3 monedas;
+  adulto + 2 bebés caminando por abajo, 1 vez por nivel). No tocan física ni input.
+- **Responsive** (`core/Game.js`): perfil de viewport (`getViewportProfile`, `isSmallPhone`,
+  `isLandscapeMobile`) → clases en `<body>` + `SceneManager.setViewportFit()` para afinar el
+  encuadre de cámara por dispositivo. Listeners `resize`/`orientationchange`/`visualViewport`.
 - **QA**: `npm run test:visual` (`tools/canvas-smoke.mjs`) ejerce el dibujo Canvas 2D y
-  la construcción 3D con un contexto simulado (sin navegador).
+  la construcción 3D con un contexto simulado (sin navegador). `tools/events-smoke.mjs`
+  valida portales, critters (SVG bien formado) y el layout responsive base.

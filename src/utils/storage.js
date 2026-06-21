@@ -11,6 +11,7 @@ const DEFAULT = {
   highScore: 0, unlocked: 1, stars: {}, bestTimes: {}, selectedBall: 'blanca', lastLevel: 1,
   starTokens: 0, extraLives: 0, trapBlocks: 0, fallShields: 0,
   livesBank: 0, // reserva de vidas (compradas/ganadas por vídeo) para continuar partidas
+  sfxOn: true, musicOn: true, // ajustes de audio (separados)
 };
 let memoryFallback = clone(DEFAULT);
 
@@ -34,6 +35,8 @@ export function load() {
       trapBlocks: nonNeg(data.trapBlocks),
       fallShields: nonNeg(data.fallShields),
       livesBank: nonNeg(data.livesBank),
+      sfxOn: data.sfxOn !== false,   // por defecto ON
+      musicOn: data.musicOn !== false,
     };
   } catch (_) {
     return clone(memoryFallback);
@@ -176,4 +179,25 @@ export function takeFromLivesBank(n) {
   const take = Math.min(c.livesBank, Math.max(0, n));
   if (take > 0) save({ ...c, livesBank: c.livesBank - take });
   return take;
+}
+
+// --- Ajustes de audio --------------------------------------------------------
+
+export function getSettings() {
+  const c = load();
+  return { sfxOn: c.sfxOn, musicOn: c.musicOn };
+}
+
+export function setSetting(key, value) {
+  if (key !== 'sfxOn' && key !== 'musicOn') return;
+  save({ ...load(), [key]: !!value });
+}
+
+// --- Reiniciar progreso (conserva audio y bola elegida) ----------------------
+
+/** Borra progreso/inventario/récords. Mantiene ajustes de audio y bola elegida. */
+export function resetProgress() {
+  const c = load();
+  const keep = { sfxOn: c.sfxOn, musicOn: c.musicOn, selectedBall: c.selectedBall };
+  save({ ...DEFAULT, ...keep });
 }

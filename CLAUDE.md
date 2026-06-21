@@ -61,7 +61,8 @@ npm run test:graph      # carga TODO el grafo de módulos (incl. Three.js) en No
 npm run test:visual     # ejerce el dibujo Canvas 2D y la construcción 3D (sin navegador)
 ```
 
-`npm test` verifica la física y que **los 25 niveles sean superables** (BFS de solvencia).
+`npm test` verifica la física y que **los 50 niveles sean superables** (BFS de solvencia,
+**portal-aware**), además de la mecánica de **portales** y los **eventos** (events-smoke).
 `test:visual` comprueba caras de bola, fondos de bioma y el dino de celebración.
 **La capa visual 3D y la sensación de control se validan manualmente en el navegador**
 (checklist en `docs/mvp.md`).

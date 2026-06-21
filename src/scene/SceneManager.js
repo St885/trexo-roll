@@ -54,11 +54,13 @@ export class SceneManager {
     this._boardCenter = new THREE.Vector3();
     this._t = 0;
     this._shake = 0;
+    this._fit = {};          // perfil de viewport (afina el encuadre por dispositivo)
     this._celebration = null;
     this._collectibles = []; // {mesh, x, z, type, taken}
     this._pickFx = [];       // efectos "pop" al recoger
     this._ptero = null;      // estado del ptero-rescate
     this._bursts = [];       // ráfagas de partículas (estrella, rescate)
+    this._portalRings = [];  // anillos de luz al teletransportar (entrada/salida)
 
     // Sombra de contacto bajo la bola (da sensación de peso y apoyo).
     this._contactShadow = new THREE.Mesh(
@@ -159,6 +161,7 @@ export class SceneManager {
     this._collectibles = [];  // sus meshes colgaban del tablero (ya liberados)
     this._pickFx = [];
     this._bursts = [];        // sus puntos colgaban del tablero (ya liberados)
+    this._portalRings = [];   // sus mallas colgaban del tablero (ya liberadas)
     if (this._ptero) { this.scene.remove(this._ptero.group); disposeTree(this._ptero.group); this._ptero = null; }
   }
 
@@ -199,6 +202,28 @@ export class SceneManager {
     points.frustumCulled = false;
     this.boardGroup.add(points);
     this._bursts.push({ points, velocities, t: 0 });
+  }
+
+  /**
+   * Efecto de invocación/teletransporte del portal: un aro de luz naranja que se
+   * expande y desvanece, más una ráfaga de chispas. Se lanza en la entrada y la
+   * salida para que el "salto" se lea con claridad. Ligero para móvil.
+   */
+  spawnPortalFx(x, z, colorHex = '#ffb15a') {
+    if (!this.boardGroup) return;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.18, 0.42, 28),
+      new THREE.MeshBasicMaterial({
+        color: colorHex, transparent: true, depthWrite: false,
+        blending: THREE.AdditiveBlending, opacity: 0.9, side: THREE.DoubleSide,
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, 0.12, z);
+    ring.frustumCulled = false;
+    this.boardGroup.add(ring);
+    this._portalRings.push({ mesh: ring, t: 0, dur: 0.5 });
+    this.spawnBurst(x, 0.35, z, colorHex);
   }
 
   /** Tapa una trampa bloqueada con una piedra gris (se ve "apagada"). */
@@ -386,14 +411,28 @@ export class SceneManager {
     const limiting = Math.min(vFov, hFov);
     const portrait = aspect < 1;
     // Encaje por esfera (sin·, no tan·) con margen pequeño: tablero grande pero estable.
-    const margin = portrait ? radius * 0.03 : radius * 0.07;
+    // El perfil de viewport afina el resultado por dispositivo:
+    //  · teléfono pequeño vertical → menos margen (tablero MÁS grande) + más elevación
+    //    (sitio para HUD arriba y controles abajo);
+    //  · móvil horizontal → margen contenido para aprovechar el ancho.
+    let marginK = portrait ? 0.03 : 0.07;
+    let raiseK = portrait ? 0.05 : 0;
+    if (this._fit.smallPortrait) { marginK = 0.012; raiseK = 0.085; }
+    else if (this._fit.landscapeMobile) { marginK = 0.05; raiseK = 0; }
+    const margin = radius * marginK;
     const dist = radius / Math.sin(limiting / 2) + margin;
     const target = this._boardCenter.clone();
-    target.z += portrait ? radius * 0.05 : 0; // sube un pelín el tablero (sitio para los controles)
+    target.z += radius * raiseK; // sube un pelín el tablero (sitio para los controles)
     const pos = CAM_DIR.clone().multiplyScalar(dist).add(this._boardCenter);
     this.camera.position.copy(pos);
     this.camera.lookAt(target);
     if (this.sun) this.sun.target.position.copy(this._boardCenter);
+  }
+
+  /** Recibe el perfil de viewport (de Game) para afinar el encuadre por dispositivo. */
+  setViewportFit(fit) {
+    this._fit = fit || {};
+    if (this._bounds) this._frame(this._bounds);
   }
 
   setTilt(tiltX, tiltZ) {
@@ -411,6 +450,9 @@ export class SceneManager {
         const e = obj.userData.baseEmissive;
         obj.material.emissiveIntensity = e * (0.6 + 0.4 * Math.sin(this._t * 3));
         obj.scale.setScalar(1 + 0.06 * Math.sin(this._t * 3));
+      }
+      if (obj.userData.spin) {
+        obj.rotation.z += dt * obj.userData.spin; // vórtice de portal girando
       }
       if (obj.userData.billboard) {
         const wp = new THREE.Vector3();
@@ -462,6 +504,20 @@ export class SceneManager {
         if (this.boardGroup) this.boardGroup.remove(b.points);
         disposeTree(b.points);
         this._bursts.splice(i, 1);
+      }
+    }
+
+    // Aros de teletransporte: se expanden y se desvanecen.
+    for (let i = this._portalRings.length - 1; i >= 0; i--) {
+      const r = this._portalRings[i];
+      r.t += dt;
+      const p = Math.min(1, r.t / r.dur);
+      r.mesh.scale.setScalar(1 + p * 6);
+      r.mesh.material.opacity = 0.9 * (1 - p);
+      if (p >= 1) {
+        if (this.boardGroup) this.boardGroup.remove(r.mesh);
+        disposeTree(r.mesh);
+        this._portalRings.splice(i, 1);
       }
     }
 

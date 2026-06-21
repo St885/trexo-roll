@@ -2,6 +2,225 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.15.2] — 2026-06-21 — Triceratops v2: más detalle, volumen y anatomía (3 monedas)
+
+> Segunda pasada de calidad sobre la familia Triceratops. **Comportamiento intacto**
+> (aparece al recoger 3 monedas, camina por abajo y se va). **Sin desplegar.**
+
+### Cambiado
+- **Familia Triceratops mucho más trabajada** (overlay SVG, mismo activador y capa):
+  - **Volumen y sombreado**: luz superior en el lomo (`tri-hi`), sombra de oclusión en
+    vientre y mejilla (`tri-ao`), vientre crema y gradiente de cuerpo más vivo (4 paradas).
+  - **Cabeza/anatomía**: hocico con **pico** y **línea de boca**, **ojo con anillo** cálido
+    (mirada amable), mejor silueta de cráneo.
+  - **3 cuernos sólidos**: 2 frontales gruesos + 1 **trasero sombreado** (`tri-horn-bk`)
+    para dar profundidad, mejor colocados; **cuerno nasal** claro.
+  - **Gola ancha y reconocible**: interior más claro (`tri-frill-in`), **nervios**
+    radiales (`tri-frill-lines`) y **epoccipitales** de marfil en el borde.
+  - **Cuerpo robusto y bajo** con **4 patas gruesas** (columnares, traseras sombreadas)
+    y dedos; **cola** proporcionada.
+  - **Bebés** rehechos con la misma anatomía (4 patas, cola, gola, 3 cuernos incipientes,
+    ojo con anillo): claramente la misma especie, más coherentes y tiernos.
+- **Animación**: caminata de **4 patas en diagonal** con **bote de peso** (ligera rotación),
+  vaivén de cabeza/cola y **meneo** desfasado de los bebés.
+- **Composición**: lienzo más amplio (viewBox 460×185) y grupo algo mayor
+  (`clamp(84px, 15vh, 152px)`) para más presencia; sigue por debajo del HUD/controles.
+
+### Validado
+- `npm test` (SVG Triceratops bien formado + 2 bebés + partes), `test:graph`, `test:visual`,
+  llaves CSS (469/469), sin huérfanos y smoke de servidor: **verde**. Activación por 3
+  monedas, conteo, puntos, estrellas, diplodocus, pteros, portales, dino de victoria, mono,
+  ptero-rescate, música, controles y responsive **intactos**.
+
+## [0.15.1] — 2026-06-21 — Rediseño visual de la familia Triceratops (3 monedas)
+
+> Mejora visual del evento de la familia Triceratops. **Comportamiento intacto**
+> (aparece al recoger 3 monedas, camina por abajo y se va). **Sin desplegar.**
+
+### Cambiado
+- **Familia Triceratops rehecha** (overlay SVG, misma capa `#critter-layer`, mismo activador):
+  - **Paleta amarillo dorado + marrón anaranjado + marfil** (gradientes de volumen),
+    sustituye al verde oliváceo anterior.
+  - **Adulto** más robusto: **gola trabajada** (epoccipitales de marfil en el borde +
+    patrón interno), **3 cuernos** de marfil bien definidos, cabeza con **pico** y **ojo
+    con brillo**, cuerpo con vientre crema y patrón dorsal, **4 patas** con profundidad
+    (traseras más oscuras) y dedos, cola proporcionada.
+  - **Bebés** rehechos con el mismo esquema cromático, tiernos y coherentes (cabeza/ojo
+    grandes), no simplones.
+- **Animación de caminata** mejorada: **4 patas en diagonal** (alternancia natural), bote
+  corporal, vaivén de cabeza y cola, y **meneo (waddle)** de los bebés desfasado.
+- **Más presencia**: tamaño algo mayor (`clamp(78px, 14vh, 142px)`) y un pelín más alto
+  del borde; entrada/salida **totalmente fuera de pantalla** (recorrido más limpio, ~8 s).
+  Sigue con `pointer-events:none` y z-index **bajo el HUD/controles** (pasa por detrás).
+
+### Validado
+- `npm test` (SVG Triceratops bien formado + 2 bebés + partes + responsive), `test:graph`,
+  `test:visual`, llaves CSS (461/461) y smoke de servidor: **verde**. Activación por 3
+  monedas, conteo, puntos, estrellas, diplodocus, pteros, portales, dino de victoria, mono,
+  ptero-rescate, música y controles **intactos**.
+
+## [0.15.0] — 2026-06-21 — Responsive real para celulares + familia Triceratops (3 monedas)
+
+> Adaptación a tamaños de celular reales y nuevo evento visual. **Sin desplegar.**
+
+### Añadido — Responsive móvil
+- **Perfil de viewport en JS** (`getViewportProfile`, `isSmallPhone`, `isTallPhone`,
+  `isLandscapeMobile`) que pone **clases en `<body>`** (`is-portrait`/`is-landscape`/
+  `is-small-phone`/`is-tall-phone`/`is-landscape-mobile`/`is-short`) y se recalcula en
+  `resize`, `orientationchange` y **`visualViewport.resize`** (barra del navegador móvil).
+- **Encuadre de cámara por dispositivo** (`SceneManager.setViewportFit`): en **teléfono
+  pequeño vertical** el tablero se ve **más grande** y un poco **más elevado** (sitio para
+  HUD arriba y controles abajo); en **móvil horizontal** se aprovecha el ancho. El encaje
+  por esfera sigue garantizando que el tablero entra completo a cualquier inclinación.
+- Afinado responsive: paneles con **viewport dinámico** (`dvh`) para respetar la barra del
+  navegador; HUD y controles **más compactos en teléfonos pequeños**; HUD que **no recorta
+  la pausa** en horizontal. El selector de **50 niveles** ya hace scroll interno.
+
+### Añadido — Evento Triceratops (3 monedas)
+- Al recoger la **3.ª moneda** de un nivel, una **familia Triceratops** (1 adulto con gola,
+  3 cuernos, cuerpo robusto, patas y cola + **2 bebés**) **camina por el borde inferior**
+  y desaparece por el otro lado (~7 s, dirección alterna por nivel). Caminata animada
+  (patas alternando, vaivén de cabeza/cola, bote de los bebés).
+- **Una sola vez por nivel** (bandera `_triceratopsPlayed`, rearmada en cada nivel).
+- Vive en la capa `#critter-layer` (`pointer-events:none`, z-index **bajo el HUD/controles**)
+  → **no** cambia la física, **no** bloquea el input, **no** tapa HUD ni controles, y pasa
+  **detrás** de los controles de las esquinas. Respeta `prefers-reduced-motion` y safe-area.
+
+### Validado
+- `npm test` añade checks de **Triceratops** (SVG bien formado, 2 bebés, partes) y
+  **responsive** (viewport meta, `overflow:hidden`/`touch-action:none`, `critter-layer`
+  sin captura de puntero). Verde junto a `test:graph`, `test:visual`, IDs (122/63),
+  llaves CSS (457/457) y smoke de servidor. Economía, portales, pteros, diplodocus, dino
+  de victoria, mono y ptero-rescate **intactos**.
+
+## [0.14.1] — 2026-06-21 — Rediseño del Diplodocus (estrella)
+
+> Mejora visual del evento del **diplodocus** que aparece al recoger una estrella.
+> **Sin desplegar** (pendiente de revisión).
+
+### Cambiado
+- **Diplodocus rehecho por completo** (overlay SVG, misma capa `#critter-layer`,
+  mismo activador: recoger estrella). Antes era una silueta plana sin patas ni cola.
+  Ahora tiene **silueta de saurópodo** real: cuello largo elegante, **cabeza de saurópodo**
+  con cara amable (ojo con brillo, fosa nasal, boca), **cuerpo robusto con volumen**
+  (gradientes de sombreado), **patas columnares** (delanteras + traseras con dedos),
+  **cola armoniosa** con vaivén, manchas dorsales y sombra de contacto.
+- **Hoja tropical** mejorada (fronda con nervadura) en lugar del blob genérico.
+- **Animación pulida y sincronizada**: entrada con asentamiento → levanta el cuello hacia
+  la hoja → **dos mordiscos** mientras la hoja se encoge y desaparece → salida suave.
+- Tamaño ligeramente reducido (`clamp(150px, 31vh, 280px)`) para **tapar menos el tablero**.
+  Sigue con `pointer-events:none` y z-index **por debajo del HUD/controles**.
+
+### Validado
+- `npm test` ahora verifica que los **SVG de critters están bien formados** (etiquetas
+  balanceadas) y que el diplodocus incluye todas sus partes. `test:graph`, `test:visual`,
+  llaves CSS (405/405) y smoke de servidor: **verde**. Sin dependencias nuevas, mismo
+  rendimiento (vector ligero animado por compositor). El resto del juego, intacto.
+
+## [0.14.0] — 2026-06-21 — 50 niveles, portales naranjas y eventos jurásicos
+
+> Gran expansión de contenido y mecánicas. **Sin desplegar** (pendiente de revisión).
+
+### Añadido
+- **25 niveles nuevos (26–50)** → **50 niveles** en total, con dificultad creciente
+  (media-alta → experto/final) y mucha variedad de formas (cañones, puentes, círculos,
+  hexágonos, rombos, islas, laberintos y campos de columnas).
+- **5 mundos nuevos** (6–10) → **10 mundos** de 5 niveles:
+  Cañón del Pterodáctilo 🦅 · Selva Perdida 🌴 · Cavernas de Ámbar 💎 ·
+  Pantano de Sombras 🌑 · Corona del T-Rex 👑.
+- **Mecánica de portales naranjas** (2 por nivel, enlazados): entrar en uno saca la bola
+  por el otro. **No mata ni gana**; conserva la dirección (amortiguada, con mínimo de
+  salida y colocación segura validada), tiene **cooldown anti-loop** (0,55 s) y **efecto
+  de invocación** (vórtice naranja giratorio + aro de luz que se expande + chispas + sonido
+  de teletransporte). Se resuelve **dentro de la física** (no rompe la semántica de eventos).
+- **Pterodáctilos ambientales**: 2 vuelos por nivel (ida y vuelta) cruzando el cielo.
+- **Diplodocus**: al recoger una **estrella**, un diplodocus se asoma desde un lateral,
+  come una hoja y se va. Ambos eventos viven en una **capa overlay DOM/SVG** con
+  `pointer-events:none` y **por debajo del HUD/controles** → no tapan la interfaz, no
+  bloquean el input, no tocan la física y son ligeros en móvil.
+- HUD ahora muestra **Nivel X/50**; selector de niveles, progresión y desbloqueos cubren
+  los 50 niveles y 10 mundos automáticamente. Textos nuevos en **ES e inglés**.
+
+### Cambiado
+- `BallPhysics`: nuevo soporte de `portals` con `consumePortalFx()` (la capa visual
+  lanza el efecto sin acoplar física y render).
+- `level-validator`: ahora es **portal-aware** (modela el teletransporte en la BFS de
+  solvencia, así los niveles de islas requieren portal y aun así se validan) y comprueba
+  que 26–50 tengan exactamente 2 portales bien colocados.
+- **Economía intacta**: monedas = 1 punto, estrellas acumulables para canje, tienda y
+  potenciadores sin cambios. Los coleccionables nunca se colocan sobre un portal.
+
+### Validado
+- `npm test` ahora incluye **test de física de portales** (entra→sale por el hermano, no
+  mata/gana, salida controlada, sin ping-pong) y **events-smoke** (critters no-op sin DOM,
+  tiempos de vuelo, 2 portales en 26–50 / 0 en 1–25, 50 niveles). Todo **verde**, junto a
+  `test:graph`, `test:visual` (construye los 50 tableros), cross-check de IDs (122/63),
+  llaves CSS balanceadas y smoke de servidor.
+
+### Notas
+- Sin dependencias nuevas. CSP intacta (todo mismo origen). **Sin push/deploy.**
+
+## [0.13.0] — 2026-06-21 — Juego completo: Ajustes, Créditos, PWA y cierre de campaña
+
+> Revisión integral de **todas las pantallas** para dejar el juego "terminado".
+> **Sin desplegar** (pendiente de revisión de Stefano).
+
+### Añadido
+- **Pantalla de Ajustes** (⚙️, accesible desde el menú) con:
+  - **Música** y **Efectos** como interruptores **independientes** (antes era un único
+    silencio global). Se **persisten** en `localStorage` y se aplican al instante.
+  - **Reiniciar progreso** con **diálogo de confirmación** (borra estrellas, niveles,
+    récords e inventario; conserva idioma, ajustes de audio y dino elegido).
+  - Acceso a **Créditos**.
+- **Pantalla de Créditos** (autoría, tecnología, "100% procedural y original").
+- **Mensaje de campaña completada**: al superar el **nivel 25**, la pantalla de victoria
+  muestra ⭐ totales / máximo y la mejor puntuación ("¡Has completado los 25 niveles!").
+- **Instalable como app (PWA)**: `manifest.webmanifest` + **favicon SVG original**
+  (`assets/icon.svg`, arte jurásico vectorial) enlazados en `index.html`.
+- Textos nuevos en **ES e inglés** (paridad i18n completa).
+
+### Cambiado
+- **Audio** refactorizado: `this.muted` global → `sfxOn`/`musicOn` separados; nuevos
+  métodos `_applyAudio` / `_toggleMusic` / `_toggleSfx` / `_toggleMasterSound`. El botón
+  de sonido en **Pausa** ahora es un **silencio maestro** (apaga/enciende todo).
+- El botón **🛒 Canje** del menú ahora se traduce (faltaba `data-i18n`).
+
+### Validado
+- `npm test` (física · 25 niveles · controles · coleccionables · imports · **i18n ES/EN**),
+  `test:graph`, `test:visual`: **verde**. Cross-check de **IDs DOM** (121 en HTML / 62 en JS):
+  todos existen. Llaves CSS balanceadas (342/342). `manifest` JSON e `icon.svg` válidos.
+  Smoke de servidor: index/manifest/icono/CSS/JS sirven con MIME correcto.
+
+### Notas
+- Sin dependencias nuevas. CSP intacta (todo mismo origen). **Sin push/deploy.**
+- Limitación menor conocida: iOS no usa SVG para `apple-touch-icon` (se podría añadir un
+  PNG si se quiere icono perfecto al "Añadir a pantalla de inicio" en iPhone).
+
+## [0.12.1] — 2026-06-21 — Revisión y endurecimiento de seguridad
+
+### Auditoría (sin hallazgos críticos)
+- Juego **100% cliente, sin backend, sin login, sin PII, sin pagos reales, sin red**.
+  Escaneo: **sin** `eval`/`Function`/`document.write`, **sin** llamadas de red, **sin** URLs
+  externas (Three.js vendorizado), **sin** entradas de usuario (→ sin vector de XSS),
+  **sin** secretos. Los `innerHTML` solo interpolan contenido propio/números saneados.
+  `localStorage` se **sanea** al leer (tipos/Number; idioma validado a es/en).
+
+### Endurecido
+- **Content-Security-Policy** (meta): `default-src 'self'`; bloquea scripts/recursos
+  externos, **conexiones salientes (exfiltración)**, objetos/plugins, `<base>`, formularios
+  e **iframes** (`frame-ancestors 'none'`). `'unsafe-inline'` se mantiene solo para el
+  `<importmap>` y los `style=""` (sin impacto: no hay XSS posible).
+- **`<meta name="referrer" content="no-referrer">`**.
+- Documentación completa en **`docs/seguridad.md`** (modelo de amenazas, hallazgos, riesgos
+  residuales y requisitos para el futuro si se añade backend/monetización real).
+
+### Validado
+- `npm test`, `test:graph`: verde. CSP diseñada para **no romper** el juego (todo es mismo
+  origen + inline permitido); servidor local OK.
+
+### Notas
+- Sin dependencias nuevas. Sin push/deploy (pendiente de confirmación de Stefano).
+
 ## [0.12.0] — 2026-06-21 — Selector de idioma (Español / Inglés)
 
 ### Añadido

@@ -2,7 +2,7 @@
 // Usa la MISMA huella que la física, así lo que se ve coincide con lo que se juega.
 
 import * as THREE from 'three';
-import { makeBoardTexture } from './textures.js';
+import { makeBoardTexture, makeGlowTexture } from './textures.js';
 import { footprintBounds } from '../physics/footprint.js';
 import { makeRock, makeFern, makeEggNest, makeFossil, makeFootprintDecal, makeTRexBanner } from './decor.js';
 
@@ -88,6 +88,17 @@ export function buildBoard(level) {
     group.add(makeRing(t, 0xe74c3c, 0.0));
   }
 
+  // --- Portales naranjas (teletransporte) con aro emisivo + vórtice giratorio ---
+  for (const p of level.portals || []) {
+    group.add(makeHole(p, 0x2a1505));               // boca oscura cálida
+    const ring = makeRing(p, 0xff8a2a, 0.9);        // aro ámbar pulsante
+    group.add(ring);
+    animated.push(ring);
+    const swirl = makePortalSwirl(p);               // disco de energía que gira
+    group.add(swirl);
+    animated.push(swirl);
+  }
+
   // --- Decoración jurásica ---
   decorate(group, level);
 
@@ -101,6 +112,23 @@ function makeHole(hole, color) {
   );
   cyl.position.set(hole.x, -HOLE_DEPTH / 2 + 0.02, hole.z);
   return cyl;
+}
+
+// Vórtice de energía del portal: disco aditivo naranja que gira y "respira".
+function makePortalSwirl(portal) {
+  const swirl = new THREE.Mesh(
+    new THREE.CircleGeometry((portal.r || 1) * 0.92, 32),
+    new THREE.MeshBasicMaterial({
+      map: makeGlowTexture('#ffb15a'), transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, opacity: 0.85, side: THREE.DoubleSide,
+    })
+  );
+  swirl.rotation.x = -Math.PI / 2;
+  swirl.position.set(portal.x, 0.06, portal.z);
+  swirl.userData.spin = 2.4;          // rad/s (lo anima SceneManager)
+  swirl.userData.pulse = true;        // late suavemente
+  swirl.userData.baseEmissive = 0;    // MeshBasic: el pulse solo escala
+  return swirl;
 }
 
 function makeRing(hole, color, emissive) {

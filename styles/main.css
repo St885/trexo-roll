@@ -157,7 +157,9 @@ html, body {
   z-index: 1;
   width: min(560px, 94vw);
   max-height: 92vh;
+  max-height: 90dvh;             /* viewport dinámico: respeta la barra del navegador móvil */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 24px;
@@ -664,6 +666,126 @@ body.is-touch .dpad { display: grid; }
 /* HUD: chip de poderes activos */
 .hud-powers { color: var(--green); }
 
+/* ===================== Critters ambientales (ptero / diplodocus) ===================== */
+/* Capa por ENCIMA del lienzo pero por DEBAJO del HUD/controles (z-index 0, tras el
+   canvas en el DOM) y sin captura de puntero → nunca tapan la UI ni bloquean el input. */
+#critter-layer { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.critter { position: absolute; will-change: transform, opacity; }
+
+/* Pterodáctilo cruzando el cielo (banda alta, lejos de los controles inferiores) */
+.ptero { top: 14%; left: 0; width: clamp(54px, 11vw, 100px); filter: drop-shadow(0 6px 6px rgba(0,0,0,0.3)); }
+.ptero-svg { width: 100%; height: auto; display: block; }
+.ptero.ltr .ptero-svg { transform: scaleX(-1); } /* mira hacia donde avanza */
+.ptero-svg .pt-body { fill: #241f1b; }
+.ptero-svg .pw { fill: #2e2723; transform-box: view-box; transform-origin: 70px 42px; }
+.ptero-svg .pt-eye { fill: #ffce6b; }
+.ptero-svg .pw-l { animation: pteroFlapL 0.42s ease-in-out infinite; }
+.ptero-svg .pw-r { animation: pteroFlapR 0.42s ease-in-out infinite; }
+@keyframes pteroFlapL { 0%,100% { transform: rotate(2deg); } 50% { transform: rotate(16deg); } }
+@keyframes pteroFlapR { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(-16deg); } }
+
+/* Diplodocus asomándose por un lateral a media altura (encima de los controles, no los tapa) */
+.diplo { bottom: 19%; height: clamp(150px, 31vh, 280px); }
+.diplo.left { left: 0; }
+.diplo.right { right: 0; }
+.diplo-svg { height: 100%; width: auto; display: block; filter: drop-shadow(0 11px 10px rgba(0,0,0,0.30)); }
+.diplo.right .diplo-svg { transform: scaleX(-1); } /* mira hacia el centro */
+
+/* — Materiales / sombreado — */
+.diplo-svg .dp-fill { fill: url(#dpBody); }
+.diplo-svg .dp-leg-back { fill: url(#dpLeg); }
+.diplo-svg .dp-shadow { fill: #0a1f12; opacity: 0.16; }
+.diplo-svg .dp-belly { fill: #a4d49a; opacity: 0.42; }
+.diplo-svg .dp-spots ellipse { fill: #80c48b; opacity: 0.5; }
+.diplo-svg .dp-eye { fill: #16271b; }
+.diplo-svg .dp-eyeshine { fill: #ffffff; opacity: 0.92; }
+.diplo-svg .dp-nostril { fill: #2c5238; }
+.diplo-svg .dp-mouth { fill: none; stroke: #2b4d35; stroke-width: 2.4; stroke-linecap: round; }
+.diplo-svg .dp-toes path { fill: none; stroke: #2c5238; stroke-width: 2.2; stroke-linecap: round; opacity: 0.5; }
+.diplo-svg .dp-leaf-blade { fill: url(#dpLeaf); }
+.diplo-svg .dp-leaf-vein { fill: none; stroke: #2f7a28; stroke-width: 1.6; stroke-linecap: round; }
+
+/* — Animación (sincronizada con la entrada/salida del contenedor, 3,2 s) — */
+.diplo-svg .dp-tail { transform-box: view-box; transform-origin: 64px 208px; animation: dpTail 2.6s ease-in-out infinite; }
+.diplo-svg .dp-neck { transform-box: view-box; transform-origin: 126px 174px; animation: dpNeck 3.2s ease-in-out both; }
+.diplo-svg .dp-head { transform-box: view-box; transform-origin: 158px 78px; animation: dpHead 3.2s ease-in-out both; }
+.diplo-svg .dp-leaf { transform-box: view-box; transform-origin: 205px 68px; animation: dpLeaf 3.2s ease both; }
+
+/* cola: vaivén suave y continuo (vida) */
+@keyframes dpTail { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+/* cuello: agacha al entrar → sube a la hoja → mastica → baja al salir */
+@keyframes dpNeck {
+  0% { transform: rotate(9deg); } 18% { transform: rotate(9deg); }
+  30% { transform: rotate(-3deg); } 40% { transform: rotate(1deg); }
+  50% { transform: rotate(-3deg); } 62% { transform: rotate(0deg); }
+  78% { transform: rotate(7deg); } 100% { transform: rotate(11deg); }
+}
+/* cabeza: levanta el morro hacia la hoja y da dos mordiscos */
+@keyframes dpHead {
+  0%, 24% { transform: rotate(0); } 31% { transform: rotate(-7deg); }
+  37% { transform: rotate(-1deg); } 45% { transform: rotate(-6deg); }
+  52% { transform: rotate(0); } 100% { transform: rotate(0); }
+}
+/* hoja: se la come (encoge y desaparece) cuando el morro llega */
+@keyframes dpLeaf {
+  0%, 27% { opacity: 1; transform: scale(1); }
+  38% { opacity: 1; transform: scale(0.66); }
+  50% { opacity: 0; transform: scale(0.22); }
+  100% { opacity: 0; transform: scale(0.22); }
+}
+
+/* Familia Triceratops (evento de las 3 monedas) — paleta AMARILLO/MARRÓN premium.
+   Va en #critter-layer (z-index < HUD/controles, pointer-events:none) → nunca tapa ni
+   bloquea la interfaz; pasa por DETRÁS de los controles de las esquinas. */
+.tri { bottom: max(6px, calc(env(safe-area-inset-bottom) + 4px)); left: 0; height: clamp(84px, 15vh, 152px); }
+.tri-svg { height: 100%; width: auto; display: block; filter: drop-shadow(0 9px 9px rgba(0,0,0,0.30)); }
+.tri.rtl .tri-svg { transform: scaleX(-1); } /* mira hacia donde camina */
+
+/* — Materiales / sombreado (amarillo dorado + marrón anaranjado + marfil) — */
+.tri-svg .tri-fill { fill: url(#triBody); }
+.tri-svg .tri-leg-far { fill: #b3741c; }               /* patas traseras: ámbar oscuro (profundidad) */
+.tri-svg .tri-shadow { fill: #0a1f12; opacity: 0.18; }
+.tri-svg .tri-hi { fill: #ffe7a0; opacity: 0.32; }     /* luz superior (volumen del lomo) */
+.tri-svg .tri-ao { fill: #6e3d12; opacity: 0.20; }     /* sombra de oclusión (vientre/mejilla) */
+.tri-svg .tri-belly { fill: #f8e3a6; opacity: 0.55; }  /* vientre crema cálido */
+.tri-svg .tri-spots ellipse { fill: #bf6f1b; opacity: 0.5; } /* patrón dorsal marrón anaranjado */
+.tri-svg .tri-frill { fill: url(#triFrill); stroke: #5e3310; stroke-width: 2; }
+.tri-svg .tri-frill-in { fill: #cf8a34; opacity: 0.55; } /* interior de la gola más claro (volumen) */
+.tri-svg .tri-frill-lines path { fill: none; stroke: #6e3d12; stroke-width: 1.4; opacity: 0.4; } /* nervios de la gola */
+.tri-svg .tri-frill-edge circle { fill: #f3ead0; }     /* epoccipitales (borde de la gola) marfil */
+.tri-svg .tri-horn { fill: #f3ead0; stroke: #c2a878; stroke-width: 1; }
+.tri-svg .tri-horn-bk { fill: #d8c49a; }               /* cuerno trasero, más oscuro (profundidad) */
+.tri-svg .tri-beak { fill: #5a3a1e; }
+.tri-svg .tri-mouth { fill: none; stroke: #4a2e16; stroke-width: 1.6; stroke-linecap: round; opacity: 0.7; }
+.tri-svg .tri-eyering { fill: #f8e3a6; }               /* anillo cálido del ojo (mirada amable) */
+.tri-svg .tri-eye { fill: #241a0e; }
+.tri-svg .tri-eyeshine { fill: #ffffff; opacity: 0.92; }
+.tri-svg .tri-toes path { fill: none; stroke: #7a4a14; stroke-width: 2.6; stroke-linecap: round; opacity: 0.55; }
+
+/* — Caminata: 4 patas en diagonal, bote con peso, vaivén de cabeza/cola y meneo de bebés — */
+.tri-svg .tri-adult { transform-box: view-box; animation: triBob 0.56s ease-in-out infinite; }
+.tri-svg .tri-leg-a { transform-box: view-box; transform-origin: 250px 122px; animation: triStepA 0.56s ease-in-out infinite; }
+.tri-svg .tri-leg-b { transform-box: view-box; transform-origin: 312px 122px; animation: triStepB 0.56s ease-in-out infinite; }
+.tri-svg .tri-leg-c { transform-box: view-box; transform-origin: 237px 124px; animation: triStepB 0.56s ease-in-out infinite; }
+.tri-svg .tri-leg-d { transform-box: view-box; transform-origin: 309px 124px; animation: triStepA 0.56s ease-in-out infinite; }
+.tri-svg .tri-head { transform-box: view-box; transform-origin: 336px 96px; animation: triHead 1.12s ease-in-out infinite; }
+.tri-svg .tri-tail { transform-box: view-box; transform-origin: 210px 106px; animation: triTail 1.12s ease-in-out infinite; }
+.tri-svg .tri-baby-1 { transform-box: view-box; transform-origin: 150px 146px; animation: triWaddle 0.52s ease-in-out infinite; }
+.tri-svg .tri-baby-2 { transform-box: view-box; transform-origin: 64px 146px; animation: triWaddle 0.52s ease-in-out .26s infinite; }
+@keyframes triBob { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-2.6px) rotate(-0.5deg); } 50% { transform: translateY(0) rotate(0deg); } 75% { transform: translateY(-2.6px) rotate(0.5deg); } }
+@keyframes triStepA { 0%, 100% { transform: rotate(11deg); } 50% { transform: rotate(-11deg); } }
+@keyframes triStepB { 0%, 100% { transform: rotate(-11deg); } 50% { transform: rotate(11deg); } }
+@keyframes triHead { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-2.6deg); } }
+@keyframes triTail { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(7deg); } }
+@keyframes triWaddle { 0%, 100% { transform: translateY(0) rotate(-2.6deg); } 50% { transform: translateY(-2.4px) rotate(2.6deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ptero-svg .pw-l, .ptero-svg .pw-r,
+  .diplo-svg .dp-tail, .diplo-svg .dp-neck, .diplo-svg .dp-head, .diplo-svg .dp-leaf,
+  .tri-svg .tri-adult, .tri-svg .tri-leg-a, .tri-svg .tri-leg-b, .tri-svg .tri-leg-c, .tri-svg .tri-leg-d,
+  .tri-svg .tri-head, .tri-svg .tri-tail, .tri-svg .tri-baby-1, .tri-svg .tri-baby-2 { animation: none; }
+}
+
 /* ===================== Popups de puntos al recoger ===================== */
 #fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
 .point-pop {
@@ -781,6 +903,34 @@ body.is-touch .dpad { display: grid; }
 /* El chip de monedas/poderes entra con un leve pop al cambiar */
 .hud-powers { transition: opacity 0.2s ease; }
 
+/* ===================== Ajustes y Créditos ===================== */
+/* Etiqueta de grupo (Audio / Datos) dentro de Ajustes */
+.settings-group-label {
+  text-align: center; margin: 14px 0 6px; font-weight: 800;
+  font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--amber); opacity: 0.85;
+}
+.settings-group-label:first-of-type { margin-top: 4px; }
+/* Toggles de audio: ancho coherente con el resto de botones del panel */
+.settings-toggle { min-width: min(280px, 80vw); }
+/* Caja de confirmación de reinicio (destructivo → borde rojo) */
+.confirm-box {
+  margin: 12px auto 4px; padding: 14px 16px; max-width: min(320px, 86vw);
+  border: 1px solid rgba(229, 96, 86, 0.55); border-radius: 14px;
+  background: rgba(40, 14, 12, 0.55);
+}
+.confirm-box p { margin: 0 0 12px; font-size: 0.92rem; line-height: 1.4; }
+.confirm-box .btn { width: 100%; margin: 6px 0 0; }
+#btn-reset-yes { background: linear-gradient(180deg, #e56056, #b8332a); border-color: #b8332a; }
+/* Botón "Reiniciar progreso" sutilmente marcado como destructivo */
+#btn-set-reset { border-color: rgba(229, 96, 86, 0.5); }
+/* Cuerpo de los créditos */
+.credits-body {
+  text-align: center; line-height: 1.7; font-size: 0.96rem;
+  max-width: min(420px, 88vw); margin: 8px auto 18px; color: var(--cream);
+}
+.credits-body strong { font-size: 1.2rem; color: var(--amber); }
+
 /* ===================== Ciclo 3 · QA visual / mobile ===================== */
 /* Evita que el nombre del nivel y de los mundos desborden o saturen el HUD. */
 #hud-level { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -865,3 +1015,24 @@ body.is-touch .dpad { display: grid; }
   }
   .dpad-btn { font-size: 1.4rem; }
 }
+
+/* ===================== Perfil de dispositivo (clases puestas por JS) ===================== */
+/* Teléfono pequeño (lado corto ≤ 380): controles algo más compactos (sin perder toque
+   cómodo) y HUD muy compacto, para dejar más sitio al tablero. */
+body.is-small-phone.is-touch .dpad { width: 146px; height: 146px; gap: 5px; }
+body.is-small-phone.is-touch .joystick { width: 100px; height: 100px; }
+body.is-small-phone.is-touch .joystick-knob { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+body.is-small-phone .hud-chip { font-size: 0.68rem; padding: 4px 8px; }
+body.is-small-phone .hud-top { gap: 5px; }
+body.is-small-phone #hud-level { max-width: 32vw; }
+/* La familia Triceratops, algo más baja en teléfonos pequeños (tapa aún menos el tablero). */
+body.is-small-phone .tri { height: clamp(68px, 12vh, 120px); }
+
+/* Móvil en horizontal: HUD en una franja compacta arriba; nada se sale ni tapa el tablero.
+   Se mantiene flex-wrap (heredado) para que el botón de pausa NUNCA se recorte. */
+body.is-landscape-mobile .hud-top { gap: 5px; padding: max(6px, env(safe-area-inset-top)) 10px 6px; }
+body.is-landscape-mobile .hud-chip { font-size: 0.7rem; padding: 4px 9px; }
+body.is-landscape-mobile #hud-time { display: none; }   /* prioriza nivel/vidas/puntos/monedas */
+body.is-landscape-mobile #hud-level { max-width: 26vw; }
+body.is-landscape-mobile .hud-hint { display: none; }    /* en horizontal estorba más que ayuda */
+body.is-landscape-mobile .tri { height: clamp(56px, 18vh, 116px); }

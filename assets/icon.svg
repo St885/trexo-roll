@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="TREXoRoll">
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#2a8d54"/>
+      <stop offset="55%" stop-color="#145e33"/>
+      <stop offset="100%" stop-color="#0a3a20"/>
+    </radialGradient>
+    <linearGradient id="ball" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe79a"/>
+      <stop offset="45%" stop-color="#f2c14e"/>
+      <stop offset="100%" stop-color="#d18f25"/>
+    </linearGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1c6e3d"/>
+      <stop offset="100%" stop-color="#0c451f"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo a sangre (compatible con icono maskable) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Tablero inclinado (diamante) con borde ámbar -->
+  <g transform="translate(256 286) rotate(45)">
+    <rect x="-150" y="-150" width="300" height="300" rx="44"
+          fill="url(#board)" stroke="#f2c14e" stroke-width="14" stroke-opacity="0.85"/>
+    <!-- hoyo de meta -->
+    <circle cx="92" cy="92" r="30" fill="#06240f"/>
+  </g>
+
+  <!-- Bola dorada con carita de dino (silueta original) -->
+  <g transform="translate(214 244)">
+    <circle r="78" fill="url(#ball)" stroke="#9c6a18" stroke-width="6"/>
+    <!-- brillo -->
+    <ellipse cx="-26" cy="-30" rx="22" ry="14" fill="#ffffff" fill-opacity="0.5"/>
+    <!-- ojo -->
+    <circle cx="20" cy="-14" r="13" fill="#1b2a14"/>
+    <circle cx="24" cy="-18" r="4" fill="#ffffff"/>
+    <!-- sonrisa con dientecitos -->
+    <path d="M-30 26 Q4 56 40 24" fill="none" stroke="#7a4d12" stroke-width="7" stroke-linecap="round"/>
+    <path d="M-14 36 l7 -12 7 12 z" fill="#fffaf0"/>
+    <path d="M6 40 l7 -12 7 12 z" fill="#fffaf0"/>
+  </g>
+
+  <!-- Estela de movimiento -->
+  <g fill="#ffffff" fill-opacity="0.35">
+    <rect x="316" y="150" width="58" height="11" rx="5.5"/>
+    <rect x="338" y="184" width="44" height="11" rx="5.5"/>
+  </g>
+</svg>

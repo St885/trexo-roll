@@ -56,3 +56,36 @@ Un criterio se considera cumplido solo si es verificable en el navegador.
 > **Validación automatizada disponible:** `npm test` ejecuta un smoke-test de la física
 > (dirección de la gravedad, detección de caída/trampa/meta y jugabilidad por nivel)
 > sin necesidad de navegador. La capa visual 3D requiere verificación manual en el navegador.
+
+---
+
+## Más allá del MVP — entregado en v0.14.0
+
+El MVP (5 niveles) quedó ampliamente superado. Estado actual de contenido y mecánicas:
+
+- **50 niveles** en **10 mundos**, todos validados como superables (BFS portal-aware).
+- **Portales naranjas** (2/nivel): teletransporte con cooldown, salida segura y efecto de
+  invocación. No matan ni ganan.
+- **Eventos ambientales**: pterodáctilos (2 vuelos/nivel) y diplodocus al recoger estrella,
+  en overlay que **no tapa HUD/controles** ni bloquea el input.
+- Economía (monedas/estrellas/canje/poderes) y controles desktop/móvil **intactos**.
+
+### Checklist de prueba manual recomendada (navegador, v0.14.0)
+- [ ] Niveles **26, 30, 33, 40, 47, 50** se cargan y son superables.
+- [ ] Al entrar en un **portal naranja** la bola sale por el otro, **sin perder vida**,
+      con efecto de vórtice y sonido; no se queda en bucle.
+- [ ] Aparecen **2 pterodáctilos** por nivel sin tapar HUD ni controles.
+- [ ] Al coger una **estrella** aparece el **diplodocus** (lateral) y no bloquea el toque.
+- [ ] HUD muestra **Nivel X/50**; el selector lista **10 mundos / 50 niveles**.
+- [ ] Tienda/canje, monedas, estrellas y potenciadores siguen funcionando.
+
+### Checklist móvil/responsive (v0.15.0)
+- [ ] **Vertical** (iPhone/Android pequeño y grande): tablero centrado y suficientemente
+      grande, HUD compacto arriba, D-pad/joystick abajo cómodos, **sin scroll** en partida.
+- [ ] **Horizontal**: se aprovecha el ancho, HUD no recorta la **pausa**, controles no tapan
+      el tablero.
+- [ ] Rotar el dispositivo y mostrar/ocultar la barra del navegador **reencuadra** bien.
+- [ ] Menús, **tienda**, **selector de 50 niveles** (scroll interno), victoria y game over
+      se ven completos (sin botones cortados ni overflow horizontal).
+- [ ] Al recoger **3 monedas** pasa la **familia Triceratops** por abajo (1 vez/nivel) sin
+      tapar HUD ni controles ni bloquear el toque; al reiniciar el nivel puede repetirse.

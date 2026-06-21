@@ -10,7 +10,7 @@
 // Esto reproduce de forma convincente el rodar de una bola sobre un tablero que
 // se inclina, sin necesidad de un motor de física pesado.
 
-import { PHYS } from '../utils/constants.js';
+import { PHYS, PORTAL } from '../utils/constants.js';
 import { isInsideFootprint } from './footprint.js';
 
 export class BallPhysics {
@@ -23,8 +23,11 @@ export class BallPhysics {
     this.walls = [];
     this.goal = null;
     this.traps = [];
+    this.portals = [];   // pares de hoyos naranjas enlazados (0..2)
     this._acc = 0;     // acumulador de tiempo para el paso fijo
     this._offTime = 0; // tiempo acumulado fuera de la huella (gracia de caída)
+    this._portalCd = 0;    // cooldown anti-loop tras teletransportar (s)
+    this._portalFx = null; // evento de portal pendiente de consumir por la capa visual
   }
 
   /** Carga la geometría lógica del nivel y coloca la bola en el inicio. */
@@ -33,6 +36,7 @@ export class BallPhysics {
     this.walls = level.walls || [];
     this.goal = level.goal;
     this.traps = level.traps || [];
+    this.portals = level.portals || [];
     this.reset(level.start);
   }
 
@@ -44,6 +48,19 @@ export class BallPhysics {
     this.vz = 0;
     this._acc = 0;
     this._offTime = 0;
+    this._portalCd = 0;
+    this._portalFx = null;
+  }
+
+  /**
+   * Devuelve y limpia el último evento de portal (para que la capa visual lance el
+   * efecto de vórtice y el sonido). null si no hubo teletransporte desde la última vez.
+   * @returns {{fromX,fromZ,toX,toZ,exitX,exitZ}|null}
+   */
+  consumePortalFx() {
+    const f = this._portalFx;
+    this._portalFx = null;
+    return f;
   }
 
   get speed() {
@@ -69,6 +86,8 @@ export class BallPhysics {
   }
 
   _step(h, tiltX, tiltZ) {
+    if (this._portalCd > 0) this._portalCd = Math.max(0, this._portalCd - h);
+
     // Gravedad proyectada en el plano del tablero.
     let ax = -PHYS.GRAVITY * Math.cos(tiltX) * Math.sin(tiltZ);
     let az = PHYS.GRAVITY * Math.sin(tiltX);
@@ -98,6 +117,9 @@ export class BallPhysics {
 
     // Colisiones contra paredes/obstáculos sólidos.
     this._resolveWalls();
+
+    // Portales (no terminal): si la bola entra en uno, sale por el otro.
+    if (this.portals.length === 2 && this._portalCd === 0) this._maybeTeleport();
 
     // ¿Cayó dentro de un hoyo?
     const hole = this._holeHit();
@@ -142,6 +164,70 @@ export class BallPhysics {
       if (dt < t.r * PHYS.CAPTURE_FACTOR) return 'trap';
     }
     return null;
+  }
+
+  /** ¿La bola entró en un portal? Si es así, la teletransporta al portal hermano. */
+  _maybeTeleport() {
+    for (let i = 0; i < this.portals.length; i++) {
+      const a = this.portals[i];
+      const ar = a.r || 1;
+      if (Math.hypot(a.x - this.x, a.z - this.z) < ar * PORTAL.CAPTURE) {
+        this._teleport(a, this.portals[1 - i]);
+        return;
+      }
+    }
+  }
+
+  /**
+   * Saca la bola por el portal de salida: conserva dirección (amortiguada, con un
+   * mínimo para que abandone la boca), la coloca JUSTO fuera de la captura y valida
+   * que el destino sea seguro (dentro de la huella, sin pared ni trampa).
+   */
+  _teleport(entry, exit) {
+    const R = PHYS.BALL_RADIUS;
+    const er = exit.r || 1;
+    let vx = this.vx * PORTAL.EXIT_DAMP;
+    let vz = this.vz * PORTAL.EXIT_DAMP;
+    let sp = Math.hypot(vx, vz);
+    // Dirección de salida: la de la velocidad si es apreciable; si no, hacia el centro
+    // del tablero (zona despejada) para no salir contra un borde.
+    let dx, dz;
+    if (sp > 0.6) { dx = vx / sp; dz = vz / sp; }
+    else {
+      const cl = Math.hypot(exit.x, exit.z) || 1;
+      dx = -exit.x / cl; dz = -exit.z / cl;
+    }
+    if (sp < PORTAL.EXIT_MIN_SPEED) { vx = dx * PORTAL.EXIT_MIN_SPEED; vz = dz * PORTAL.EXIT_MIN_SPEED; }
+
+    const margin = er * PORTAL.CAPTURE + R + 0.35;
+    let nx = exit.x + dx * margin;
+    let nz = exit.z + dz * margin;
+    if (!this._safeSpot(nx, nz)) {
+      // Reintento hacia el centro del tablero.
+      const cl = Math.hypot(exit.x, exit.z) || 1;
+      nx = exit.x - (exit.x / cl) * margin;
+      nz = exit.z - (exit.z / cl) * margin;
+      if (!this._safeSpot(nx, nz)) { nx = exit.x; nz = exit.z; }
+    }
+
+    this.x = nx; this.z = nz;
+    this.vx = vx; this.vz = vz;
+    this._portalCd = PORTAL.COOLDOWN;
+    this._offTime = 0;
+    this._portalFx = { fromX: entry.x, fromZ: entry.z, toX: nx, toZ: nz, exitX: exit.x, exitZ: exit.z };
+  }
+
+  /** ¿(x,z) es un punto seguro para reaparecer? (dentro de huella, sin pared ni trampa) */
+  _safeSpot(x, z) {
+    const R = PHYS.BALL_RADIUS;
+    if (!isInsideFootprint(this.footprint, x, z)) return false;
+    for (const w of this.walls) {
+      if (Math.abs(x - w.x) < w.w / 2 + R && Math.abs(z - w.z) < w.d / 2 + R) return false;
+    }
+    for (const t of this.traps) {
+      if (Math.hypot(t.x - x, t.z - z) < t.r * PHYS.CAPTURE_FACTOR + R) return false;
+    }
+    return true;
   }
 
   /** Resuelve colisión círculo (bola) vs AABB (paredes), con rebote. */

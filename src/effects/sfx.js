@@ -100,6 +100,23 @@ export const sfx = {
     setTimeout(() => beep(470, 0.08, 'square', 0.06), 110);
     setTimeout(() => beep(400, 0.12, 'square', 0.06), 220);
   },
+  /** Portal/teletransporte: barrido ascendente brillante con un eco (whoosh mágico). */
+  portal() {
+    if (muted) return;
+    const a = ac();
+    if (!a) return;
+    const t = a.currentTime;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(420, t);
+    o.frequency.exponentialRampToValueAtTime(1400, t + 0.18);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.28);
+    // Eco agudo (la "aparición" en el otro extremo).
+    setTimeout(() => beep(1760, 0.12, 'triangle', 0.06), 110);
+  },
   /** Rescate del ptero: barrido descendente-ascendente "aleteo". */
   rescue() {
     beep(300, 0.12, 'sine', 0.1);

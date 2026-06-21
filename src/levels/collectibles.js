@@ -22,6 +22,10 @@ function isValidSpot(level, x, z, placed) {
   for (const t of level.traps || []) {
     if (Math.hypot(x - t.x, z - t.z) < t.r + 0.75) return false;
   }
+  // No sobre un portal (la bola se teletransportaría antes de recogerlo).
+  for (const p of level.portals || []) {
+    if (Math.hypot(x - p.x, z - p.z) < (p.r || 1) + 0.75) return false;
+  }
   // No dentro de paredes (+ margen de la bola).
   for (const w of level.walls || []) {
     if (Math.abs(x - w.x) < w.w / 2 + 0.6 && Math.abs(z - w.z) < w.d / 2 + 0.6) return false;

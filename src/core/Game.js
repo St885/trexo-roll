@@ -15,6 +15,7 @@ import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
 import { music } from '../effects/music.js';
 import { showTaunt } from '../effects/tauntMonkey.js';
+import * as critters from '../effects/critters.js';
 import { t, tf, getLang, setLang, applyTranslations, onLangChange } from '../utils/i18n.js';
 import { makeBallThumbnail } from '../scene/textures.js';
 import {
@@ -23,6 +24,7 @@ import {
   getSelectedBall, setSelectedBall, setLastLevel, getLastLevel,
   getStarTokens, addStarTokens, getInventory, buyPowerup, consumePowerup,
   getLivesBank, addLivesBank, takeFromLivesBank,
+  getSettings, setSetting, resetProgress,
 } from '../utils/storage.js';
 
 // Paquetes de vidas (monetización conceptual; precios de muestra, compra SIMULADA).
@@ -40,13 +42,18 @@ const SHOP = [
   { key: 'fallShields', name: 'Escudo de caída',   icon: '🦅', cost: 4, desc: 'Un pterosaurio te rescata si caes del tablero.' },
 ];
 
-// Mundos: agrupan los 25 niveles en 5 bloques de 5 (progresión visual).
+// Mundos: agrupan los 50 niveles en 10 bloques de 5 (progresión visual).
 const WORLDS = [
-  { name: 'Valle Jurásico',   emoji: '🌿' },
-  { name: 'Pantano Raptor',   emoji: '🐊' },
-  { name: 'Cráter Volcánico', emoji: '🌋' },
-  { name: 'Ruinas Fósiles',   emoji: '🦴' },
-  { name: 'Isla TREXo',       emoji: '🏝️' },
+  { name: 'Valle Jurásico',       emoji: '🌿' },
+  { name: 'Pantano Raptor',       emoji: '🐊' },
+  { name: 'Cráter Volcánico',     emoji: '🌋' },
+  { name: 'Ruinas Fósiles',       emoji: '🦴' },
+  { name: 'Isla TREXo',           emoji: '🏝️' },
+  { name: 'Cañón del Pterodáctilo', emoji: '🦅' },
+  { name: 'Selva Perdida',        emoji: '🌴' },
+  { name: 'Cavernas de Ámbar',    emoji: '💎' },
+  { name: 'Pantano de Sombras',   emoji: '🌑' },
+  { name: 'Corona del T-Rex',     emoji: '👑' },
 ];
 const worldOf = (index) => WORLDS[Math.min(WORLDS.length - 1, Math.floor(index / 5))];
 const worldIdx = (index) => Math.min(WORLDS.length - 1, Math.floor(index / 5));
@@ -87,6 +94,7 @@ export class Game {
     this.screens = new ScreenManager();
     this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     document.body.classList.toggle('is-touch', this.isTouch);
+    this._applyViewportProfile(); // clases de body + encuadre de cámara por dispositivo
 
     this.levelIndex = 0;
     this.lives = LIVES_START;
@@ -101,11 +109,16 @@ export class Game {
     this._pauseStart = 0;
     this._livesAtLevelStart = LIVES_START;
     this._last = performance.now();
-    this.muted = false;
+    // Ajustes de audio (separados, persistidos). La música arranca en el menú (gesto).
+    const settings = getSettings();
+    this.sfxOn = settings.sfxOn;
+    this.musicOn = settings.musicOn;
+    sfx.setMuted(!this.sfxOn);
 
     // Recompensas dentro del nivel + potenciadores activados en preparación.
     this._collect = [];            // [{x,z,type,taken}] alineado con la escena
     this._coinsThisLevel = 0;
+    this._triceratopsPlayed = false; // evento de la familia Triceratops (1 vez por nivel)
     this._fallShieldActive = false; // escudo armado para el nivel en curso
     this._pendingTrapBlock = false; // activar bloqueo de trampa al empezar
     this._pendingFallShield = false;// armar escudo de caída al empezar
@@ -113,9 +126,13 @@ export class Game {
     this._wireUI();
     // Al cambiar de idioma: traducir el DOM estático y refrescar lo dinámico.
     onLangChange(() => this._onLangChanged());
-    window.addEventListener('resize', () => { this.scene.resize(); this.input.refresh(); });
+    const relayout = () => { this._applyViewportProfile(); this.scene.resize(); this.input.refresh(); };
+    window.addEventListener('resize', relayout);
     // Al rotar el móvil el layout tarda un instante en estabilizarse.
-    window.addEventListener('orientationchange', () => setTimeout(() => { this.scene.resize(); this.input.refresh(); }, 200));
+    window.addEventListener('orientationchange', () => setTimeout(relayout, 200));
+    // Barra del navegador móvil apareciendo/desapareciendo: reencuadra al cambiar el
+    // viewport visible (sin spamear: la propia llamada es barata e idempotente).
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', relayout);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
         if (this.playing) { e.preventDefault(); this._togglePause(); }
@@ -124,10 +141,52 @@ export class Game {
     this._loop = this._loop.bind(this);
   }
 
+  // --- Responsive: perfil de viewport (clases en body + encuadre de cámara) -----
+
+  /** ¿Pantalla de teléfono pequeño? (lado corto ≤ 380 css px). */
+  isSmallPhone() { return Math.min(window.innerWidth, window.innerHeight) <= 380; }
+  /** ¿Teléfono alto/estrecho (vertical muy alargado)? */
+  isTallPhone() { return window.innerHeight / Math.max(1, window.innerWidth) >= 1.9; }
+  /** ¿Móvil en horizontal (táctil + ancho > alto)? */
+  isLandscapeMobile() { return this.isTouch && window.innerWidth > window.innerHeight; }
+
+  /** Devuelve un perfil legible del viewport actual. */
+  getViewportProfile() {
+    const w = window.innerWidth, h = window.innerHeight;
+    return {
+      width: w, height: h,
+      landscape: w > h,
+      smallPhone: this.isSmallPhone(),
+      tallPhone: this.isTallPhone(),
+      landscapeMobile: this.isLandscapeMobile(),
+      short: h <= 480,
+    };
+  }
+
+  /** Aplica clases al <body> y pasa el perfil de encuadre a la escena. Idempotente. */
+  _applyViewportProfile() {
+    const p = this.getViewportProfile();
+    const b = document.body.classList;
+    b.toggle('is-portrait', !p.landscape);
+    b.toggle('is-landscape', p.landscape);
+    b.toggle('is-small-phone', p.smallPhone);
+    b.toggle('is-tall-phone', p.tallPhone);
+    b.toggle('is-landscape-mobile', p.landscapeMobile);
+    b.toggle('is-short', p.short);
+    // Encuadre de cámara: tablero más grande en teléfonos pequeños verticales;
+    // aprovechar ancho en móvil horizontal.
+    if (this.scene && this.scene.setViewportFit) {
+      this.scene.setViewportFit({
+        smallPortrait: p.smallPhone && !p.landscape,
+        landscapeMobile: p.landscapeMobile,
+      });
+    }
+  }
+
   start() {
     applyTranslations();        // traduce el DOM al idioma guardado (ES por defecto)
     this._syncLangButtons();
-    this._syncSoundLabels();
+    this._syncAudioLabels();
     this._updateHighScoreLabels();
     this._updateBallPreviews();
     this.screens.show(SCREENS.LANDING);
@@ -138,7 +197,7 @@ export class Game {
   _onLangChanged() {
     applyTranslations();
     this._syncLangButtons();
-    this._syncSoundLabels();
+    this._syncAudioLabels();
     this._updateHighScoreLabels();
     this._updateBallPreviews();
     this._updateMenuProgress();
@@ -157,12 +216,16 @@ export class Game {
     }
   }
 
-  _syncSoundLabels() {
-    const label = this.muted ? t('sound.off') : t('sound.on');
-    for (const id of ['btn-sound', 'btn-pause-sound']) {
-      const btn = document.getElementById(id);
-      if (btn) btn.textContent = label;
-    }
+  _syncAudioLabels() {
+    // Botón maestro en Pausa: refleja si TODO el audio está silenciado.
+    const allOff = !this.sfxOn && !this.musicOn;
+    const master = document.getElementById('btn-pause-sound');
+    if (master) master.textContent = allOff ? t('sound.off') : t('sound.on');
+    // Toggles granulares en Ajustes.
+    const m = document.getElementById('btn-set-music');
+    if (m) m.textContent = tf('set.music', this.musicOn);
+    const s = document.getElementById('btn-set-sfx');
+    if (s) s.textContent = tf('set.sfx', this.sfxOn);
   }
 
   // --- Cableado de la interfaz ---------------------------------------------
@@ -180,8 +243,18 @@ export class Game {
     click('btn-shop-back', () => this._showMenu());
     click('btn-levels', () => this._showLevels());
     click('btn-howto', () => this.screens.show(SCREENS.HOWTO));
-    click('btn-sound', () => this._toggleSound());
+    click('btn-settings', () => this._showSettings());
     click('btn-fullscreen', () => this._toggleFullscreen());
+
+    // Ajustes y créditos
+    click('btn-set-music', () => this._toggleMusic());
+    click('btn-set-sfx', () => this._toggleSfx());
+    click('btn-set-reset', () => this._askResetProgress());
+    click('btn-reset-yes', () => this._confirmResetProgress());
+    click('btn-reset-no', () => this._cancelResetProgress());
+    click('btn-set-credits', () => this._showCredits());
+    click('btn-settings-back', () => this._showMenu());
+    click('btn-credits-back', () => this._showSettings());
 
     click('btn-prep-start', () => this._startLevel());
     click('btn-prep-ball', () => this._cyclePrepBall());
@@ -194,7 +267,7 @@ export class Game {
     click('btn-pause', () => this._pause());
     click('btn-resume', () => this._resume());
     click('btn-restart', () => this._restartLevel());
-    click('btn-pause-sound', () => this._toggleSound());
+    click('btn-pause-sound', () => this._toggleMasterSound());
     click('btn-pause-shop', () => this._quitToShop());
     click('btn-pause-menu', () => this._quitToMenu());
 
@@ -216,13 +289,13 @@ export class Game {
     this.paused = false;
     this.input.disable();
     this.scene.clearBoard();
+    critters.clear();
     this._updateHighScoreLabels();
     this._updateBallPreviews();
     this._updateMenuProgress();
     // Llegamos aquí tras pulsar "Entrar" (gesto del usuario): podemos arrancar la
     // música de fondo respetando las restricciones de autoplay del navegador.
-    if (!music.isPlaying()) music.start();
-    music.setMuted(this.muted);
+    this._applyAudio();
     this.screens.show(SCREENS.MENU);
   }
 
@@ -253,12 +326,73 @@ export class Game {
     this.screens.show(SCREENS.LEVELS);
   }
 
-  _toggleSound() {
-    this.muted = !this.muted;
-    sfx.setMuted(this.muted);
-    music.setMuted(this.muted);
-    if (!this.muted && !music.isPlaying()) music.start();
-    this._syncSoundLabels();
+  // --- Audio: música y efectos por separado, persistidos --------------------
+
+  /** Aplica el estado de audio actual a los buses y arranca la música si toca. */
+  _applyAudio() {
+    sfx.setMuted(!this.sfxOn);
+    music.setMuted(!this.musicOn);
+    if (this.musicOn && !music.isPlaying()) music.start();
+    this._syncAudioLabels();
+  }
+
+  _toggleMusic() {
+    this.musicOn = !this.musicOn;
+    setSetting('musicOn', this.musicOn);
+    this._applyAudio();
+  }
+
+  _toggleSfx() {
+    this.sfxOn = !this.sfxOn;
+    setSetting('sfxOn', this.sfxOn);
+    this._applyAudio();
+  }
+
+  /** Botón maestro (Pausa): si algo suena lo silencia todo; si todo está mudo, lo reactiva. */
+  _toggleMasterSound() {
+    const anyOn = this.sfxOn || this.musicOn;
+    this.sfxOn = !anyOn;
+    this.musicOn = !anyOn;
+    setSetting('sfxOn', this.sfxOn);
+    setSetting('musicOn', this.musicOn);
+    this._applyAudio();
+  }
+
+  _showSettings() {
+    this._cancelResetProgress();
+    this._setSettingsFeedback('');
+    this._syncAudioLabels();
+    this.screens.show(SCREENS.SETTINGS);
+  }
+
+  _showCredits() {
+    this.screens.show(SCREENS.CREDITS);
+  }
+
+  _setSettingsFeedback(msg) {
+    const el = document.getElementById('settings-feedback');
+    if (el) el.textContent = msg || '';
+  }
+
+  _askResetProgress() {
+    const box = document.getElementById('reset-confirm');
+    if (box) box.style.display = '';
+    this._setSettingsFeedback('');
+  }
+
+  _cancelResetProgress() {
+    const box = document.getElementById('reset-confirm');
+    if (box) box.style.display = 'none';
+  }
+
+  _confirmResetProgress() {
+    resetProgress();
+    this._cancelResetProgress();
+    // Refrescar todo lo que depende del progreso/inventario.
+    this._updateHighScoreLabels();
+    this._updateBallPreviews();
+    this._updateMenuProgress();
+    this._setSettingsFeedback(t('set.resetDone'));
   }
 
   /** Pantalla completa (Android/desktop). En iOS Safari no siempre es posible. */
@@ -559,6 +693,13 @@ export class Game {
     setThumb('hud-ball', getBall(this.selectedBall), 34);
     setLastLevel(this.levelIndex + 1);
 
+    // Eventos ambientales: 2 vuelos de pterodáctilo por nivel (ida y vuelta) +
+    // familia Triceratops al recoger 3 monedas (rearma la bandera por nivel).
+    critters.clear();
+    this._pteroTimes = critters.pteroFlightTimes(lvl.par);
+    this._pteroFired = [false, false];
+    this._triceratopsPlayed = false;
+
     this.input.reset();
     this.input.enable();
     this._levelStart = performance.now();
@@ -619,7 +760,16 @@ export class Game {
     this.ball.roll(this.physics.vx, this.physics.vz, dt);
     hud.setTime(this._elapsed());
 
+    this._maybeFlyPtero();
     this._checkPickups();
+
+    // Portal (no termina el nivel): efecto de invocación en ambos extremos + sonido.
+    const pfx = this.physics.consumePortalFx();
+    if (pfx) {
+      this.scene.spawnPortalFx(pfx.exitX, pfx.exitZ); // salida (donde reaparece)
+      this.scene.spawnPortalFx(pfx.fromX, pfx.fromZ); // entrada (donde desapareció)
+      sfx.portal();
+    }
 
     if (ev === 'goal') this._startResolve('goal');
     else if (ev === 'trap') this._startResolve('trap');
@@ -627,6 +777,14 @@ export class Game {
       if (this._fallShieldActive) this._startRescue();
       else this._startResolve('fall');
     }
+  }
+
+  /** Lanza los 2 vuelos ambientales de pterodáctilo (ida y vuelta) según el tiempo. */
+  _maybeFlyPtero() {
+    if (!this._pteroTimes) return;
+    const e = this._elapsed();
+    if (!this._pteroFired[0] && e >= this._pteroTimes[0]) { this._pteroFired[0] = true; critters.flyPtero('ltr'); }
+    if (!this._pteroFired[1] && e >= this._pteroTimes[1]) { this._pteroFired[1] = true; critters.flyPtero('rtl'); }
   }
 
   /** Recoge monedas/estrella si la bola pasa cerca. Suma puntos/estrellas-token. */
@@ -648,6 +806,7 @@ export class Game {
         sfx.starGet();
         hud.flash('gold');
         hud.toast(t('msg.starGet'), 1500);
+        critters.diplodocus(); // un diplodocus se asoma a celebrar (overlay lateral)
       } else {
         this.score += COIN_POINTS; // 1 punto por moneda
         this._coinsThisLevel += 1;
@@ -655,6 +814,11 @@ export class Game {
         sfx.coin();
         hud.setCoins(this._coinsThisLevel);
         hud.setScore(this.score);
+        // A las 3 monedas del nivel: pasa la familia Triceratops (1 sola vez por nivel).
+        if (this._coinsThisLevel >= 3 && !this._triceratopsPlayed) {
+          this._triceratopsPlayed = true;
+          critters.triceratops(this.levelIndex % 2 === 0 ? 'ltr' : 'rtl');
+        }
       }
     }
   }
@@ -861,10 +1025,15 @@ export class Game {
     setText('win-rewards', tf('win.rewards', this._coinsThisLevel, starTxt));
     setText('win-time', tf('win.time', time.toFixed(1), (getBestTime(lvl.id) ?? time).toFixed(1)));
     setText('win-progress', tf('win.progress', this.levelIndex + 1, LEVELS.length, getTotalStars(), MAX_STARS));
-    // Mensaje de desbloqueo (si este nivel abrió uno nuevo).
-    const unlockedNew = newUnlocked > prevUnlocked && !isLast;
-    if (unlockedNew) setText('win-unlock', tf('win.unlock', Math.min(newUnlocked, LEVELS.length)));
-    showEl('win-unlock', unlockedNew);
+    // Mensaje de desbloqueo (si abrió un nivel nuevo) o de juego completado (último nivel).
+    if (isLast) {
+      setText('win-unlock', tf('win.completeMsg', getTotalStars(), MAX_STARS, getHighScore()));
+      showEl('win-unlock', true);
+    } else {
+      const unlockedNew = newUnlocked > prevUnlocked;
+      if (unlockedNew) setText('win-unlock', tf('win.unlock', Math.min(newUnlocked, LEVELS.length)));
+      showEl('win-unlock', unlockedNew);
+    }
     showEl('win-record', isRecord);
     showEl('btn-win-next', !isLast);
     this.screens.show(SCREENS.WIN);
@@ -993,8 +1162,8 @@ export class Game {
     this.paused = false;
     this.input.disable();
     this.scene.clearBoard();
-    if (!music.isPlaying()) music.start();
-    music.setMuted(this.muted);
+    critters.clear();
+    this._applyAudio();
     this._showShop();
   }
 

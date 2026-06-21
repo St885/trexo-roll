@@ -11,7 +11,7 @@
 
 import { LEVELS } from '../src/levels/levels.js';
 import { isInsideFootprint, footprintBounds } from '../src/physics/footprint.js';
-import { PHYS } from '../src/utils/constants.js';
+import { PHYS, PORTAL } from '../src/utils/constants.js';
 
 const STEP = 0.4;                       // resolución de la rejilla
 const WALL_PAD = PHYS.BALL_RADIUS * 0.6; // margen de la bola contra muros
@@ -53,12 +53,24 @@ function reachable(level) {
   visited.add(key(si, sj));
   const ni = Math.ceil(b.width / STEP) + 2;
   const nj = Math.ceil(b.depth / STEP) + 2;
+  const portals = level.portals || [];
 
   while (queue.length) {
     const [i, j] = queue.shift();
     const [wx, wz] = toWorld(i, j);
     if (Math.hypot(level.goal.x - wx, level.goal.z - wz) < level.goal.r) {
       return { ok: true };
+    }
+    // Aristas de teletransporte: si esta celda cae dentro de la boca de un portal,
+    // se "salta" al centro del portal hermano (modela el portal en la búsqueda).
+    for (let p = 0; p < portals.length; p++) {
+      const a = portals[p];
+      if (Math.hypot(a.x - wx, a.z - wz) < (a.r || 1) * PORTAL.CAPTURE) {
+        const o = portals[1 - p];
+        const [oi, oj] = toCell(o.x, o.z);
+        const ok2 = key(oi, oj);
+        if (!visited.has(ok2) && isFree(level, o.x, o.z)) { visited.add(ok2); queue.push([oi, oj]); }
+      }
     }
     for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
       const i2 = i + di, j2 = j + dj;
@@ -85,6 +97,26 @@ for (const lvl of LEVELS) {
   if (insideAnyWall(lvl.walls || [], lvl.goal.x, lvl.goal.z, 0)) issues.push('goal solapado por un muro');
   for (const t of lvl.traps || []) {
     if (Math.hypot(t.x - lvl.goal.x, t.z - lvl.goal.z) < t.r + lvl.goal.r) issues.push('trampa demasiado pegada a la meta');
+  }
+  // Portales naranjas: los niveles 26–50 deben tener EXACTAMENTE 2, bien colocados.
+  const portals = lvl.portals || [];
+  if (lvl.id >= 26 && portals.length !== 2) issues.push('los niveles 26–50 deben tener exactamente 2 portales');
+  if (portals.length) {
+    if (portals.length !== 2) issues.push('debe haber exactamente 2 portales (enlazados)');
+    for (const p of portals) {
+      const pr = p.r || 1;
+      if (!isInsideFootprint(lvl.footprint, p.x, p.z)) issues.push('portal fuera de la huella');
+      if (insideAnyWall(lvl.walls || [], p.x, p.z, 0)) issues.push('portal dentro de un muro');
+      if (Math.hypot(p.x - lvl.start.x, p.z - lvl.start.z) < 1.6) issues.push('portal demasiado pegado al inicio');
+      if (Math.hypot(p.x - lvl.goal.x, p.z - lvl.goal.z) < pr + lvl.goal.r) issues.push('portal demasiado pegado a la meta');
+      for (const t of lvl.traps || []) {
+        if (Math.hypot(p.x - t.x, p.z - t.z) < pr + t.r) issues.push('portal solapado con una trampa');
+      }
+    }
+    if (portals.length === 2 &&
+        Math.hypot(portals[0].x - portals[1].x, portals[0].z - portals[1].z) < 4) {
+      issues.push('los dos portales están demasiado juntos');
+    }
   }
   const r = reachable(lvl);
   if (!r.ok) issues.push(r.reason);

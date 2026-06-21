@@ -26,6 +26,17 @@ export const PHYS = {
   DRAG_FULL_PX_MOBILE: 78,
 };
 
+// --- Portales (hoyos naranjas tipo teletransporte) ---
+// Dos portales por nivel, enlazados: entrar en uno saca la bola por el otro.
+// No matan ni ganan: la bola continúa. Tienen cooldown anti-loop y una salida
+// controlada (ni disparo injusto ni quedarse pegada en la boca de salida).
+export const PORTAL = {
+  CAPTURE: 0.8,        // % del radio del portal dentro del cual la bola "entra" (mayor que un hoyo → captura fiable)
+  COOLDOWN: 0.55,      // s tras teletransportar en los que se ignora la entrada (evita ping-pong infinito)
+  EXIT_DAMP: 0.7,      // factor sobre la velocidad al salir (evita salir disparada injustamente)
+  EXIT_MIN_SPEED: 3.2, // velocidad mínima de salida hacia fuera de la boca (garantiza que abandone el portal)
+};
+
 // --- Puntuación ---
 export const SCORE = {
   BASE_LEVEL: 1000,     // por completar un nivel
@@ -49,6 +60,8 @@ export const SCREENS = {
   MENU: 'screen-menu',
   BALLS: 'screen-balls',
   SHOP: 'screen-shop',
+  SETTINGS: 'screen-settings',
+  CREDITS: 'screen-credits',
   LEVELS: 'screen-levels',
   HOWTO: 'screen-howto',
   PREP: 'screen-prep',

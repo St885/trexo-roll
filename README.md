@@ -6,7 +6,7 @@ Juego **3D de habilidad** para web y móvil con temática **jurásica**. Inclina
 flotante para hacer rodar una bola blanca —con el emblema de un T-Rex— hasta el hoyo
 objetivo, esquivando hoyos trampa y caídas al vacío.
 
-![estado](https://img.shields.io/badge/estado-v0.3.1-2ecc71) ![3D](https://img.shields.io/badge/3D-Three.js-blue) ![niveles](https://img.shields.io/badge/niveles-25-e9c46a) ![bolas](https://img.shields.io/badge/bolas-5%20dinos-ff7bb0) ![deps](https://img.shields.io/badge/dependencias-0%20en%20runtime-success)
+![estado](https://img.shields.io/badge/estado-v0.15.0-2ecc71) ![3D](https://img.shields.io/badge/3D-Three.js-blue) ![niveles](https://img.shields.io/badge/niveles-50-e9c46a) ![mundos](https://img.shields.io/badge/mundos-10-f4a261) ![bolas](https://img.shields.io/badge/bolas-5%20dinos-ff7bb0) ![deps](https://img.shields.io/badge/dependencias-0%20en%20runtime-success)
 
 🎮 **Jugar online:** https://st885.github.io/trexo-roll/ *(activo tras el despliegue en GitHub Pages)*
 
@@ -16,10 +16,17 @@ objetivo, esquivando hoyos trampa y caídas al vacío.
 
 - **Objetivo:** lleva la bola al **hoyo verde**.
 - **Evita:** los **hoyos rojos** (trampa) y caer fuera del tablero.
-- Tienes **3 vidas**. Completa los **25 tableros** para ganar.
+- **Portales naranjas** 🟠 (desde el Mundo 6): entra en uno y sal por el otro — atajos,
+  rutas alternativas y puzzles. No te quitan vida.
+- Tienes **3 vidas**. Completa los **50 tableros** (10 mundos) para ganar.
 - **Elige tu bola** entre 5 dinos: ¡el tuyo sale del hoyo a celebrar al ganar!
 - Gana hasta **3 ⭐ por nivel**: sin perder vidas y por debajo del tiempo objetivo.
 - Puntúas por completar nivel, por vidas restantes y por rapidez.
+- Ambiente vivo: **pterodáctilos** cruzan el cielo, un **diplodocus** se asoma cuando
+  recoges una estrella ⭐, y una **familia Triceratops** (adulto + 2 bebés) camina por
+  abajo al recoger **3 monedas** 🪙.
+- **Mobile-first de verdad:** se adapta a iPhone/Android, pequeños y grandes, vertical y
+  horizontal (cámara y HUD se ajustan al tamaño de pantalla; sin scroll en partida).
 
 ### Controles
 
