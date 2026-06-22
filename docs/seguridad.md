@@ -10,11 +10,11 @@ Pages (HTTPS)**. Esto define una superficie de ataque **muy pequeña**:
 | Característica | Implicación de seguridad |
 |---|---|
 | **Sin backend / sin servidor propio** | No hay SQL injection, ni bypass de auth, ni base de datos que robar. |
-| **Sin login / sin cuentas** | No hay credenciales de usuario que filtrar. |
-| **Sin datos personales (PII)** | No se pide nombre, email, ni nada identificable. |
+| **Acceso/registro SIMULADO (v0.17.0)** | Login/registro **locales**, sin backend. **No se guardan contraseñas ni emails**; ver §5. |
+| **Sin datos personales (PII)** | Solo un **nombre visible** opcional (saneado). No se pide email ni nada identificable obligatorio. |
 | **Sin pagos reales** | La monetización (vídeo/packs) es **simulada**; no se procesan tarjetas. |
 | **Sin dependencias de red en runtime** | Three.js está **vendorizado** en `libs/`; audio e imagen son **locales**. |
-| **Sin entradas de texto del usuario** | No hay campos de texto/chat → **no hay vector de inyección (XSS)**. |
+| **Entradas de texto: solo acceso local** | Nombre/contraseña del acceso simulado; **saneadas**, sin innerHTML con datos de usuario → sin XSS (ver §5). |
 | **Datos solo en `localStorage`** | Progreso del juego: récord, estrellas, inventario, idioma. **No sensible.** |
 
 **Conclusión:** lo único que un atacante podría "robar" es el **progreso del juego** del
@@ -79,7 +79,27 @@ seguridad cambia de categoría:
 ## 6. Veredicto
 
 **Postura de seguridad: BUENA para un juego estático sin backend.** No hay datos sensibles
-ni servidor que comprometer; no hay vector de XSS (sin entradas); sin red ni dependencias
-externas; `localStorage` saneado; CSP que bloquea exfiltración y recursos externos.
-El único "riesgo" real es que el jugador haga trampas en su propio dispositivo, lo cual es
-inherente al cliente y no compromete a nadie más.
+ni servidor que comprometer; las únicas entradas (acceso local) están **saneadas** y no
+generan XSS; sin red ni dependencias externas; `localStorage` saneado; CSP que bloquea
+exfiltración y recursos externos. El único "riesgo" real es que el jugador haga trampas en
+su propio dispositivo, lo cual es inherente al cliente y no compromete a nadie más.
+
+---
+
+## 7. Acceso / registro local (v0.17.0)
+
+La pantalla de acceso es una **simulación 100% local**, preparada para una futura
+integración real sin comprometer la postura actual:
+
+- **No hay autenticación real ni APIs externas.** Los botones de Google/Apple/Samsung son
+  **placeholders** ("Función preparada para futura integración").
+- **No se guardan contraseñas ni emails.** El "login"/"registro" aceptan un nombre y una
+  contraseña, pero la **contraseña no se persiste ni se transmite** (no hay red).
+- En `localStorage` (`trexoroll.session.v1`) solo se guarda: `authMode`, `playerName`
+  (saneado: sin `<>`, ≤24 chars), `acceptedTerms` y `language`. **Independiente del progreso
+  de juego** (cerrar sesión no borra el avance).
+- El nombre del jugador se muestra siempre con `textContent` (nunca `innerHTML`). El único
+  `innerHTML` de esta zona es el **texto legal**, que es **contenido propio** (sin datos del
+  usuario) → sin vector de XSS.
+- La CSP se mantiene: no se envían formularios (`form-action 'none'`), la interacción es por
+  botones + JS, todo de mismo origen.

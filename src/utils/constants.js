@@ -56,6 +56,8 @@ export const BALL_STATE = {
 
 // --- Pantallas de la app ---
 export const SCREENS = {
+  AUTH: 'screen-auth',         // acceso/registro (simulado, sin backend real)
+  LEGAL: 'screen-legal',       // política de privacidad / términos
   LANDING: 'screen-landing',
   MENU: 'screen-menu',
   BALLS: 'screen-balls',

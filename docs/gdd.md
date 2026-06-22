@@ -195,3 +195,23 @@ tablas de clasificación online, monetización. Ver `mvp.md` y `backlog.md`.
   paneles con `dvh`; safe-areas (`env(safe-area-inset-*)`); HUD y D-pad/joystick compactos en
   pantallas pequeñas sin perder el toque cómodo (mín. 44px) ni recortar la pausa.
 - Soportado: iPhone/Android pequeños y grandes, vertical y horizontal, pantallas altas/anchas.
+
+---
+
+## 12. Acceso / registro (v0.17.0) — simulado y local
+
+Al abrir el juego, si no hay sesión local, aparece la **pantalla de acceso** (`screen-auth`)
+con estilo jurásico luminoso:
+
+- **Continuar como invitado** → entra (sesión `guest`).
+- **Ingresar / Crear cuenta** → formularios **locales simulados** (nombre + contraseña; la
+  contraseña **no se guarda**; el registro exige aceptar términos).
+- **Google / Apple / Samsung** → **placeholder seguro** (mensaje "preparado para futura
+  integración" + continuar como invitado o volver).
+- **Idioma ES/EN** y enlaces a **Política de privacidad** y **Términos** (`screen-legal`).
+
+La sesión (`src/utils/session.js`, `trexoroll.session.v1`) guarda solo `authMode`,
+`playerName` (saneado), `acceptedTerms` y `language` — **nunca credenciales**, e
+**independiente del progreso**. Tras acceder, el flujo sigue al landing → menú habitual.
+"Cerrar sesión" (en Ajustes) vuelve al acceso sin borrar el avance. Estructura preparada
+para una integración real futura sin tocar el resto del juego.

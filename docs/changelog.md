@@ -2,6 +2,76 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.17.0] — 2026-06-22 — Pantalla de acceso/registro (simulada, mobile-first)
+
+> Nueva puerta de entrada jurásica con acceso/registro **local y simulado** (sin backend,
+> sin APIs externas, sin contraseñas guardadas). **Sin desplegar.**
+
+### Añadido
+- **Pantalla de acceso** (`screen-auth`) que aparece al abrir el juego si no hay sesión:
+  - **Continuar como invitado** (CTA principal).
+  - **Ingresar** y **Crear cuenta**: formularios **locales simulados** (nombre + contraseña;
+    la **contraseña no se guarda** en ningún sitio; el registro pide aceptar términos).
+  - **Continuar con Google / Apple / Samsung**: **placeholder seguro** ("Función preparada
+    para futura integración") con opción de continuar como invitado o volver.
+  - **Selector de idioma ES/EN** y enlaces a **Política de privacidad** y **Términos**.
+- **Pantalla legal** (`screen-legal`) con la política de privacidad y los términos (textos
+  ES/EN), enfatizando que el juego es 100% local y sin recopilación de datos.
+- **Sesión local** (`src/utils/session.js`, clave `trexoroll.session.v1`): guarda solo
+  `authMode`, `playerName` (saneado), `acceptedTerms` y `language`. **Nunca** credenciales.
+- **Saludo** "¡Hola, X!" en el menú y **Cerrar sesión** en Ajustes (no borra el progreso).
+- `applyTranslations` ahora traduce **placeholders** de inputs (`data-i18n-ph`).
+
+### Privacidad / seguridad
+- Sin red, sin APIs externas, sin auth real, sin contraseñas ni emails almacenados. Nombres
+  de jugador **saneados** (sin `<>`, longitud acotada). `innerHTML` solo con contenido propio
+  (textos legales); el resto por `textContent`. La sesión es independiente del **progreso de
+  juego** (al cerrar sesión no se pierde el avance).
+
+### Validado
+- `npm test` (incl. **i18n ES/EN** con las nuevas cadenas), `npm run test:graph`,
+  `npm run test:visual`, **cross-check de IDs DOM** (159/69) y llaves CSS (508/508): **verde**.
+  Menú, juego, controles, música, niveles, monedas, estrellas, tienda, portales, eventos
+  jurásicos y dinos de victoria **intactos**.
+
+## [0.16.0] — 2026-06-21 — Dinos de victoria premium (5 especies) + animación mejorada
+
+> Subida de calidad de los 5 dinosaurios 3D que salen del hoyo verde al ganar.
+> **Sin desplegar** (a la espera de tu visto bueno).
+
+### Cambiado
+- **Materiales** (`CelebrationDino.makeMats`): añadidos **tono medio** (volumen/sombra),
+  **marfil** (cuernos/garras/dientes/pico), **interior de boca** y mantenido vientre claro;
+  piel con realce de color más vivo bajo el tone mapping.
+- **Helpers**: patas con **muslo + espinilla + pie + garras** (y **garra falciforme**
+  opcional), **ojos con párpado** (expresión: fiera/serena), filas de **dientes**, y
+  **espinas/placas dorsales**.
+- **5 modelos rehechos con personalidad propia** (no recoloreados):
+  - **T-Rex (feroz)**: cabezón con **mandíbula articulada que abre al rugir**, dos filas de
+    dientes + interior de boca, ceño/párpados, espinas dorsales, bracitos con garras.
+  - **Velociraptor (ágil)**: esbelto y horizontal, **garra falciforme** en cada pie, cresta
+    de espinas (plumaje sugerido), cola larga rígida, manos con garras.
+  - **Parasaurio (tierno/elegante)**: **pico de pato** + **cresta tubular curva** en dos
+    tonos, mirada de párpados caídos.
+  - **Triceratops (robusto)**: **gola con epoccipitales** de marfil + interior, **3 cuernos
+    sólidos** + **pico**, cuádrupedo bajo.
+  - **Braquiosaurio (sereno)**: **cuello largo** en dos tramos afinados, cabeza pequeña
+    arriba con cresta nasal, patas columnares, mirada serena.
+- **Animación de celebración** (`SceneManager`): **estiramiento (squash&stretch) al emerger**
+  del hoyo; **mandíbula que abre** en el rugido del T-Rex; **cabeceo de cresta** del
+  Parasaurio; se conservan giro/salto, embestida del Triceratops y mecido del cuello del
+  Braquiosaurio. Confeti un poco más rico (54 partículas, paleta cálida).
+
+### Mantiene intacto
+- Selector de bolas, **asociación bola → especie**, flujo de victoria y transición de nivel,
+  HUD, controles, música, monedas, estrellas, tienda, portales, Triceratops/Diplodocus/
+  pterodáctilos ambientales, mono al fallar, responsive y 50 niveles.
+
+### Validado
+- `npm test`, `npm run test:graph`, `npm run test:visual` (**construye los 5 dinos** +
+  confeti sin errores): **verde**. Sin dependencias nuevas; una sola instancia breve por
+  victoria (rendimiento móvil sin cambios).
+
 ## [0.15.2] — 2026-06-21 — Triceratops v2: más detalle, volumen y anatomía (3 monedas)
 
 > Segunda pasada de calidad sobre la familia Triceratops. **Comportamiento intacto**

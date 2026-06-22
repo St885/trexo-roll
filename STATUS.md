@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.15.2 — Triceratops v2: más detalle, volumen y anatomía (sin push aún) |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.12.0) · 🛠️ Local v0.15.2 lista para **revisión de Stefano** antes de desplegar (acumula 0.15.x + 0.14.x + 0.13.0 + 0.12.1) |
+| **Versión** | 0.17.0 — Pantalla de acceso/registro (simulada) + dinos premium (sin push aún) |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.15.2) · 🛠️ Local v0.17.0 (acumula 0.16.0 dinos premium) lista para **revisión de Stefano** antes de desplegar |
 | **Fecha** | 2026-06-21 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |

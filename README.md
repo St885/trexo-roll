@@ -27,6 +27,9 @@ objetivo, esquivando hoyos trampa y caídas al vacío.
   abajo al recoger **3 monedas** 🪙.
 - **Mobile-first de verdad:** se adapta a iPhone/Android, pequeños y grandes, vertical y
   horizontal (cámara y HUD se ajustan al tamaño de pantalla; sin scroll en partida).
+- **Acceso jurásico:** al abrir, pantalla de acceso/registro **local y simulada** (invitado,
+  ingresar, crear cuenta, Google/Apple/Samsung como placeholder, ES/EN, privacidad/términos).
+  Sin backend, sin APIs y **sin guardar contraseñas** — ver [docs/seguridad.md](docs/seguridad.md).
 
 ### Controles
 

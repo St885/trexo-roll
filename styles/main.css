@@ -90,6 +90,8 @@ html, body {
 /* Fondo de las pantallas de menú: IMAGEN jurásica + overlay oscuro para legibilidad.
    mobile-first: cover (sin deformar) + center + no-repeat; color de fallback si la
    imagen no carga. El gameplay (#screen-game) NO la usa: conserva su cielo 3D por bioma. */
+#screen-auth.active,
+#screen-legal.active,
 #screen-landing.active,
 #screen-menu.active,
 #screen-balls.active,
@@ -930,6 +932,78 @@ body.is-touch .dpad { display: grid; }
   max-width: min(420px, 88vw); margin: 8px auto 18px; color: var(--cream);
 }
 .credits-body strong { font-size: 1.2rem; color: var(--amber); }
+
+/* ===================== Acceso / registro (pantalla de auth) ===================== */
+.auth-panel { width: min(420px, 94vw); }
+.auth-emblem { width: 84px; height: 84px; font-size: 42px; margin-bottom: 4px; }
+.auth-title { margin: 2px 0 4px; }
+.auth-subtitle { font-size: 0.98rem; margin: 0 0 18px; opacity: 0.92; }
+.auth-view { display: flex; flex-direction: column; gap: 10px; }
+.auth-view .btn { width: 100%; margin: 0; }
+.auth-guest { font-size: 1.08rem; }
+.auth-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.auth-row2 .btn { width: 100%; }
+
+/* Divisor "o continúa con" */
+.auth-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px 2px; color: var(--muted); font-size: 0.82rem; letter-spacing: 0.04em;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(246,241,227,0.28), transparent);
+}
+
+/* Botones de proveedor (placeholder seguro): franja de color a la izquierda */
+.btn.provider {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  background: rgba(9, 27, 18, 0.72); border: 1px solid rgba(246,241,227,0.22);
+  font-weight: 700; padding-left: 14px;
+}
+.btn.provider:active { transform: translateY(1px) scale(0.99); }
+.provider-ic {
+  width: 30px; height: 30px; flex: 0 0 30px; border-radius: 8px;
+  display: grid; place-items: center; font-weight: 900; font-size: 1.05rem; color: #0b1f14;
+}
+.provider-google .provider-ic { background: #ffffff; color: #4285f4; }
+.provider-apple  .provider-ic { background: #f3f1ea; color: #111; }
+.provider-samsung .provider-ic { background: #1f6fe5; color: #fff; }
+.provider-google { border-color: rgba(66,133,244,0.5); }
+.provider-apple  { border-color: rgba(240,240,235,0.4); }
+.provider-samsung { border-color: rgba(31,111,229,0.5); }
+
+/* Campos de formulario */
+.auth-field { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+.auth-field > span { font-size: 0.8rem; font-weight: 800; color: var(--amber); letter-spacing: 0.02em; }
+.auth-field input {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: 1rem;
+  padding: 12px 14px; min-height: 48px; border-radius: 12px;
+  background: rgba(6, 20, 13, 0.7); color: var(--cream);
+  border: 1px solid rgba(242,193,78,0.32); outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.auth-field input::placeholder { color: rgba(246,241,227,0.4); }
+.auth-field input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(242,193,78,0.22); }
+.auth-check { display: flex; align-items: flex-start; gap: 9px; text-align: left; font-size: 0.9rem; color: var(--cream); line-height: 1.35; }
+.auth-check input { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 1px; accent-color: var(--green); }
+.auth-error { color: var(--red); font-size: 0.86rem; min-height: 1.1em; margin: 2px 0; font-weight: 700; }
+.auth-demo { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; line-height: 1.4; }
+
+/* Vista de proveedor (placeholder) */
+.auth-provider-ic { font-size: 44px; margin: 6px 0 2px; }
+.auth-provider-name { font-size: 1.3rem; font-weight: 900; color: var(--amber); margin: 0 0 6px; }
+.auth-provider-msg { font-size: 1rem; color: var(--cream); margin: 0 0 4px; }
+
+/* Pie legal + enlaces */
+.auth-foot { font-size: 0.78rem; color: var(--muted); margin: 16px 0 10px; line-height: 1.5; }
+.auth-foot a { color: var(--amber); text-decoration: underline; cursor: pointer; }
+.legal-body { text-align: left; line-height: 1.55; font-size: 0.95rem; color: var(--cream); margin: 6px 0 16px; }
+.legal-body p { margin: 0 0 12px; }
+.legal-body strong { color: var(--amber); }
+
+/* Saludo en el menú */
+.menu-greeting { margin: 2px 0 4px; font-size: 0.92rem; font-weight: 800; color: var(--green); min-height: 1em; }
+.menu-greeting:empty { display: none; }
 
 /* ===================== Ciclo 3 · QA visual / mobile ===================== */
 /* Evita que el nombre del nivel y de los mundos desborden o saturen el HUD. */

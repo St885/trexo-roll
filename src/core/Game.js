@@ -17,6 +17,7 @@ import { music } from '../effects/music.js';
 import { showTaunt } from '../effects/tauntMonkey.js';
 import * as critters from '../effects/critters.js';
 import { t, tf, getLang, setLang, applyTranslations, onLangChange } from '../utils/i18n.js';
+import { getSession, setSession, clearSession, hasSession, sanitizeName } from '../utils/session.js';
 import { makeBallThumbnail } from '../scene/textures.js';
 import {
   getHighScore, setHighScore, getUnlocked, unlockLevel,
@@ -189,7 +190,13 @@ export class Game {
     this._syncAudioLabels();
     this._updateHighScoreLabels();
     this._updateBallPreviews();
-    this.screens.show(SCREENS.LANDING);
+    this._updateGreeting();
+    // Acceso: si ya hay sesión local válida, va directo al landing; si no, pide acceso.
+    if (hasSession()) {
+      this.screens.show(SCREENS.LANDING);
+    } else {
+      this._showAuth();
+    }
     requestAnimationFrame(this._loop);
   }
 
@@ -206,11 +213,13 @@ export class Game {
     if (this.screens.isActive(SCREENS.SHOP)) this._renderShop();
     if (this.screens.isActive(SCREENS.LIFEPACKS)) this._renderLifePacks();
     if (this.screens.isActive(SCREENS.PREP)) this._showPrep();
+    if (this.screens.isActive(SCREENS.LEGAL) && this._legalKind) this._showLegal(this._legalKind);
+    this._updateGreeting();
   }
 
   _syncLangButtons() {
     const cur = getLang();
-    for (const id of ['btn-lang-es', 'btn-lang-en']) {
+    for (const id of ['btn-lang-es', 'btn-lang-en', 'btn-auth-lang-es', 'btn-auth-lang-en']) {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('active', el.dataset.lang === cur);
     }
@@ -231,6 +240,26 @@ export class Game {
   // --- Cableado de la interfaz ---------------------------------------------
   _wireUI() {
     const click = (id, fn) => this.screens.onClick(id, () => { sfx.click(); fn(); });
+
+    // Acceso / registro (simulado)
+    click('btn-auth-guest', () => this._authGuest());
+    click('btn-auth-login', () => this._authView('login'));
+    click('btn-auth-register', () => this._authView('register'));
+    click('btn-login-back', () => this._authView('home'));
+    click('btn-register-back', () => this._authView('home'));
+    click('btn-do-login', () => this._doLogin());
+    click('btn-do-register', () => this._doRegister());
+    click('btn-auth-google', () => this._authProvider('google'));
+    click('btn-auth-apple', () => this._authProvider('apple'));
+    click('btn-auth-samsung', () => this._authProvider('samsung'));
+    click('btn-provider-guest', () => this._authGuest());
+    click('btn-provider-back', () => this._authView('home'));
+    click('link-terms', () => this._showLegal('terms'));
+    click('link-privacy', () => this._showLegal('privacy'));
+    click('btn-legal-back', () => this._showAuthOrMenu());
+    click('btn-auth-lang-es', () => setLang('es'));
+    click('btn-auth-lang-en', () => setLang('en'));
+    click('btn-set-logout', () => this._logout());
 
     click('btn-enter', () => this._showMenu());
     click('btn-lang-es', () => setLang('es'));
@@ -284,6 +313,119 @@ export class Game {
     click('btn-lifepacks-continue', () => this._continueFromBank());
   }
 
+  // --- Acceso / registro (SIMULADO, local; sin backend, APIs ni contraseñas) -----
+
+  /** Muestra la pantalla de acceso en su vista inicial (opciones). */
+  _showAuth() {
+    this._authView('home');
+    this._setAuthError('login-error', '');
+    this._setAuthError('reg-error', '');
+    this.screens.show(SCREENS.AUTH);
+  }
+
+  /** Alterna entre las vistas internas de la pantalla de acceso. */
+  _authView(name) {
+    for (const id of ['auth-home', 'auth-login', 'auth-register', 'auth-provider']) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = (id === 'auth-' + name) ? 'flex' : 'none';
+    }
+  }
+
+  _setAuthError(id, msg) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = msg || '';
+  }
+
+  _authGuest() { this._completeAuth('guest', t('player.guest')); }
+
+  _doLogin() {
+    const name = sanitizeName(this._inputVal('login-name'), '');
+    const pass = this._inputVal('login-pass');
+    if (!name) { this._setAuthError('login-error', t('auth.errName')); return; }
+    if (!pass || pass.length < 4) { this._setAuthError('login-error', t('auth.errPass')); return; }
+    this._setAuthError('login-error', '');
+    this._completeAuth('local-demo', name); // la contraseña NO se guarda
+  }
+
+  _doRegister() {
+    const name = sanitizeName(this._inputVal('reg-name'), '');
+    const pass = this._inputVal('reg-pass');
+    const pass2 = this._inputVal('reg-pass2');
+    const terms = !!(document.getElementById('reg-terms') && document.getElementById('reg-terms').checked);
+    if (!name) { this._setAuthError('reg-error', t('auth.errName')); return; }
+    if (!pass || pass.length < 4) { this._setAuthError('reg-error', t('auth.errPass')); return; }
+    if (pass !== pass2) { this._setAuthError('reg-error', t('auth.errMatch')); return; }
+    if (!terms) { this._setAuthError('reg-error', t('auth.errTerms')); return; }
+    this._setAuthError('reg-error', '');
+    this._completeAuth('local-demo', name); // la contraseña NO se guarda
+  }
+
+  /** Proveedor externo: placeholder seguro (aún sin integración real). */
+  _authProvider(provider) {
+    const map = { google: { name: 'Google', mode: 'google-placeholder' },
+                  apple: { name: 'Apple', mode: 'apple-placeholder' },
+                  samsung: { name: 'Samsung', mode: 'samsung-placeholder' } };
+    const p = map[provider] || map.google;
+    this._pendingProvider = p.mode;
+    const nameEl = document.getElementById('auth-provider-name');
+    if (nameEl) nameEl.textContent = p.name; // textContent (sin innerHTML): seguro
+    this._authView('provider');
+  }
+
+  /** Lee un input de forma segura (string acotado). */
+  _inputVal(id) {
+    const el = document.getElementById(id);
+    return el && typeof el.value === 'string' ? el.value : '';
+  }
+
+  /** Guarda la sesión local y entra al landing. NO toca el progreso del juego. */
+  _completeAuth(mode, name) {
+    setSession({ authMode: mode, playerName: name, acceptedTerms: true, language: getLang() });
+    this._clearAuthInputs();
+    this._updateGreeting();
+    this.screens.show(SCREENS.LANDING);
+  }
+
+  _clearAuthInputs() {
+    for (const id of ['login-name', 'login-pass', 'reg-name', 'reg-pass', 'reg-pass2']) {
+      const el = document.getElementById(id); if (el) el.value = '';
+    }
+    const chk = document.getElementById('reg-terms'); if (chk) chk.checked = false;
+  }
+
+  /** Muestra la política de privacidad o los términos. which: 'privacy' | 'terms'. */
+  _showLegal(which) {
+    this._legalKind = which === 'terms' ? 'terms' : 'privacy';
+    this._legalReturn = this.screens.isActive(SCREENS.LEGAL) ? (this._legalReturn || SCREENS.AUTH) : (this._currentScreen() || SCREENS.AUTH);
+    const titleEl = document.getElementById('legal-title');
+    const bodyEl = document.getElementById('legal-body');
+    if (titleEl) titleEl.textContent = t(this._legalKind === 'terms' ? 'legal.termsTitle' : 'legal.privacyTitle');
+    if (bodyEl) bodyEl.innerHTML = t(this._legalKind === 'terms' ? 'legal.termsBody' : 'legal.privacyBody'); // contenido propio (sin entradas de usuario)
+    this.screens.show(SCREENS.LEGAL);
+  }
+
+  _showAuthOrMenu() { this.screens.show(this._legalReturn || SCREENS.AUTH); }
+
+  _currentScreen() {
+    const active = document.querySelector('.screen.active');
+    return active ? active.id : null;
+  }
+
+  /** Cierra la sesión local (desde Ajustes). No borra el progreso del juego. */
+  _logout() {
+    clearSession();
+    this._updateGreeting();
+    this._showAuth();
+  }
+
+  /** Saludo "¡Hola, X!" en el menú según la sesión local. */
+  _updateGreeting() {
+    const el = document.getElementById('menu-greeting');
+    if (!el) return;
+    const s = getSession();
+    el.textContent = s ? tf('auth.greet', s.playerName) : '';
+  }
+
   _showMenu() {
     this.playing = false;
     this.paused = false;
@@ -293,6 +435,7 @@ export class Game {
     this._updateHighScoreLabels();
     this._updateBallPreviews();
     this._updateMenuProgress();
+    this._updateGreeting();
     // Llegamos aquí tras pulsar "Entrar" (gesto del usuario): podemos arrancar la
     // música de fondo respetando las restricciones de autoplay del navegador.
     this._applyAudio();

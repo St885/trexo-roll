@@ -44,6 +44,94 @@
 
     <!-- Interfaz / pantallas -->
     <div id="ui">
+      <!-- 0. Acceso / registro (simulado, sin backend real; preparado para futura integración) -->
+      <section class="screen" id="screen-auth">
+        <div class="bg-decor" aria-hidden="true">
+          <span class="floaty f1">🌿</span>
+          <span class="floaty f2">🦴</span>
+          <span class="floaty f3">🥚</span>
+          <span class="floaty f4">🌴</span>
+          <span class="floaty f5">🦕</span>
+        </div>
+        <div class="panel center auth-panel">
+          <span class="brand-tag" data-i18n="auth.tag">Aventura jurásica</span>
+          <div class="ball-emblem floaty-ball auth-emblem" aria-hidden="true">🦖</div>
+          <h1 class="title small auth-title">TREX<span>o</span>Roll</h1>
+          <p class="subtitle auth-subtitle" data-i18n="auth.subtitle">Crea tu cuenta o entra para empezar tu aventura jurásica.</p>
+
+          <!-- Vista: opciones -->
+          <div class="auth-view" id="auth-home">
+            <button class="btn primary auth-guest" id="btn-auth-guest" data-i18n="auth.guest">🦖 Continuar como invitado</button>
+            <div class="auth-row2">
+              <button class="btn ghost" id="btn-auth-login" data-i18n="auth.login">Ingresar</button>
+              <button class="btn ghost" id="btn-auth-register" data-i18n="auth.register">Crear cuenta</button>
+            </div>
+            <div class="auth-divider"><span data-i18n="auth.or">o continúa con</span></div>
+            <button class="btn provider provider-google" id="btn-auth-google"><span class="provider-ic">G</span><span data-i18n="auth.google">Continuar con Google</span></button>
+            <button class="btn provider provider-apple" id="btn-auth-apple"><span class="provider-ic">A</span><span data-i18n="auth.apple">Continuar con Apple</span></button>
+            <button class="btn provider provider-samsung" id="btn-auth-samsung"><span class="provider-ic">S</span><span data-i18n="auth.samsung">Continuar con Samsung</span></button>
+          </div>
+
+          <!-- Vista: ingresar -->
+          <div class="auth-view" id="auth-login" style="display:none">
+            <label class="auth-field"><span data-i18n="auth.nameLabel">Nombre de jugador</span>
+              <input id="login-name" type="text" autocomplete="off" maxlength="24" data-i18n-ph="auth.namePh" placeholder="Tu nombre" /></label>
+            <label class="auth-field"><span data-i18n="auth.passLabel">Contraseña</span>
+              <input id="login-pass" type="password" autocomplete="off" maxlength="40" data-i18n-ph="auth.passPh" placeholder="••••••••" /></label>
+            <p class="auth-error" id="login-error"></p>
+            <button class="btn primary" id="btn-do-login" data-i18n="auth.doLogin">▶ Ingresar</button>
+            <button class="btn ghost" id="btn-login-back" data-i18n="common.back">← Volver</button>
+            <p class="auth-demo" data-i18n="auth.demoNote">🔒 Demo local: nada se envía a ningún servidor.</p>
+          </div>
+
+          <!-- Vista: crear cuenta -->
+          <div class="auth-view" id="auth-register" style="display:none">
+            <label class="auth-field"><span data-i18n="auth.nameLabel">Nombre de jugador</span>
+              <input id="reg-name" type="text" autocomplete="off" maxlength="24" data-i18n-ph="auth.namePh" placeholder="Tu nombre" /></label>
+            <label class="auth-field"><span data-i18n="auth.passLabel">Contraseña</span>
+              <input id="reg-pass" type="password" autocomplete="off" maxlength="40" data-i18n-ph="auth.passPh" placeholder="••••••••" /></label>
+            <label class="auth-field"><span data-i18n="auth.passConfirmLabel">Repite la contraseña</span>
+              <input id="reg-pass2" type="password" autocomplete="off" maxlength="40" data-i18n-ph="auth.passPh" placeholder="••••••••" /></label>
+            <label class="auth-check"><input id="reg-terms" type="checkbox" /><span data-i18n="auth.terms">Acepto los términos y la política de privacidad</span></label>
+            <p class="auth-error" id="reg-error"></p>
+            <button class="btn primary" id="btn-do-register" data-i18n="auth.doRegister">✓ Crear cuenta</button>
+            <button class="btn ghost" id="btn-register-back" data-i18n="common.back">← Volver</button>
+            <p class="auth-demo" data-i18n="auth.demoNote">🔒 Demo local: nada se envía a ningún servidor.</p>
+          </div>
+
+          <!-- Vista: proveedor (placeholder seguro) -->
+          <div class="auth-view" id="auth-provider" style="display:none">
+            <div class="auth-provider-ic" id="auth-provider-ic" aria-hidden="true">🔗</div>
+            <p class="auth-provider-name" id="auth-provider-name">Google</p>
+            <p class="auth-provider-msg" data-i18n="auth.providerSoon">Función preparada para una futura integración.</p>
+            <p class="muted center" data-i18n="auth.providerSoon2">Por ahora puedes continuar como invitado.</p>
+            <button class="btn primary" id="btn-provider-guest" data-i18n="auth.guest">🦖 Continuar como invitado</button>
+            <button class="btn ghost" id="btn-provider-back" data-i18n="common.back">← Volver</button>
+          </div>
+
+          <p class="auth-foot">
+            <span data-i18n="auth.footNote">Al continuar aceptas los</span>
+            <a role="button" tabindex="0" id="link-terms" data-i18n="auth.termsLink">Términos</a>
+            <span data-i18n="auth.footAnd">y la</span>
+            <a role="button" tabindex="0" id="link-privacy" data-i18n="auth.privacyLink">Política de privacidad</a>.
+          </p>
+          <div class="lang-select">
+            <span class="lang-label" data-i18n="lang.label">Idioma</span>
+            <button class="lang-btn" id="btn-auth-lang-es" data-lang="es" aria-label="Español">ES</button>
+            <button class="lang-btn" id="btn-auth-lang-en" data-lang="en" aria-label="English">EN</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 0b. Legal (privacidad / términos) -->
+      <section class="screen" id="screen-legal">
+        <div class="panel">
+          <h2 class="title small" id="legal-title">Política de privacidad</h2>
+          <div class="legal-body" id="legal-body"></div>
+          <button class="btn ghost" id="btn-legal-back" data-i18n="common.back">← Volver</button>
+        </div>
+      </section>
+
       <!-- 1. Landing -->
       <section class="screen active" id="screen-landing">
         <div class="bg-decor" aria-hidden="true">
@@ -74,6 +162,7 @@
         <div class="panel center">
           <div class="ball-preview" id="menu-ball" aria-hidden="true"></div>
           <h2 class="title small">TREXoRoll</h2>
+          <p class="menu-greeting" id="menu-greeting"></p>
           <div class="progress-wrap">
             <div class="progress-bar"><div class="progress-fill" id="menu-progress-fill"></div></div>
             <p class="progress-label" id="menu-progress-label">Progreso</p>
@@ -128,6 +217,7 @@
           <button class="btn settings-toggle" id="btn-set-sfx">🔊 Efectos: ON</button>
           <p class="settings-group-label" data-i18n="set.data">Datos</p>
           <button class="btn" id="btn-set-reset" data-i18n="set.reset">🗑️ Reiniciar progreso</button>
+          <button class="btn" id="btn-set-logout" data-i18n="auth.logout">🚪 Cerrar sesión</button>
           <button class="btn" id="btn-set-credits" data-i18n="set.credits">🎬 Créditos</button>
           <div class="confirm-box" id="reset-confirm" style="display:none">
             <p data-i18n="set.resetConfirm">¿Borrar todo el progreso? No se puede deshacer.</p>

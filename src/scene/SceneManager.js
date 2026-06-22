@@ -319,6 +319,7 @@ export class SceneManager {
       dino, points, velocities, aura, t: 0, baseY: 0.0, baseX: x, baseZ: z,
       anim: dino.userData.anim, head: dino.userData.head, neck: dino.userData.neck,
       tail: dino.userData.tail, arms: dino.userData.arms || [],
+      jaw: dino.userData.jaw || null, crest: dino.userData.crest || null, legs: dino.userData.legs || [],
     };
   }
 
@@ -341,15 +342,18 @@ export class SceneManager {
 
     // Salida del hoyo (0–0.4 s) con overshoot, y luego saltitos (primer salto fuerte).
     let y = c.baseY;
+    let sy = 1;
     if (t < 0.4) {
       const e = 1 - Math.pow(1 - t / 0.4, 3);
       y = -1.4 + (c.baseY + 1.4) * e + Math.sin(e * Math.PI) * 0.35; // overshoot = impacto
+      sy = 1 + Math.sin(e * Math.PI) * 0.14; // estiramiento vertical al emerger del hoyo
     } else {
       const hop = c.anim === 'neck' ? 0.12 : 0.3; // el braquiosaurio salta menos
       const boost = t < 0.95 ? 1.7 : 1; // primer salto más alto
       y = c.baseY + Math.abs(Math.sin((t - 0.4) * 7)) * hop * boost;
     }
     d.position.set(c.baseX, y, c.baseZ);
+    d.scale.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy)); // squash&stretch (conserva volumen)
     d.rotation.set(0, d.rotation.y + dt * 1.2, 0); // giro base lento
 
     // Aura de victoria: aparece, late y se desvanece al final.
@@ -363,14 +367,20 @@ export class SceneManager {
     if (t > 0.4) {
       const u = t - 0.4;
       switch (c.anim) {
-        case 'spin': d.rotation.y += dt * 5; if (c.tail) c.tail.rotation.z = Math.sin(u * 12) * 0.3; break;
-        case 'dance': d.rotation.z = Math.sin(u * 8) * 0.18; break;
-        case 'charge':
+        case 'spin': // Raptor: giro veloz + coletazo rígido
+          d.rotation.y += dt * 5; if (c.tail) c.tail.rotation.z = Math.sin(u * 12) * 0.3; break;
+        case 'dance': // Parasaurio: balanceo + cabeceo de la cresta
+          d.rotation.z = Math.sin(u * 8) * 0.18;
+          if (c.crest) c.crest.rotation.x = Math.sin(u * 8) * 0.16; break;
+        case 'charge': // Triceratops: embestida adelante/atrás + cabezazo de cuernos
           d.position.z = c.baseZ + Math.sin(u * 6) * 0.45;
           if (c.head) c.head.rotation.x = Math.max(0, Math.sin(u * 6)) * 0.45; break;
-        case 'neck': if (c.neck) c.neck.rotation.x = -0.3 + Math.sin(u * 3) * 0.45; break;
+        case 'neck': // Braquiosaurio: mecer el cuello largo
+          if (c.neck) c.neck.rotation.x = -0.3 + Math.sin(u * 3) * 0.45; break;
         case 'roar':
-        default: if (c.head) c.head.rotation.x = -0.12 + Math.sin(u * 9) * 0.32; break;
+        default: // T-Rex: cabezazo + mandíbula que abre al rugir
+          if (c.head) c.head.rotation.x = -0.12 + Math.sin(u * 9) * 0.32;
+          if (c.jaw) c.jaw.rotation.x = 0.12 + Math.max(0, Math.sin(u * 9)) * 0.5; break;
       }
     }
     for (const arm of c.arms) arm.rotation.x = Math.sin(t * 14) * 0.8 - 0.2;
