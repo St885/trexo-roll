@@ -1128,6 +1128,35 @@ body.is-touch .dpad { display: grid; }
 .auth-error { color: var(--red); font-size: 0.86rem; min-height: 1.1em; margin: 2px 0; font-weight: 700; }
 .auth-demo { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; line-height: 1.4; }
 
+/* — Cuenta/nube (Firebase-ready): alterna campos según modo demo vs nube — */
+.auth-mode-msg {
+  font-size: 0.82rem; font-weight: 700; color: var(--bone); margin: 0 0 12px;
+  padding: 7px 12px; border-radius: 12px; line-height: 1.35;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(242,193,78,0.28);
+}
+body.cloud-auth .auth-mode-msg { color: #d6f0ff; border-color: rgba(120,200,255,0.4); background: rgba(20,50,80,0.35); }
+/* Por defecto (modo demo) se ocultan los campos solo-nube; en modo nube, al revés. */
+.cloud-only { display: none; }
+body.cloud-auth .cloud-only { display: block; }
+body.cloud-auth .auth-field.cloud-only { display: flex; }
+body.cloud-auth .demo-only { display: none; }
+/* Enlace "¿Olvidaste tu contraseña?" con aspecto de enlace (no botón pesado) */
+.link-btn {
+  background: none; border: none; box-shadow: none; min-width: 0; min-height: auto;
+  color: var(--amber); text-decoration: underline; font-size: 0.84rem; font-weight: 700;
+  padding: 4px 6px; margin: 2px auto 0; cursor: pointer;
+}
+.link-btn:hover { filter: brightness(1.1); background: none; }
+/* Tarjeta de cuenta + estado de sincronización en Ajustes */
+.account-card {
+  text-align: left; margin: 2px auto 8px; padding: 10px 14px; border-radius: 14px;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(242,193,78,0.26); width: min(320px, 92%);
+}
+.account-line { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 0.9rem; font-weight: 700; color: var(--cream); }
+.account-line .account-ic { font-size: 1rem; }
+.account-line.sync-line { color: var(--bone); font-size: 0.82rem; font-weight: 600; }
+#sync-status { color: var(--green); }
+
 /* Vista de proveedor (placeholder) */
 .auth-provider-ic { font-size: 44px; margin: 6px 0 2px; }
 .auth-provider-name { font-size: 1.3rem; font-weight: 900; color: var(--amber); margin: 0 0 6px; }

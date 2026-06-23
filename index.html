@@ -2,12 +2,18 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <!-- Seguridad: el juego es 100% de mismo origen (Three.js vendorizado, audio/imagen
-         locales, sin red ni dependencias externas). Esta CSP bloquea cargar scripts/
-         recursos externos, conexiones salientes (exfiltración), objetos/plugins, frames
-         y envío de formularios. 'unsafe-inline' es necesario solo para el <importmap> y
-         los style="" inline (no hay vector de XSS: el juego no tiene entradas de texto). -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" />
+    <!-- Seguridad (CSP). El juego es de mismo origen (Three.js y el SDK de Firebase
+         VENDORIZADOS en libs/, audio/imagen locales). Por eso script-src se mantiene en
+         'self' (no se confía en CDN de terceros). Lo ÚNICO que se abre es connect-src hacia
+         dominios CONCRETOS de Google para Firebase Auth + Firestore (sin comodines tipo *):
+           · identitytoolkit/securetoken.googleapis.com → Firebase Authentication
+           · firestore.googleapis.com                   → Cloud Firestore
+           · firebaseinstallations.googleapis.com        → Installations (requerido por el SDK)
+         En MODO DEMO no se conecta a ninguno (no rompe nada). Para ANALYTICS (GA4) hace
+         falta una directiva extra (inyecta gtag.js) → es OPT-IN; ver docs/csp-firebase.md.
+         'unsafe-inline' solo es para el <importmap> y los style="" inline (sin entradas de
+         texto del usuario → sin vector de XSS). -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" />
     <meta name="referrer" content="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#16321f" />
@@ -62,6 +68,7 @@
           <div class="ball-emblem floaty-ball auth-emblem" aria-hidden="true">🦖</div>
           <h1 class="title small auth-title">TREX<span>o</span>Roll</h1>
           <p class="subtitle auth-subtitle" data-i18n="auth.subtitle">Crea tu cuenta o entra para empezar tu aventura jurásica.</p>
+          <p class="auth-mode-msg" id="auth-mode-msg" data-i18n="auth.modeDemo">Modo demo: tu progreso se guarda en este dispositivo.</p>
 
           <!-- Vista: opciones -->
           <div class="auth-view" id="auth-home">
@@ -78,20 +85,26 @@
 
           <!-- Vista: ingresar -->
           <div class="auth-view" id="auth-login" style="display:none">
-            <label class="auth-field"><span data-i18n="auth.nameLabel">Nombre de jugador</span>
+            <label class="auth-field cloud-only"><span data-i18n="auth.emailLabel">Correo electrónico</span>
+              <input id="login-email" type="email" autocomplete="email" maxlength="80" inputmode="email" data-i18n-ph="auth.emailPh" placeholder="tu@correo.com" /></label>
+            <label class="auth-field demo-only"><span data-i18n="auth.nameLabel">Nombre de jugador</span>
               <input id="login-name" type="text" autocomplete="off" maxlength="24" data-i18n-ph="auth.namePh" placeholder="Tu nombre" /></label>
             <label class="auth-field"><span data-i18n="auth.passLabel">Contraseña</span>
               <input id="login-pass" type="password" autocomplete="off" maxlength="40" data-i18n-ph="auth.passPh" placeholder="••••••••" /></label>
             <p class="auth-error" id="login-error"></p>
             <button class="btn primary" id="btn-do-login" data-i18n="auth.doLogin">▶ Ingresar</button>
+            <button class="btn link-btn cloud-only" id="btn-forgot" data-i18n="auth.forgot">¿Olvidaste tu contraseña?</button>
             <button class="btn ghost" id="btn-login-back" data-i18n="common.back">← Volver</button>
-            <p class="auth-demo" data-i18n="auth.demoNote">🔒 Demo local: nada se envía a ningún servidor.</p>
+            <p class="auth-demo demo-only" data-i18n="auth.demoNote">🔒 Demo local: nada se envía a ningún servidor.</p>
+            <p class="auth-demo cloud-only" data-i18n="auth.cloudNote">☁️ Tu cuenta y progreso se guardan de forma segura en la nube.</p>
           </div>
 
           <!-- Vista: crear cuenta -->
           <div class="auth-view" id="auth-register" style="display:none">
             <label class="auth-field"><span data-i18n="auth.nameLabel">Nombre de jugador</span>
               <input id="reg-name" type="text" autocomplete="off" maxlength="24" data-i18n-ph="auth.namePh" placeholder="Tu nombre" /></label>
+            <label class="auth-field cloud-only"><span data-i18n="auth.emailLabel">Correo electrónico</span>
+              <input id="reg-email" type="email" autocomplete="email" maxlength="80" inputmode="email" data-i18n-ph="auth.emailPh" placeholder="tu@correo.com" /></label>
             <label class="auth-field"><span data-i18n="auth.passLabel">Contraseña</span>
               <input id="reg-pass" type="password" autocomplete="off" maxlength="40" data-i18n-ph="auth.passPh" placeholder="••••••••" /></label>
             <label class="auth-field"><span data-i18n="auth.passConfirmLabel">Repite la contraseña</span>
@@ -100,7 +113,8 @@
             <p class="auth-error" id="reg-error"></p>
             <button class="btn primary" id="btn-do-register" data-i18n="auth.doRegister">✓ Crear cuenta</button>
             <button class="btn ghost" id="btn-register-back" data-i18n="common.back">← Volver</button>
-            <p class="auth-demo" data-i18n="auth.demoNote">🔒 Demo local: nada se envía a ningún servidor.</p>
+            <p class="auth-demo demo-only" data-i18n="auth.demoNote">🔒 Demo local: nada se envía a ningún servidor.</p>
+            <p class="auth-demo cloud-only" data-i18n="auth.cloudNote">☁️ Tu cuenta y progreso se guardan de forma segura en la nube.</p>
           </div>
 
           <!-- Vista: proveedor (placeholder seguro) -->
@@ -311,6 +325,11 @@
       <section class="screen" id="screen-settings">
         <div class="panel center">
           <h2 class="title small" data-i18n="set.title">⚙️ Ajustes</h2>
+          <p class="settings-group-label" data-i18n="set.account">Cuenta</p>
+          <div class="account-card">
+            <p class="account-line"><span class="account-ic">👤</span><span id="account-status">Invitado</span></p>
+            <p class="account-line sync-line"><span class="account-ic">🔄</span><span id="sync-status">Guardado local</span></p>
+          </div>
           <p class="settings-group-label" data-i18n="set.audio">Audio</p>
           <button class="btn settings-toggle" id="btn-set-music">🎵 Música: ON</button>
           <button class="btn settings-toggle" id="btn-set-sfx">🔊 Efectos: ON</button>

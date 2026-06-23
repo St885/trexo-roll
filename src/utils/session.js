@@ -8,8 +8,9 @@
 
 const SESSION_KEY = 'trexoroll.session.v1';
 
-// Modos válidos de acceso (placeholder seguro para proveedores externos).
-export const AUTH_MODES = ['guest', 'local-demo', 'google-placeholder', 'apple-placeholder', 'samsung-placeholder'];
+// Modos válidos de acceso. 'email' = cuenta real de Firebase Auth (correo/contraseña);
+// el resto son demo local o placeholders seguros de proveedores externos.
+export const AUTH_MODES = ['guest', 'local-demo', 'email', 'google-placeholder', 'apple-placeholder', 'samsung-placeholder'];
 
 /** Recorta y limpia un nombre visible (sin HTML, longitud acotada). */
 export function sanitizeName(name, fallback = 'Invitado') {

@@ -2,6 +2,87 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.23.0] — 2026-06-23 — Firebase: SDK vendorizado + CSP preparada (sin claves reales)
+
+> Prepara la parte técnica para activar Firebase: **SDK vendorizado** en `libs/firebase/` y
+> **CSP** lista para Auth + Firestore, manteniendo el modo demo intacto y **sin** claves,
+> tokens ni proyecto real. **Sin desplegar.**
+
+### Estrategia
+- **Vendorizado (SDK local)** elegido sobre CDN: más seguro (todo el código ejecutable es de
+  mismo origen → `script-src 'self'`, sin confiar en terceros), más estable y mejor para
+  GitHub Pages. Analytics (que inyecta `gtag.js`) queda como **opt-in** documentado.
+
+### Añadido
+- `libs/firebase/` con **placeholders** ESM (`firebase-app/auth/firestore/analytics.js`) +
+  `README.md` (versión 10.12.2, origen oficial, cómo poblar/actualizar, seguridad). Los
+  placeholders exportan `__PLACEHOLDER__` → el juego se queda en demo hasta vendorizar.
+- `tools/fetch-firebase.mjs` + script `npm run fetch:firebase`: descarga el SDK real a
+  `libs/firebase/` (lo ejecuta el usuario, con red; no descarga nada sensible).
+- `docs/firebase-sdk-vendor.md` y `docs/csp-firebase.md` (estrategia, archivos, versión,
+  actualización, directivas CSP exactas y por qué).
+
+### Cambiado
+- `index.html`: **CSP** ahora abre `connect-src` solo a dominios concretos de Google
+  (`identitytoolkit`, `securetoken`, `firestore`, `firebaseinstallations` `.googleapis.com`)
+  para Auth + Firestore. `script-src` sigue `'self'` (SDK vendorizado). Sin comodines.
+- `src/config/firebaseConfig.js` y `.example.js`: `sdkUrls` apunta por defecto a
+  `./libs/firebase/` (vendorizado); alternativa CDN comentada.
+- `src/services/firebaseClient.js`: detecta placeholders (`__PLACEHOLDER__`) y degrada a
+  demo; **aviso de consola solo en desarrollo**, genérico (sin exponer config ni claves).
+
+### Seguridad
+- Sin claves reales, sin tokens, sin contraseñas (grep `AIza`/`apiKey`/`token`/`secret` →
+  solo placeholders y documentación). `.gitignore` bloquea `serviceAccount*.json` y `.env`.
+
+### Validado
+- `npm test` (225 asserts), `test:graph`, `test:visual`, `test:ui`: **verde**. Carga HTTP de
+  los nuevos `libs/firebase/*.js` (200). Modo invitado, demo y web/GitHub Pages intactos.
+
+## [0.22.0] — 2026-06-23 — Arquitectura de cuenta y nube (Firebase-ready, segura)
+
+> Prepara TREXoRoll para producción con **autenticación, progreso en la nube y analítica**
+> mediante Firebase, **sin** SDK real, sin claves reales y **sin romper** el modo invitado,
+> la web ni GitHub Pages. Inerte (modo demo) hasta configurar Firebase. **Sin desplegar.**
+
+### Auditoría (estado anterior)
+- El "registro" era **demo local**: la contraseña se validaba en memoria y se **descartaba**
+  (no se guardaba ni se transmitía). Sesión en `trexoroll.session.v1` (solo modo/nombre/
+  idioma/términos), progreso en `trexoroll.save.v1`. **No había contraseñas almacenadas.**
+
+### Añadido (capa de servicios, Firebase-ready)
+- `services/authService.js`: registro/login/logout/recuperación con Firebase Auth
+  (correo/contraseña), observador de sesión, modo invitado y placeholders de proveedores.
+- `services/playerProfileService.js`: documento `players/{uid}` en Firestore + **mapeo
+  puro** local↔nube (correo **enmascarado**, nunca contraseña).
+- `services/progressSyncService.js`: migración local→nube y **resolución de conflictos**
+  (gana el más avanzado: nivel desbloqueado → estrellas → bestScore) + estados de sync.
+- `services/analyticsService.js`: 12 eventos GA4 (`login`, `level_complete`, `chest_opened`…)
+  con **filtrado de datos sensibles**; país por reportes **agregados** de GA4 (sin GPS).
+- `services/firebaseClient.js`: carga **perezosa** del SDK (sin import estático) → el grafo
+  carga sin Firebase; se intenta el SDK solo con config real.
+- `config/firebaseConfig.js` (placeholders → modo demo) + `firebaseConfig.example.js`.
+
+### Seguridad / privacidad
+- ❌ contraseña en localStorage · ❌ en Firestore · ❌ contraseña/token en consola/analítica.
+- Errores **genéricos** al usuario; validación de correo y contraseña (≥6). Logout y
+  recuperación preparados. **Sin permisos de ubicación / GPS.**
+- `.gitignore`: bloquea claves del Admin SDK / `.env`; nota para mantener privada la config.
+
+### UI
+- Pantalla de acceso: mensaje de modo (**demo** vs **nube**), campos de **correo**
+  (solo nube) y nombre (solo demo), enlace **¿Olvidaste tu contraseña?**.
+- Ajustes → **Cuenta**: estado de la cuenta + estado de sincronización
+  (Guardado local / Sincronizado / Sin conexión / Pendiente).
+
+### Documentación
+- `docs/firebase-setup.md` (guía 1–13 + **CSP** obligatoria), `docs/auth-architecture.md`
+  (auditoría, capas, modelo, sync, reglas Firestore, analítica, seguridad).
+
+### Validado
+- `npm test` (incl. nuevo `auth-smoke`: 225 asserts), `test:graph`, `test:visual`,
+  `test:ui`: **verde**. Módulos nuevos sirven HTTP 200; modo invitado y web intactos.
+
 ## [0.21.0] — 2026-06-23 — Rediseño visual del menú principal (premium / mobile-first)
 
 > Rediseño del **menú principal** para recuperar limpieza, compacidad y jerarquía tras la

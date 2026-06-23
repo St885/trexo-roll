@@ -296,6 +296,50 @@ export function setDaily(dateStr, streak) {
   save({ ...c, daily: { lastClaimDate: String(dateStr || ''), streak: nonNeg(streak) } });
 }
 
+// --- Sincronización nube ↔ local (Firebase) ----------------------------------
+
+/** Devuelve una instantánea completa del guardado local (para subir a la nube). */
+export function exportSave() {
+  return load();
+}
+
+/**
+ * Aplica una instantánea (p. ej. traída de la nube) al guardado local, SANEADA.
+ * Solo toca campos de progreso/inventario; ignora claves desconocidas. No guarda
+ * jamás credenciales (este store nunca las maneja).
+ */
+export function importSave(snap) {
+  if (!snap || typeof snap !== 'object') return false;
+  const cur = load();
+  const next = { ...cur };
+  if (snap.highScore != null) next.highScore = Math.max(0, Number(snap.highScore) || 0);
+  if (snap.unlocked != null) next.unlocked = Math.max(1, Number(snap.unlocked) || 1);
+  if (snap.stars && typeof snap.stars === 'object') next.stars = sanitizeStarMap(snap.stars);
+  if (snap.bestTimes && typeof snap.bestTimes === 'object') next.bestTimes = snap.bestTimes;
+  if (typeof snap.selectedBall === 'string') next.selectedBall = snap.selectedBall;
+  if (snap.lastLevel != null) next.lastLevel = Math.max(1, Number(snap.lastLevel) || 1);
+  for (const k of ['starTokens', 'extraLives', 'trapBlocks', 'fallShields', 'livesBank', 'chestsOpened']) {
+    if (snap[k] != null) next[k] = nonNeg(snap[k]);
+  }
+  if (Array.isArray(snap.ownedSkins)) next.ownedSkins = sanitizeSkins(snap.ownedSkins);
+  if (typeof snap.activeSkin === 'string') next.activeSkin = snap.activeSkin;
+  if (snap.daily && typeof snap.daily === 'object') next.daily = sanitizeDaily(snap.daily);
+  if (typeof snap.sfxOn === 'boolean') next.sfxOn = snap.sfxOn;
+  if (typeof snap.musicOn === 'boolean') next.musicOn = snap.musicOn;
+  save(next);
+  return true;
+}
+
+/** Sanea un mapa nivel→estrellas (valores 0..3 enteros). */
+function sanitizeStarMap(m) {
+  const out = {};
+  for (const k of Object.keys(m)) {
+    const v = Math.max(0, Math.min(3, Math.round(Number(m[k]) || 0)));
+    if (v > 0) out[k] = v;
+  }
+  return out;
+}
+
 // --- Reiniciar progreso (conserva audio, bola y skins elegidas) --------------
 
 /** Borra progreso/inventario/récords. Mantiene ajustes de audio, bola y skins. */

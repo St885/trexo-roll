@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.21.0 — Rediseño visual del menú principal (premium, mobile-first) sobre la evolución de progresión v0.20 (sin push aún) |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.17.0) · 🛠️ Local v0.21.0 (acumula 0.18.x–0.21.0) lista para **revisión de Stefano** antes de desplegar |
+| **Versión** | 0.22.0 — Arquitectura de cuenta/nube Firebase-ready (auth + Firestore + GA4), inerte en modo demo; menú premium v0.21; progresión v0.20 |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.21.0, push de release previo) · 🛠️ Local v0.22.0 lista para **revisión de Stefano** y configuración de Firebase |
 | **Fecha** | 2026-06-23 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
@@ -15,6 +15,18 @@
 | **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · v0.8.0 (2026-06-19) |
 
 ---
+
+## Novedades v0.22.0 — Cuenta y nube (Firebase-ready, segura)
+
+- Capa de servicios para **Firebase Auth + Firestore + GA4**, **inerte en modo demo** hasta
+  configurar (no rompe invitado, web ni GitHub Pages).
+- **Sin contraseñas** en local ni en la nube; correo enmascarado; errores genéricos; sin GPS.
+- Migración de progreso local→nube al crear cuenta; **resolución de conflictos** (más
+  avanzado: nivel → estrellas → score); estados de sincronización en Ajustes.
+- UI de acceso con modo demo/nube, correo, recuperar contraseña. 12 eventos de analítica.
+- Docs: `firebase-setup.md` (con la **CSP** a ajustar) y `auth-architecture.md`.
+- Validado: `npm test` (incl. `auth-smoke`, 225 asserts), `test:graph/visual/ui`: **verde**.
+  ⚠️ **No desplegado** — pendiente de que Stefano configure Firebase.
 
 ## Novedades v0.21.0 — Rediseño visual del menú principal
 

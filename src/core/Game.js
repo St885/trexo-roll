@@ -24,6 +24,10 @@ import * as critters from '../effects/critters.js';
 import * as weather from '../effects/weather.js';
 import { t, tf, getLang, setLang, applyTranslations, onLangChange } from '../utils/i18n.js';
 import { getSession, setSession, clearSession, hasSession, sanitizeName } from '../utils/session.js';
+// Capa de cuenta/nube (Firebase-ready, inerte en modo demo) + analítica.
+import * as auth from '../services/authService.js';
+import * as sync from '../services/progressSyncService.js';
+import { track } from '../services/analyticsService.js';
 import { makeBallThumbnail } from '../scene/textures.js';
 import {
   getHighScore, setHighScore, getUnlocked, unlockLevel,
@@ -205,6 +209,7 @@ export class Game {
     this._updateHighScoreLabels();
     this._updateBallPreviews();
     this._updateGreeting();
+    this._initAccount();        // detecta modo demo/nube y prepara UI de cuenta/sync
     // Acceso: si ya hay sesión local válida, va directo al landing; si no, pide acceso.
     if (hasSession()) {
       this.screens.show(SCREENS.LANDING);
@@ -212,6 +217,92 @@ export class Game {
       this._showAuth();
     }
     requestAnimationFrame(this._loop);
+  }
+
+  // --- Cuenta / nube (Firebase-ready; inerte y seguro en modo demo) -----------
+
+  /** Detecta si Firebase está configurado y prepara la UI de cuenta/sincronización. */
+  _initAccount() {
+    this._cloudMode = false;                 // por defecto, demo (local)
+    this._cloudUser = null;
+    this._syncStatus = sync.SYNC_STATUS.LOCAL;
+    // Detección async: no bloquea el arranque. En demo, queda todo como está.
+    auth.getAuthMode().then((mode) => {
+      this._cloudMode = (mode === 'cloud');
+      this._applyAuthModeUI();
+    }).catch(() => { this._cloudMode = false; this._applyAuthModeUI(); });
+    // Observa la sesión de la nube (si la hay) para reflejar el estado.
+    try {
+      auth.onAuthChange((u) => {
+        this._cloudUser = u;
+        this._setSyncStatus(u ? sync.SYNC_STATUS.CLOUD : (this._cloudMode ? sync.SYNC_STATUS.LOCAL : sync.SYNC_STATUS.LOCAL));
+        this._updateAccountUI();
+      });
+    } catch (_) { /* sin Firebase: no pasa nada */ }
+    this._applyAuthModeUI();
+  }
+
+  /** Aplica clase de modo (demo/nube) y textos asociados en la pantalla de acceso. */
+  _applyAuthModeUI() {
+    document.body.classList.toggle('cloud-auth', !!this._cloudMode);
+    setText('auth-mode-msg', this._cloudMode ? t('auth.modeCloud') : t('auth.modeDemo'));
+    this._updateAccountUI();
+  }
+
+  /** Refresca el bloque de cuenta + estado de sincronización en Ajustes. */
+  _updateAccountUI() {
+    const s = getSession();
+    const acc = this._cloudUser
+      ? tf('account.cloud', this._cloudUser.displayName || this._cloudUser.email || 'cuenta')
+      : (s ? tf('account.local', s.playerName) : t('account.none'));
+    setText('account-status', acc);
+    const map = {
+      [sync.SYNC_STATUS.LOCAL]: t('sync.local'),
+      [sync.SYNC_STATUS.CLOUD]: t('sync.cloud'),
+      [sync.SYNC_STATUS.OFFLINE]: t('sync.offline'),
+      [sync.SYNC_STATUS.PENDING]: t('sync.pending'),
+    };
+    setText('sync-status', map[this._syncStatus] || t('sync.local'));
+  }
+
+  _setSyncStatus(status) {
+    this._syncStatus = status;
+    this._updateAccountUI();
+  }
+
+  /** Sube el progreso local a la nube si hay sesión real (best-effort, sin bloquear). */
+  _pushCloudIfLogged() {
+    if (!this._cloudUser) return;
+    Promise.resolve(sync.pushLocal(this._cloudUser.uid, this._accountMeta()))
+      .then((r) => { if (r) this._setSyncStatus(r.status); })
+      .catch(() => this._setSyncStatus(sync.SYNC_STATUS.PENDING));
+  }
+
+  /** Metadatos de sesión para la sincronización con la nube. */
+  _accountMeta(email) {
+    const s = getSession();
+    return {
+      playerName: (s && s.playerName) || (this._cloudUser && this._cloudUser.displayName) || 'Jugador',
+      language: getLang(),
+      authProvider: this._cloudUser ? this._cloudUser.provider : 'password',
+      email: email || (this._cloudUser && this._cloudUser.email) || '',
+    };
+  }
+
+  /** Traduce un código de error de auth a un mensaje GENÉRICO (sin tecnicismos). */
+  _authErrorMsg(code) {
+    const map = {
+      'auth/invalid-email': 'auth.errEmail',
+      'auth/weak-password': 'auth.errWeak',
+      'auth/email-already-in-use': 'auth.errInUse',
+      'auth/invalid-credential': 'auth.errBadCreds',
+      'auth/wrong-password': 'auth.errBadCreds',
+      'auth/user-not-found': 'auth.errBadCreds',
+      'auth/too-many-requests': 'auth.errTooMany',
+      'auth/network-request-failed': 'auth.errNetwork',
+      'auth/not-configured': 'auth.errNotReady',
+    };
+    return t(map[code] || 'auth.errGeneric');
   }
 
   /** Tras cambiar de idioma: re-traduce estáticos y refresca textos dinámicos. */
@@ -266,6 +357,7 @@ export class Game {
     click('btn-register-back', () => this._authView('home'));
     click('btn-do-login', () => this._doLogin());
     click('btn-do-register', () => this._doRegister());
+    click('btn-forgot', () => this._resetPassword());
     click('btn-auth-google', () => this._authProvider('google'));
     click('btn-auth-apple', () => this._authProvider('apple'));
     click('btn-auth-samsung', () => this._authProvider('samsung'));
@@ -347,6 +439,7 @@ export class Game {
     this._authView('home');
     this._setAuthError('login-error', '');
     this._setAuthError('reg-error', '');
+    this._applyAuthModeUI(); // refleja modo demo/nube (mensaje + campos correctos)
     this.screens.show(SCREENS.AUTH);
   }
 
@@ -363,28 +456,89 @@ export class Game {
     if (el) el.textContent = msg || '';
   }
 
-  _authGuest() { this._completeAuth('guest', t('player.guest')); }
+  _authGuest() {
+    track.guestStart();
+    this._completeAuth('guest', t('player.guest'));
+  }
 
-  _doLogin() {
+  async _doLogin() {
+    const pass = this._inputVal('login-pass'); // la contraseña NUNCA se guarda ni se loguea
+    if (this._cloudMode) {
+      // --- Nube: Firebase Auth con correo/contraseña ---
+      const email = this._inputVal('login-email').trim();
+      if (!auth.isValidEmail(email)) { this._setAuthError('login-error', t('auth.errEmail')); return; }
+      if (!auth.isValidPassword(pass)) { this._setAuthError('login-error', t('auth.errWeak')); return; }
+      this._setAuthError('login-error', t('auth.signingIn'));
+      const res = await auth.signInEmail({ email, password: pass });
+      if (!res.ok) { this._setAuthError('login-error', this._authErrorMsg(res.code)); return; }
+      this._setAuthError('login-error', '');
+      await this._afterCloudAuth(res, email, 'login');
+      return;
+    }
+    // --- Demo local (sin Firebase configurado): nombre + contraseña (no se guarda) ---
     const name = sanitizeName(this._inputVal('login-name'), '');
-    const pass = this._inputVal('login-pass');
     if (!name) { this._setAuthError('login-error', t('auth.errName')); return; }
     if (!pass || pass.length < 4) { this._setAuthError('login-error', t('auth.errPass')); return; }
     this._setAuthError('login-error', '');
-    this._completeAuth('local-demo', name); // la contraseña NO se guarda
+    this._completeAuth('local-demo', name);
   }
 
-  _doRegister() {
+  async _doRegister() {
     const name = sanitizeName(this._inputVal('reg-name'), '');
     const pass = this._inputVal('reg-pass');
     const pass2 = this._inputVal('reg-pass2');
     const terms = !!(document.getElementById('reg-terms') && document.getElementById('reg-terms').checked);
     if (!name) { this._setAuthError('reg-error', t('auth.errName')); return; }
+    if (this._cloudMode) {
+      // --- Nube: crea la cuenta real; migra el progreso local existente a la nube ---
+      const email = this._inputVal('reg-email').trim();
+      if (!auth.isValidEmail(email)) { this._setAuthError('reg-error', t('auth.errEmail')); return; }
+      if (!auth.isValidPassword(pass)) { this._setAuthError('reg-error', t('auth.errWeak')); return; }
+      if (pass !== pass2) { this._setAuthError('reg-error', t('auth.errMatch')); return; }
+      if (!terms) { this._setAuthError('reg-error', t('auth.errTerms')); return; }
+      this._setAuthError('reg-error', t('auth.creating'));
+      const res = await auth.signUpEmail({ email, password: pass, displayName: name });
+      if (!res.ok) { this._setAuthError('reg-error', this._authErrorMsg(res.code)); return; }
+      this._setAuthError('reg-error', '');
+      await this._afterCloudAuth(res, email, 'register');
+      return;
+    }
+    // --- Demo local: validación mínima; la contraseña NO se guarda ---
     if (!pass || pass.length < 4) { this._setAuthError('reg-error', t('auth.errPass')); return; }
     if (pass !== pass2) { this._setAuthError('reg-error', t('auth.errMatch')); return; }
     if (!terms) { this._setAuthError('reg-error', t('auth.errTerms')); return; }
     this._setAuthError('reg-error', '');
-    this._completeAuth('local-demo', name); // la contraseña NO se guarda
+    this._completeAuth('local-demo', name);
+  }
+
+  /** Tras un login/registro real: sesión + sincronización nube/local + analítica. */
+  async _afterCloudAuth(res, email, kind) {
+    const name = (res.user && res.user.displayName) || sanitizeName(this._inputVal(kind === 'register' ? 'reg-name' : 'login-name'), email.split('@')[0]);
+    setSession({ authMode: 'email', playerName: name, acceptedTerms: true, language: getLang() });
+    this._cloudUser = res.user;
+    if (kind === 'register') track.signUp('password'); else track.login('password');
+    // Sincroniza progreso (elige el más avanzado entre local y nube).
+    try {
+      const r = await sync.syncOnLogin(res.uid, this._accountMeta(email));
+      this._setSyncStatus(r.status);
+    } catch (_) { this._setSyncStatus(sync.SYNC_STATUS.PENDING); }
+    // Refresca lo que depende del progreso (la nube pudo cambiar el local).
+    this.selectedBall = getSelectedBall();
+    this._updateBallPreviews();
+    this._updateHighScoreLabels();
+    this._clearAuthInputs();
+    this._updateGreeting();
+    this._updateAccountUI();
+    this.screens.show(SCREENS.LANDING);
+  }
+
+  /** Recuperación de contraseña (solo en modo nube). */
+  async _resetPassword() {
+    if (!this._cloudMode) return;
+    const email = this._inputVal('login-email').trim();
+    if (!auth.isValidEmail(email)) { this._setAuthError('login-error', t('auth.errEmail')); return; }
+    const res = await auth.resetPassword(email);
+    this._setAuthError('login-error', res.ok ? t('auth.resetSent') : this._authErrorMsg(res.code));
   }
 
   /** Proveedor externo: placeholder seguro (aún sin integración real). */
@@ -414,7 +568,7 @@ export class Game {
   }
 
   _clearAuthInputs() {
-    for (const id of ['login-name', 'login-pass', 'reg-name', 'reg-pass', 'reg-pass2']) {
+    for (const id of ['login-name', 'login-email', 'login-pass', 'reg-name', 'reg-email', 'reg-pass', 'reg-pass2']) {
       const el = document.getElementById(id); if (el) el.value = '';
     }
     const chk = document.getElementById('reg-terms'); if (chk) chk.checked = false;
@@ -438,10 +592,14 @@ export class Game {
     return active ? active.id : null;
   }
 
-  /** Cierra la sesión local (desde Ajustes). No borra el progreso del juego. */
-  _logout() {
+  /** Cierra la sesión (local y, si la hay, de la nube). NO borra el progreso del juego. */
+  async _logout() {
+    try { await auth.signOutUser(); } catch (_) { /* en demo es no-op */ }
+    this._cloudUser = null;
+    this._setSyncStatus(sync.SYNC_STATUS.LOCAL);
     clearSession();
     this._updateGreeting();
+    this._updateAccountUI();
     this._showAuth();
   }
 
@@ -565,6 +723,7 @@ export class Game {
     this._cancelResetProgress();
     this._setSettingsFeedback('');
     this._syncAudioLabels();
+    this._updateAccountUI(); // cuenta + estado de sincronización
     this.screens.show(SCREENS.SETTINGS);
   }
 
@@ -721,6 +880,7 @@ export class Game {
     const owned = ownsSkin(skin.id);
     if (owned) {
       setActiveSkin(skin.id);
+      track.skinSelected(skin.id);
       sfx.click();
       this.ball.setSkin(this._ballVisual());
       this._updateBallPreviews();
@@ -787,6 +947,8 @@ export class Game {
     const locked = SKINS.filter((s) => !ownsSkin(s.id)).map((s) => s.id);
     const reward = rollChest(Math.random, locked);
     this._applyChestReward(reward);
+    track.chestOpened(reward.type);
+    this._pushCloudIfLogged();
     // Animación de apertura + revelado.
     const box = document.getElementById('chest-box');
     if (box) { box.classList.remove('open'); void box.offsetWidth; box.classList.add('open'); }
@@ -857,6 +1019,8 @@ export class Game {
     if (!st.canClaim) { sfx.nope(); return; }
     this._applyDailyReward(st.reward);
     setDaily(todayStr(), st.nextStreak);
+    track.dailyClaimed(st.nextStreak);
+    this._pushCloudIfLogged();
     sfx.buy(); sfx.starGet();
     this._dailyClaiming = true;
     const fb = document.getElementById('daily-feedback');
@@ -1165,6 +1329,7 @@ export class Game {
     this._setTimeAttackHud();
     setThumb('hud-ball', this._ballVisual(), 34);
     setLastLevel(this.levelIndex + 1);
+    track.levelStart(this.levelIndex + 1);
 
     // Eventos ambientales: 2 vuelos de pterodáctilo por nivel (ida y vuelta) +
     // familia Triceratops al recoger 3 monedas (rearma la bandera por nivel).
@@ -1205,6 +1370,7 @@ export class Game {
 
   /** Banner de jefe (overlay breve, no bloquea el input). */
   _showBossIntro(boss) {
+    track.bossStarted(this.levelIndex + 1, boss.kind);
     const el = document.getElementById('boss-banner');
     if (el) {
       el.innerHTML =
@@ -1367,6 +1533,7 @@ export class Game {
     if (i < 0) return;
     const fx = this.scene.launchRocket(i);
     if (!fx) return;
+    track.rocketActivated(fx.type);
     if (fx.type === 'red') {
       // Coreografía: aparece el ptero → (retardo) despega el cohete LENTO → impacto → caída.
       hud.toast(t('msg.rocketRed'), 1300);
@@ -1566,6 +1733,7 @@ export class Game {
 
   /** La bola tocó al cavernícola: se detiene, patea la bola y prepara el lanzamiento. */
   _startCavemanAttack() {
+    track.cavemanHit(this.levelIndex + 1);
     this.ballState = 'caveman';
     this.scene.cavemanStartAttack();
     // Dirección de la patada: desde el cavernícola hacia fuera (la bola sale despedida).
@@ -1691,6 +1859,10 @@ export class Game {
     // Bonus de contrarreloj: completar un nivel cronometrado da estrellas de canje extra.
     let taBonus = 0;
     if (this._timeAttackLimit) { taBonus = 2; addStarTokens(taBonus); }
+
+    // Analítica + sincronización best-effort del progreso a la nube (si hay cuenta).
+    track.levelComplete(this.levelIndex + 1, stars);
+    this._pushCloudIfLogged();
 
     // Auto-desbloqueo de skins por estrellas acumuladas + aviso de cofre listo.
     const newSkins = this._autoUnlockStarSkins();

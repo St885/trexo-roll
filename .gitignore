@@ -10,3 +10,15 @@ Thumbs.db
 
 # Temporales
 *.tmp
+
+# Firebase: la config web NO es secreta (se sirve al cliente; la seguridad la dan las
+# reglas de Firestore + Auth). El repo trae src/config/firebaseConfig.js con placeholders.
+# Si PREFIERES no versionar tus valores reales, descomenta la línea siguiente y ejecuta
+# una vez:  git rm --cached src/config/firebaseConfig.js
+# src/config/firebaseConfig.js
+#
+# NUNCA subas claves del Admin SDK / cuentas de servicio (esas SÍ son secretas):
+*serviceAccount*.json
+*firebase-adminsdk*.json
+.env
+.env.*
