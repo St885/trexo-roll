@@ -12,6 +12,11 @@ const DEFAULT = {
   starTokens: 0, extraLives: 0, trapBlocks: 0, fallShields: 0,
   livesBank: 0, // reserva de vidas (compradas/ganadas por vídeo) para continuar partidas
   sfxOn: true, musicOn: true, // ajustes de audio (separados)
+  // — Evolución v0.20: cofre jurásico, skins y recompensa diaria —
+  chestsOpened: 0,                 // cofres jurásicos ya abiertos (cada 15 ⭐ de nivel da uno)
+  ownedSkins: ['classic'],         // skins de bola desbloqueadas (la clásica viene de serie)
+  activeSkin: 'classic',           // skin equipada actualmente
+  daily: { lastClaimDate: '', streak: 0 }, // recompensa diaria (fecha YYYY-MM-DD + racha)
 };
 let memoryFallback = clone(DEFAULT);
 
@@ -37,10 +42,30 @@ export function load() {
       livesBank: nonNeg(data.livesBank),
       sfxOn: data.sfxOn !== false,   // por defecto ON
       musicOn: data.musicOn !== false,
+      chestsOpened: nonNeg(data.chestsOpened),
+      ownedSkins: sanitizeSkins(data.ownedSkins),
+      activeSkin: typeof data.activeSkin === 'string' ? data.activeSkin : 'classic',
+      daily: sanitizeDaily(data.daily),
     };
   } catch (_) {
     return clone(memoryFallback);
   }
+}
+
+/** Normaliza la lista de skins poseídas (siempre incluye 'classic', sin duplicados). */
+function sanitizeSkins(arr) {
+  const out = new Set(['classic']);
+  if (Array.isArray(arr)) for (const s of arr) if (typeof s === 'string') out.add(s);
+  return [...out];
+}
+
+/** Normaliza el bloque de recompensa diaria. */
+function sanitizeDaily(d) {
+  if (!d || typeof d !== 'object') return { lastClaimDate: '', streak: 0 };
+  return {
+    lastClaimDate: typeof d.lastClaimDate === 'string' ? d.lastClaimDate : '',
+    streak: nonNeg(d.streak),
+  };
 }
 
 // Claves válidas de potenciadores (para validar entradas).
@@ -161,6 +186,14 @@ export function consumePowerup(item) {
   return true;
 }
 
+/** Otorga `n` unidades de un potenciador SIN coste (recompensas de cofre/diario). */
+export function addPowerup(item, n = 1) {
+  const c = load();
+  if (!POWERUPS.includes(item)) return false;
+  save({ ...c, [item]: nonNeg(c[item]) + Math.max(0, n) });
+  return true;
+}
+
 // --- Banco de vidas (monetización: vídeo recompensado / packs de vidas) -------
 
 export function getLivesBank() {
@@ -193,11 +226,84 @@ export function setSetting(key, value) {
   save({ ...load(), [key]: !!value });
 }
 
-// --- Reiniciar progreso (conserva audio y bola elegida) ----------------------
+// --- Cofre jurásico (se gana cada CHEST_STAR_COST ⭐ de nivel acumuladas) ------
 
-/** Borra progreso/inventario/récords. Mantiene ajustes de audio y bola elegida. */
+export const CHEST_STAR_COST = 15; // estrellas de nivel por cada cofre disponible
+
+/** Cofres GANADOS en total según las estrellas de nivel acumuladas (monótono). */
+export function getChestsEarned() {
+  return Math.floor(getTotalStars() / CHEST_STAR_COST);
+}
+
+/** Cofres listos para abrir (ganados − abiertos). */
+export function getChestsAvailable() {
+  return Math.max(0, getChestsEarned() - load().chestsOpened);
+}
+
+/** Marca un cofre como abierto (si había alguno disponible). @returns {boolean} */
+export function openChest() {
+  const c = load();
+  if (getChestsAvailable() <= 0) return false;
+  save({ ...c, chestsOpened: c.chestsOpened + 1 });
+  return true;
+}
+
+/** Estrellas que faltan para el PRÓXIMO cofre (0 si ya hay uno listo). */
+export function starsToNextChest() {
+  if (getChestsAvailable() > 0) return 0;
+  const total = getTotalStars();
+  return CHEST_STAR_COST - (total % CHEST_STAR_COST);
+}
+
+// --- Skins de bola -----------------------------------------------------------
+
+export function getOwnedSkins() {
+  return load().ownedSkins.slice();
+}
+
+export function ownsSkin(id) {
+  return load().ownedSkins.includes(id);
+}
+
+export function getActiveSkin() {
+  return load().activeSkin;
+}
+
+/** Desbloquea una skin (sin coste aquí; el coste lo gestiona quien llama). */
+export function unlockSkin(id) {
+  const c = load();
+  if (c.ownedSkins.includes(id)) return false;
+  save({ ...c, ownedSkins: [...c.ownedSkins, id] });
+  return true;
+}
+
+/** Equipa una skin SOLO si está desbloqueada. @returns {boolean} */
+export function setActiveSkin(id) {
+  const c = load();
+  if (!c.ownedSkins.includes(id)) return false;
+  save({ ...c, activeSkin: id });
+  return true;
+}
+
+// --- Recompensa diaria -------------------------------------------------------
+
+export function getDaily() {
+  return { ...load().daily };
+}
+
+export function setDaily(dateStr, streak) {
+  const c = load();
+  save({ ...c, daily: { lastClaimDate: String(dateStr || ''), streak: nonNeg(streak) } });
+}
+
+// --- Reiniciar progreso (conserva audio, bola y skins elegidas) --------------
+
+/** Borra progreso/inventario/récords. Mantiene ajustes de audio, bola y skins. */
 export function resetProgress() {
   const c = load();
-  const keep = { sfxOn: c.sfxOn, musicOn: c.musicOn, selectedBall: c.selectedBall };
+  const keep = {
+    sfxOn: c.sfxOn, musicOn: c.musicOn, selectedBall: c.selectedBall,
+    ownedSkins: c.ownedSkins, activeSkin: c.activeSkin, // las skins son colección, no progreso de niveles
+  };
   save({ ...DEFAULT, ...keep });
 }

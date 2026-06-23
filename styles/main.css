@@ -264,8 +264,147 @@ html, body {
 .btn.tiny { min-width: auto; padding: 6px 12px; font-size: 1.2rem; }
 .btn-icon { margin-right: 6px; }
 
-.menu-buttons { display: flex; flex-direction: column; gap: 11px; align-items: center; margin-top: 10px; }
-.menu-buttons .btn { width: min(300px, 84vw); }
+/* ============================================================================
+   Menú principal — rediseño premium v0.21
+   Cabecera compacta · tarjeta de stats · 2 CTAs héroe · grid de tiles · utilitarios.
+   Objetivo: jerarquía clara, look premium glass, sin panel largo ni scroll.
+   ============================================================================ */
+.menu-panel {
+  width: min(420px, 94vw);
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 22px 20px 18px;
+  text-align: left;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(52, 210, 123, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(18, 44, 30, 0.86), rgba(9, 24, 16, 0.92));
+  border: 1px solid rgba(242, 193, 78, 0.42);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+}
+
+/* — Cabecera: avatar + título + saludo — */
+.menu-head { display: flex; align-items: center; gap: 14px; }
+.menu-avatar { margin: 0; flex-shrink: 0; }
+.menu-avatar canvas {
+  width: 60px; height: 60px; border-radius: 50%;
+  border: 2px solid rgba(242, 193, 78, 0.65);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.45), 0 0 14px rgba(52, 210, 123, 0.28);
+}
+.menu-head-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.menu-title {
+  margin: 0; font-size: clamp(1.55rem, 6vw, 2rem); font-weight: 900; letter-spacing: 0.4px;
+  line-height: 1; color: var(--amber);
+  text-shadow: 0 2px 0 var(--amber-deep), 0 6px 14px rgba(0,0,0,0.5);
+}
+.menu-title span { color: var(--green); }
+.menu-head .menu-greeting { margin: 0; font-size: 0.9rem; }
+
+/* — Tarjeta de estadísticas — */
+.menu-stats {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px; border-radius: 16px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.menu-pills { display: flex; gap: 8px; justify-content: space-between; }
+.menu-pills .stat-pill {
+  flex: 1; justify-content: center; gap: 5px; padding: 7px 6px;
+  background: rgba(9, 27, 18, 0.7); border: 1px solid rgba(242, 193, 78, 0.28);
+  border-radius: 12px; font-size: 0.82rem; font-weight: 800; color: var(--bone);
+  display: inline-flex; align-items: center; min-width: 0;
+}
+.menu-pills .stat-pill b { color: var(--amber); font-weight: 900; }
+.menu-pills .pill-ic { font-size: 0.95rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.menu-progress { display: flex; align-items: center; gap: 10px; }
+.menu-progress .progress-bar {
+  flex: 1; height: 10px; border-radius: 999px; background: rgba(0,0,0,0.4);
+  overflow: hidden; border: 1px solid rgba(242, 193, 78, 0.25);
+}
+.menu-progress .progress-fill {
+  height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--green), var(--amber));
+  box-shadow: 0 0 10px rgba(242, 193, 78, 0.5); transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+}
+.progress-pct { font-size: 0.78rem; font-weight: 800; color: var(--amber); min-width: 34px; text-align: right; }
+
+/* — CTAs principales — */
+.menu-cta { display: flex; flex-direction: column; gap: 10px; }
+.cta-main {
+  width: 100%; min-width: 0; margin: 0;
+  font-size: 1.18rem; font-weight: 900; letter-spacing: 0.4px;
+  padding: 15px 20px; border-radius: 16px;
+}
+.cta-hero {
+  font-size: 1.32rem; padding: 17px 20px;
+  background: linear-gradient(180deg, #58e89a, var(--green-deep));
+  box-shadow: 0 7px 0 #136e3a, var(--shadow), 0 0 22px rgba(52, 210, 123, 0.35);
+  position: relative; overflow: hidden;
+}
+.cta-hero::after { /* brillo diagonal sutil (transform → compositor, suave en móvil) */
+  content: ""; position: absolute; top: 0; left: 0; width: 40%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+  will-change: transform; animation: ctaShine 4.5s ease-in-out infinite;
+}
+@keyframes ctaShine { 0%, 70% { transform: translateX(-180%) skewX(-18deg); } 88%, 100% { transform: translateX(320%) skewX(-18deg); } }
+.cta-hero:active { box-shadow: 0 2px 0 #136e3a, var(--shadow); }
+@media (prefers-reduced-motion: reduce) { .cta-hero::after { animation: none; } }
+/* "Continuar" en ámbar (reanudar la aventura): distinto a "Jugar", ambos protagonistas. */
+#btn-continue.cta-main {
+  background: linear-gradient(180deg, #f7d06b, var(--amber-deep));
+  border-color: var(--amber-deep); color: #3c2606;
+  box-shadow: 0 6px 0 #855613, var(--shadow);
+}
+#btn-continue.cta-main:hover { filter: brightness(1.05); }
+#btn-continue.cta-main:active { box-shadow: 0 2px 0 #855613; transform: translateY(3px) scale(0.99); }
+
+/* — Grid de tiles (acciones secundarias) — */
+.menu-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.menu-tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 13px 6px 11px; border-radius: 16px; cursor: pointer; font-family: inherit;
+  color: var(--cream); border: 1px solid rgba(242, 193, 78, 0.28);
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: transform 0.1s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.menu-tile:hover { transform: translateY(-2px); background: rgba(255,255,255,0.16); border-color: rgba(242,193,78,0.5); box-shadow: var(--shadow); }
+.menu-tile:active { transform: scale(0.95); }
+.tile-ic { font-size: 1.7rem; line-height: 1; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.45)); }
+.tile-label { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.2px; }
+.tile-feature { border-color: rgba(242, 193, 78, 0.42); background: linear-gradient(180deg, rgba(242,193,78,0.14), rgba(255,255,255,0.03)); }
+/* Badge (contador o punto) en la esquina del tile */
+.tile-badge {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 900; color: var(--green-ink); border-radius: 999px;
+  background: linear-gradient(180deg, #58e89a, var(--green-deep)); border: 2px solid rgba(9,24,16,0.9);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+}
+.tile-badge[hidden] { display: none; }
+.tile-badge.amber { background: linear-gradient(180deg, #f7d06b, var(--amber-deep)); color: #3c2606; }
+.tile-badge.dot { min-width: 14px; width: 14px; height: 14px; padding: 0; background: var(--red); border-color: rgba(9,24,16,0.9); }
+.menu-tile.ready { border-color: var(--amber); box-shadow: var(--shadow-sm), 0 0 16px rgba(242,193,78,0.45); animation: tileGlow 1.9s ease-in-out infinite; }
+@keyframes tileGlow { 0%,100% { box-shadow: var(--shadow-sm), 0 0 10px rgba(242,193,78,0.3); } 50% { box-shadow: var(--shadow-sm), 0 0 20px rgba(242,193,78,0.6); } }
+@media (prefers-reduced-motion: reduce) { .menu-tile.ready { animation: none; } }
+
+/* — Fila utilitaria: ayuda / ajustes / pantalla + idioma — */
+.menu-util {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+  padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);
+}
+.util-btn {
+  flex: 1; min-width: 84px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 10px; border-radius: 12px; cursor: pointer; font-family: inherit;
+  font-size: 0.84rem; font-weight: 700; color: var(--bone);
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  transition: background 0.15s ease, transform 0.08s ease, border-color 0.15s ease;
+}
+.util-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(242,193,78,0.4); }
+.util-btn:active { transform: scale(0.95); }
+.util-ic { font-size: 1.05rem; }
+.lang-mini { display: inline-flex; gap: 6px; }
+.lang-mini .lang-btn { min-width: 40px; min-height: 36px; padding: 6px 10px; }
 
 /* Selector de idioma (menú) */
 .lang-select { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
@@ -1029,7 +1168,10 @@ body.is-touch .dpad { display: grid; }
 
 /* Tablet / desktop amplio: un poco más de aire */
 @media (min-height: 720px) and (min-width: 600px) {
-  .menu-buttons .btn { font-size: 1.16rem; padding: 16px 24px; }
+  .menu-panel { width: min(440px, 92vw); padding: 26px 24px 20px; gap: 18px; }
+  .cta-main { font-size: 1.24rem; }
+  .cta-hero { font-size: 1.4rem; }
+  .menu-avatar canvas { width: 66px; height: 66px; }
 }
 
 /* Pantallas estrechas: HUD compacto, paneles y botones cómodos */
@@ -1038,7 +1180,7 @@ body.is-touch .dpad { display: grid; }
   .hud-chip { font-size: 0.74rem; padding: 5px 10px; }
   .hud-ball-mini canvas { width: 30px; height: 30px; }
   .panel { width: 94vw; padding: 22px 16px; }
-  .menu-buttons .btn { width: min(320px, 90vw); }
+  .menu-panel { padding: 18px 15px 16px; gap: 13px; }
   .balls-grid { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px; }
   .levels-grid { grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; }
   .title { letter-spacing: 0.3px; }
@@ -1050,6 +1192,15 @@ body.is-touch .dpad { display: grid; }
   .panel { padding: 20px 13px; border-radius: 20px; }
   .btn { font-size: 1rem; padding: 13px 18px; }
   .levels-grid { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+  /* Menú: pills y tiles más compactos para que nada se corte. */
+  .menu-panel { gap: 12px; }
+  .menu-pills { gap: 6px; }
+  .menu-pills .stat-pill { font-size: 0.74rem; padding: 6px 4px; white-space: nowrap; }
+  .menu-pills .pill-ic { font-size: 0.85rem; }
+  .menu-tiles { gap: 8px; }
+  .tile-ic { font-size: 1.55rem; }
+  .tile-label { font-size: 0.74rem; }
+  .util-btn { min-width: 72px; font-size: 0.8rem; padding: 8px 8px; }
 }
 
 /* Dispositivos táctiles: objetivos grandes */
@@ -1057,6 +1208,8 @@ body.is-touch .dpad { display: grid; }
   .btn { min-height: 48px; }
   .btn.ghost { min-height: 42px; }
   .ball-card, .level-card { min-height: 54px; }
+  .menu-tile { min-height: 64px; }
+  .util-btn { min-height: 44px; }
   .joystick { opacity: 0.9; }
 }
 
@@ -1071,8 +1224,17 @@ body.is-touch .dpad { display: grid; }
   .ball-emblem { width: 58px; height: 58px; font-size: 28px; }
   .win-emoji, .over-emoji { font-size: 32px; margin: 0; }
   .stars-row { font-size: 1.8rem; margin: 2px 0; }
-  .menu-buttons { gap: 8px; }
-  .menu-buttons .btn { padding: 11px 20px; }
+  /* Menú en paisaje: aprovecha el ancho → CTAs en par y tiles en una sola fila. */
+  .menu-panel { width: min(620px, 96vw); max-height: 96dvh; gap: 11px; padding: 12px 18px; }
+  .menu-head { gap: 11px; }
+  .menu-avatar canvas { width: 48px; height: 48px; }
+  .menu-stats { padding: 9px 12px; gap: 8px; }
+  .menu-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .menu-cta.no-continue { grid-template-columns: 1fr; }
+  .cta-main, .cta-hero { font-size: 1.08rem; padding: 12px 14px; }
+  .menu-tiles { grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .tile-ic { font-size: 1.4rem; }
+  .menu-util { padding-top: 9px; }
   .progress-wrap { margin: 8px auto 0; }
   .floaty { display: none; }
   .hud-hint { top: calc(env(safe-area-inset-top) + 44px); }
@@ -1110,3 +1272,143 @@ body.is-landscape-mobile #hud-time { display: none; }   /* prioriza nivel/vidas/
 body.is-landscape-mobile #hud-level { max-width: 26vw; }
 body.is-landscape-mobile .hud-hint { display: none; }    /* en horizontal estorba más que ayuda */
 body.is-landscape-mobile .tri { height: clamp(56px, 18vh, 116px); }
+
+/* ============================================================================
+   Evolución v0.20 — clima, jefes, contrarreloj, skins, cofre, diario
+   ============================================================================ */
+
+/* --- Capa de clima: por ENCIMA del lienzo, por DEBAJO del HUD/controles ----- */
+#weather-layer { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.weather { position: absolute; inset: 0; }
+
+/* Partículas que caen (lluvia / ceniza / tormenta) */
+.wx-p { position: absolute; top: -12vh; will-change: transform, opacity; animation: wxFall linear infinite; }
+.wx-rain  { width: 2px; height: 16px; border-radius: 2px; background: linear-gradient(180deg, rgba(180,220,255,0), rgba(180,220,255,0.7)); }
+.wx-storm { width: 2px; height: 22px; border-radius: 2px; background: linear-gradient(180deg, rgba(200,225,255,0), rgba(220,235,255,0.85)); }
+.wx-ash   { width: 6px; height: 6px; border-radius: 50%; background: rgba(220,210,200,0.5); box-shadow: 0 0 4px rgba(255,180,120,0.35); }
+@keyframes wxFall { 0% { transform: translateY(-12vh); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(112vh); opacity: 0.9; } }
+
+/* Viento: ráfagas/hojas horizontales */
+.wx-gust { position: absolute; left: -12vw; font-size: 1.1rem; opacity: 0.7; color: rgba(220,255,210,0.7);
+  width: 30px; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.5), rgba(255,255,255,0));
+  will-change: transform; animation: wxGust linear infinite; }
+.wx-gust:not(:empty) { background: none; width: auto; height: auto; }
+@keyframes wxGust { 0% { transform: translateX(-12vw); opacity: 0; } 15% { opacity: 0.8; } 100% { transform: translateX(114vw); opacity: 0; } }
+
+/* Niebla / calor: bandas suaves a la deriva */
+.wx-band { position: absolute; left: -20%; width: 140%; height: 40%; opacity: 0.5; will-change: transform; }
+.weather-fog .wx-band { background: radial-gradient(60% 100% at 50% 50%, rgba(230,235,230,0.55), rgba(230,235,230,0)); }
+.weather-heat .wx-band { background: radial-gradient(60% 100% at 50% 50%, rgba(255,150,80,0.16), rgba(255,150,80,0)); }
+.wx-band.b0 { top: 12%; animation: wxDrift 16s ease-in-out infinite; }
+.wx-band.b1 { top: 42%; animation: wxDrift 22s ease-in-out infinite reverse; }
+.wx-band.b2 { top: 68%; animation: wxDrift 19s ease-in-out infinite; }
+@keyframes wxDrift { 0%,100% { transform: translateX(-4%); } 50% { transform: translateX(6%); } }
+
+/* Tormenta: destellos esporádicos (sutiles, no ciegan) */
+.wx-flash { position: absolute; inset: 0; background: rgba(220,235,255,0); animation: wxFlash 7s linear infinite; }
+@keyframes wxFlash { 0%,93%,100% { background: rgba(220,235,255,0); } 94% { background: rgba(220,235,255,0.18); } 95% { background: rgba(220,235,255,0.02); } 96% { background: rgba(220,235,255,0.14); } 97% { background: rgba(220,235,255,0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-p, .wx-gust, .wx-band, .wx-flash { animation-duration: 0.001s !important; opacity: 0.18; }
+}
+
+/* --- Banner de jefe (intro) ------------------------------------------------ */
+.boss-banner {
+  position: absolute; top: 22%; left: 50%; transform: translateX(-50%) translateY(-8px);
+  display: flex; align-items: center; gap: 10px; z-index: 4; pointer-events: none;
+  padding: 10px 18px; border-radius: 16px; opacity: 0;
+  background: linear-gradient(180deg, rgba(60,20,10,0.92), rgba(30,8,4,0.92));
+  border: 2px solid var(--amber); box-shadow: var(--shadow-lg), 0 0 22px rgba(242,193,78,0.4);
+  color: var(--cream); font-weight: 900; letter-spacing: 0.3px;
+}
+.boss-banner.show { animation: bossIn 2.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.boss-banner .boss-emoji { font-size: 1.7rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+.boss-banner .boss-text { font-size: 1.05rem; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+@keyframes bossIn {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-26px) scale(0.92); }
+  14% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  82% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.98); }
+}
+
+/* --- HUD contrarreloj ------------------------------------------------------ */
+.hud-chip.hud-ta { color: #fff; background: linear-gradient(180deg, rgba(244,162,97,0.9), rgba(181,121,31,0.9)); border-color: var(--amber); font-weight: 900; }
+.hud-chip.hud-ta.danger { animation: taPulse 0.7s ease-in-out infinite; background: linear-gradient(180deg, var(--red), var(--red-deep)); border-color: var(--red); }
+@keyframes taPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+/* --- Chips de evento en preparación ---------------------------------------- */
+.prep-events { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin: 4px 0 12px; }
+.ev-chip { font-size: 0.76rem; font-weight: 800; padding: 5px 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.3); }
+.ev-chip.ev-boss { color: #ffd9c0; border-color: var(--amber); background: rgba(120,40,20,0.5); }
+.ev-chip.ev-ta { color: #fff; border-color: var(--amber-2); background: rgba(181,121,31,0.45); }
+.ev-chip.ev-wx { color: #d6eaff; border-color: rgba(150,200,255,0.5); background: rgba(20,50,80,0.4); }
+
+/* --- Skins (colección) ----------------------------------------------------- */
+.skins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin: 16px 0; }
+.skin-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px 12px; border-radius: 18px; border: 2px solid rgba(242,193,78,0.3);
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+  color: var(--cream); font-family: inherit; cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.skin-card:hover { background: rgba(255,255,255,0.14); transform: translateY(-3px); box-shadow: var(--shadow-sm); }
+.skin-card:active { transform: scale(0.95); }
+.skin-card.selected { border-color: var(--green); background: rgba(52,210,123,0.18); box-shadow: 0 0 0 2px rgba(52,210,123,0.5) inset, var(--shadow); }
+.skin-card.selected::after { content: "✓"; position: absolute; top: 8px; right: 9px; width: 22px; height: 22px; border-radius: 50%; background: var(--green); color: var(--green-ink); font-size: 0.8rem; font-weight: 900; display: grid; place-items: center; box-shadow: var(--shadow-sm); }
+.skin-card.locked { opacity: 0.7; filter: grayscale(0.35); }
+.skin-card.locked .skin-thumb { filter: grayscale(0.5) brightness(0.85); }
+.skin-thumb { border-radius: 50%; box-shadow: 0 6px 14px rgba(0,0,0,0.4); }
+.skin-name { font-weight: 800; font-size: 0.86rem; text-align: center; }
+.skin-status { font-size: 0.72rem; color: var(--amber); opacity: 0.95; text-align: center; min-height: 1.1em; }
+.skin-card.locked .skin-status { color: var(--bone); }
+
+/* Habilidad en el selector de bola */
+.ball-ability { font-size: 0.72rem; color: #cde7d3; line-height: 1.3; text-align: center; padding: 0 2px; }
+.ball-ability b { color: var(--green); }
+.ball-blurb { font-size: 0.72rem; color: var(--muted); line-height: 1.3; text-align: center; }
+
+/* --- Cofre jurásico -------------------------------------------------------- */
+.chest-stage { display: grid; place-items: center; height: 150px; margin: 6px auto 4px; }
+.chest-box { position: relative; width: 120px; height: 96px; }
+.chest-body { position: absolute; bottom: 0; left: 0; right: 0; height: 64px; border-radius: 10px 10px 12px 12px;
+  background: linear-gradient(180deg, #8a5a2a, #5a3818); border: 3px solid #3a2410;
+  box-shadow: inset 0 -8px 16px rgba(0,0,0,0.4), var(--shadow); display: grid; place-items: center; }
+.chest-body .chest-amber { font-size: 1.5rem; filter: drop-shadow(0 0 8px rgba(255,180,60,0.8)); }
+.chest-lid { position: absolute; top: 0; left: -2px; right: -2px; height: 42px; transform-origin: bottom center;
+  border-radius: 12px 12px 4px 4px; background: linear-gradient(180deg, #a06a30, #6a4420); border: 3px solid #3a2410;
+  box-shadow: inset 0 6px 12px rgba(255,220,150,0.18); transition: transform 0.4s cubic-bezier(0.34,1.4,0.5,1); }
+.chest-box.open .chest-lid { transform: rotateX(58deg) translateY(-8px); }
+.chest-box.ready { animation: chestBob 1.8s ease-in-out infinite; }
+.chest-box.ready .chest-body { box-shadow: inset 0 -8px 16px rgba(0,0,0,0.4), 0 0 26px rgba(255,190,70,0.55); }
+@keyframes chestBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.chest-sparkle { position: absolute; opacity: 0; font-size: 1.1rem; }
+.chest-box.ready .chest-sparkle, .chest-box.open .chest-sparkle { animation: chestSpark 1.6s ease-in-out infinite; }
+.chest-sparkle.s1 { top: -6px; left: 4px; animation-delay: 0s; }
+.chest-sparkle.s2 { top: 2px; right: -2px; animation-delay: 0.5s; }
+.chest-sparkle.s3 { top: -10px; left: 50%; animation-delay: 0.9s; }
+@keyframes chestSpark { 0%,100% { opacity: 0; transform: translateY(2px) scale(0.8); } 50% { opacity: 1; transform: translateY(-6px) scale(1.1); } }
+.chest-count { font-size: 1.1rem; font-weight: 900; color: var(--amber); margin: 6px 0 2px; }
+.chest-reveal { min-height: 1.4em; font-weight: 900; font-size: 1.05rem; color: var(--green); margin: 8px 0; }
+.chest-reveal.show { animation: fbPop 0.5s cubic-bezier(0.22,1,0.36,1); }
+#btn-chest-open.disabled { opacity: 0.5; filter: grayscale(0.4); }
+
+/* --- Recompensa diaria ----------------------------------------------------- */
+.daily-streak { font-size: 1.05rem; font-weight: 900; color: var(--amber-2); margin: 6px 0 10px; }
+.daily-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 8px 0 12px; }
+.daily-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 2px; border-radius: 12px;
+  border: 1px solid rgba(242,193,78,0.3); background: rgba(9,27,18,0.5); font-size: 0.72rem; }
+.daily-cell .daily-day { font-size: 0.62rem; color: var(--muted); }
+.daily-cell .daily-ic { font-size: 1.1rem; }
+.daily-cell .daily-amt { font-weight: 800; color: var(--amber); }
+.daily-cell.claimed { opacity: 0.5; filter: grayscale(0.4); }
+.daily-cell.today { border-color: var(--green); background: rgba(52,210,123,0.18); box-shadow: 0 0 0 2px rgba(52,210,123,0.4) inset; }
+.daily-reward { font-weight: 800; margin: 4px 0 10px; }
+#btn-daily-claim.disabled { opacity: 0.55; filter: grayscale(0.4); }
+
+/* --- Indicadores "listo" en botones de menú -------------------------------- */
+.btn.ready { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset, 0 0 16px rgba(242,193,78,0.4); animation: readyGlow 1.8s ease-in-out infinite; }
+@keyframes readyGlow { 0%,100% { box-shadow: 0 0 0 1px var(--amber) inset, 0 0 10px rgba(242,193,78,0.3); } 50% { box-shadow: 0 0 0 1px var(--amber) inset, 0 0 20px rgba(242,193,78,0.55); } }
+
+/* --- Línea de extras en victoria ------------------------------------------- */
+.win-extra { font-weight: 800; color: var(--amber); font-size: 0.9rem; margin: 2px 0 8px; line-height: 1.4; }

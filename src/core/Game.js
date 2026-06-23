@@ -8,14 +8,20 @@ import { InputController } from './InputController.js';
 import { ScreenManager } from './ScreenManager.js';
 import { LEVELS, getLevel } from '../levels/levels.js';
 import { generateCollectibles, COIN_POINTS, PICKUP_RADIUS } from '../levels/collectibles.js';
-import { BALLS, getBall } from '../data/balls.js';
+import { generateRocket, ROCKET_HIT_R } from '../levels/rockets.js';
+import { BALLS, getBall, getAbility } from '../data/balls.js';
+import { SKINS, applySkin, skinsUnlockedByStars } from '../data/skins.js';
 import { getDino } from '../data/dinos.js';
-import { SCREENS, LIVES_START, SCORE } from '../utils/constants.js';
+import { bossFor, weatherFor, windPushFor, timeAttackFor } from '../levels/levelEvents.js';
+import { rollChest } from '../systems/chest.js';
+import { evaluateDaily, todayStr, DAILY_REWARDS } from '../systems/daily.js';
+import { SCREENS, LIVES_START, SCORE, PHYS } from '../utils/constants.js';
 import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
 import { music } from '../effects/music.js';
 import { showTaunt } from '../effects/tauntMonkey.js';
 import * as critters from '../effects/critters.js';
+import * as weather from '../effects/weather.js';
 import { t, tf, getLang, setLang, applyTranslations, onLangChange } from '../utils/i18n.js';
 import { getSession, setSession, clearSession, hasSession, sanitizeName } from '../utils/session.js';
 import { makeBallThumbnail } from '../scene/textures.js';
@@ -23,9 +29,12 @@ import {
   getHighScore, setHighScore, getUnlocked, unlockLevel,
   getStars, setStars, getTotalStars, getBestTime, setBestTime,
   getSelectedBall, setSelectedBall, setLastLevel, getLastLevel,
-  getStarTokens, addStarTokens, getInventory, buyPowerup, consumePowerup,
+  getStarTokens, addStarTokens, getInventory, buyPowerup, consumePowerup, addPowerup,
   getLivesBank, addLivesBank, takeFromLivesBank,
   getSettings, setSetting, resetProgress,
+  getChestsAvailable, openChest, starsToNextChest, CHEST_STAR_COST,
+  ownsSkin, getActiveSkin, unlockSkin, setActiveSkin,
+  getDaily, setDaily,
 } from '../utils/storage.js';
 
 // Paquetes de vidas (monetización conceptual; precios de muestra, compra SIMULADA).
@@ -79,12 +88,17 @@ const starString = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
 const MAX_STARS = LEVELS.length * 3;
 const CELEBRATION_DUR = 1.7;
 
+// Emoji por tipo de jefe (banner de intro).
+const BOSS_EMOJI = { caveman: '🪓', trex: '🦖', volcano: '🌋', storm: '⛈️', finale: '👑' };
+// Emoji por tipo de clima.
+const WEATHER_EMOJI = { rain: '🌧️', fog: '🌫️', wind: '🌬️', ash: '🌋', storm: '⛈️', heat: '🔥' };
+
 export class Game {
   constructor(container) {
     this.container = container;
     this.scene = new SceneManager(container);
     this.selectedBall = getSelectedBall();
-    this.ball = new Ball(getBall(this.selectedBall));
+    this.ball = new Ball(applySkin(getBall(this.selectedBall), getActiveSkin()));
     this.physics = new BallPhysics();
     this.input = new InputController(
       this.scene.renderer.domElement,
@@ -211,6 +225,9 @@ export class Game {
     if (this.screens.isActive(SCREENS.BALLS)) this._renderBallCards();
     if (this.screens.isActive(SCREENS.LEVELS)) this._renderLevelCards();
     if (this.screens.isActive(SCREENS.SHOP)) this._renderShop();
+    if (this.screens.isActive(SCREENS.SKINS)) this._renderSkins();
+    if (this.screens.isActive(SCREENS.CHEST)) this._renderChest();
+    if (this.screens.isActive(SCREENS.DAILY)) this._renderDaily();
     if (this.screens.isActive(SCREENS.LIFEPACKS)) this._renderLifePacks();
     if (this.screens.isActive(SCREENS.PREP)) this._showPrep();
     if (this.screens.isActive(SCREENS.LEGAL) && this._legalKind) this._showLegal(this._legalKind);
@@ -270,6 +287,16 @@ export class Game {
     click('btn-balls-back', () => this._showMenu());
     click('btn-shop', () => this._showShop());
     click('btn-shop-back', () => this._showMenu());
+    // Skins, cofre jurásico y recompensa diaria (evolución v0.20)
+    click('btn-skins', () => this._showSkins());
+    click('btn-skins-back', () => this._showMenu());
+    click('btn-chest', () => this._showChest());
+    click('btn-chest-open', () => this._openChest());
+    click('btn-chest-back', () => this._showMenu());
+    click('btn-shop-chest', () => this._showChest());
+    click('btn-daily', () => this._showDaily());
+    click('btn-daily-claim', () => this._claimDaily());
+    click('btn-daily-back', () => this._showMenu());
     click('btn-levels', () => this._showLevels());
     click('btn-howto', () => this.screens.show(SCREENS.HOWTO));
     click('btn-settings', () => this._showSettings());
@@ -432,6 +459,7 @@ export class Game {
     this.input.disable();
     this.scene.clearBoard();
     critters.clear();
+    weather.clear();
     this._updateHighScoreLabels();
     this._updateBallPreviews();
     this._updateMenuProgress();
@@ -442,19 +470,51 @@ export class Game {
     this.screens.show(SCREENS.MENU);
   }
 
-  /** Barra de progreso + botón "Continuar" en el menú (solo si hay progreso). */
+  /** Stats (estrellas/nivel/récord), barra de progreso, "Continuar" y badges de tiles. */
   _updateMenuProgress() {
     const unlocked = Math.min(getUnlocked(), LEVELS.length);
     const total = getTotalStars();
     const pct = Math.round((total / MAX_STARS) * 100);
+    // Pills de estadísticas.
+    setText('menu-stars', `${total}/${MAX_STARS}`);
+    setText('menu-unlocked', `${unlocked}/${LEVELS.length}`);
+    setText('menu-best', `${getHighScore()}`);
+    // Barra de progreso + porcentaje.
     const fill = document.getElementById('menu-progress-fill');
     if (fill) fill.style.width = pct + '%';
-    setText('menu-progress-label', tf('menu.progressLabel', total, MAX_STARS, unlocked, LEVELS.length));
+    setText('menu-progress-label', `${pct}%`);
+    // "Continuar" solo si hay progreso. Marca el contenedor cuando solo está "Jugar"
+    // (para que el CTA ocupe el ancho completo en el layout de paisaje a 2 columnas).
     const hasProgress = unlocked > 1 || getLastLevel() > 1 || total > 0;
     const cont = document.getElementById('btn-continue');
-    if (cont) cont.style.display = hasProgress ? 'block' : 'none';
-    const shopBtn = document.getElementById('btn-shop');
-    if (shopBtn) shopBtn.textContent = tf('menu.shopBtn', getStarTokens());
+    if (cont) {
+      cont.style.display = hasProgress ? '' : 'none';
+      const cta = cont.parentElement;
+      if (cta) cta.classList.toggle('no-continue', !hasProgress);
+    }
+
+    // Badges de los tiles (Canje, Cofre, Diario) — sin tocar icono/etiqueta.
+    this._setTileBadge('tile-shop-badge', `⭐${getStarTokens()}`, getStarTokens() > 0);
+    const chests = getChestsAvailable();
+    this._setTileBadge('tile-chest-badge', `${chests}`, chests > 0);
+    this._markTileReady('btn-chest', chests > 0);
+    const dailyReady = this._dailyState().canClaim;
+    this._setTileBadge('tile-daily-badge', '', dailyReady); // punto (dot) sin texto
+    this._markTileReady('btn-daily', dailyReady);
+  }
+
+  /** Pinta (o esconde) el badge de un tile. */
+  _setTileBadge(id, text, show) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.hidden = !show;
+  }
+
+  /** Marca un tile como "listo" (glow) cuando hay algo que reclamar/abrir. */
+  _markTileReady(btnId, ready) {
+    const el = document.getElementById(btnId);
+    if (el) el.classList.toggle('ready', ready);
   }
 
   /** "Continuar": empieza en el último nivel jugado (o el más avanzado desbloqueado). */
@@ -610,6 +670,211 @@ export class Game {
     }
   }
 
+  // --- Skins de bola (colección) --------------------------------------------
+  _showSkins() {
+    this._renderSkins();
+    this.screens.show(SCREENS.SKINS);
+  }
+
+  _renderSkins() {
+    setText('skins-tokens', `⭐ ${getStarTokens()}`);
+    const list = document.getElementById('skins-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const active = getActiveSkin();
+    const totalStars = getTotalStars();
+    for (const skin of SKINS) {
+      const owned = ownsSkin(skin.id);
+      const isActive = skin.id === active;
+      const card = document.createElement('button');
+      card.className = 'skin-card' + (isActive ? ' selected' : '') + (owned ? ' owned' : ' locked');
+      // Miniatura: la skin aplicada sobre la bola actualmente elegida.
+      const thumb = makeBallThumbnail(applySkin(getBall(this.selectedBall), skin.id), 84);
+      thumb.className = 'skin-thumb';
+      card.appendChild(thumb);
+      const name = document.createElement('span');
+      name.className = 'skin-name';
+      name.textContent = `${skin.icon} ${t('skin.' + skin.id + '.name')}`;
+      card.appendChild(name);
+      const status = document.createElement('span');
+      status.className = 'skin-status';
+      status.textContent = this._skinStatusText(skin, owned, isActive, totalStars);
+      card.appendChild(status);
+      card.addEventListener('click', () => this._onSkinClick(skin));
+      list.appendChild(card);
+    }
+    const fb = document.getElementById('skins-feedback');
+    if (fb) { fb.textContent = ''; fb.className = 'shop-feedback'; }
+  }
+
+  _skinStatusText(skin, owned, isActive, totalStars) {
+    if (isActive) return t('skins.equipped');
+    if (owned) return t('skins.tapEquip');
+    const u = skin.unlock;
+    if (u.type === 'stars') return tf('skins.needStars', u.need, totalStars);
+    if (u.type === 'tokens') return tf('skins.buyTokens', u.cost);
+    if (u.type === 'chest') return t('skins.fromChest');
+    return '';
+  }
+
+  _onSkinClick(skin) {
+    const owned = ownsSkin(skin.id);
+    if (owned) {
+      setActiveSkin(skin.id);
+      sfx.click();
+      this.ball.setSkin(this._ballVisual());
+      this._updateBallPreviews();
+      this._renderSkins();
+      this._skinsFeedback(tf('skins.equippedOk', t('skin.' + skin.id + '.name')), true);
+      return;
+    }
+    if (skin.unlock.type === 'tokens') {
+      if (getStarTokens() >= skin.unlock.cost) {
+        addStarTokens(-skin.unlock.cost);
+        unlockSkin(skin.id);
+        setActiveSkin(skin.id);
+        sfx.buy();
+        this.ball.setSkin(this._ballVisual());
+        this._updateBallPreviews();
+        this._renderSkins();
+        this._updateMenuProgress();
+        this._skinsFeedback(tf('skins.boughtOk', t('skin.' + skin.id + '.name')), true);
+      } else {
+        sfx.nope();
+        this._skinsFeedback(tf('skins.notEnough', skin.unlock.cost), false);
+      }
+      return;
+    }
+    // Bloqueada por estrellas o solo-cofre: explica cómo conseguirla.
+    sfx.nope();
+    this._skinsFeedback(this._skinStatusText(skin, false, false, getTotalStars()), false);
+  }
+
+  _skinsFeedback(msg, ok) {
+    const fb = document.getElementById('skins-feedback');
+    if (!fb) return;
+    fb.className = 'shop-feedback';
+    void fb.offsetWidth;
+    fb.textContent = msg;
+    fb.classList.add('show', ok ? 'ok' : 'bad');
+  }
+
+  // --- Cofre jurásico -------------------------------------------------------
+  _showChest() {
+    this._renderChest();
+    this.screens.show(SCREENS.CHEST);
+  }
+
+  _renderChest() {
+    const avail = getChestsAvailable();
+    setText('chest-count', tf('chest.available', avail));
+    const need = starsToNextChest();
+    setText('chest-progress', avail > 0 ? t('chest.readyHint') : tf('chest.nextHint', need, CHEST_STAR_COST));
+    const box = document.getElementById('chest-box');
+    if (box) box.classList.toggle('ready', avail > 0);
+    const btn = document.getElementById('btn-chest-open');
+    if (btn) {
+      btn.classList.toggle('disabled', avail <= 0);
+      btn.textContent = avail > 0 ? t('chest.open') : t('chest.locked');
+    }
+    const reveal = document.getElementById('chest-reveal');
+    if (reveal && !this._chestRevealing) { reveal.textContent = ''; reveal.className = 'chest-reveal'; }
+  }
+
+  _openChest() {
+    if (getChestsAvailable() <= 0) { sfx.nope(); return; }
+    if (!openChest()) { sfx.nope(); return; }
+    const locked = SKINS.filter((s) => !ownsSkin(s.id)).map((s) => s.id);
+    const reward = rollChest(Math.random, locked);
+    this._applyChestReward(reward);
+    // Animación de apertura + revelado.
+    const box = document.getElementById('chest-box');
+    if (box) { box.classList.remove('open'); void box.offsetWidth; box.classList.add('open'); }
+    sfx.buy(); sfx.starGet();
+    this._chestRevealing = true;
+    const reveal = document.getElementById('chest-reveal');
+    if (reveal) {
+      reveal.className = 'chest-reveal';
+      void reveal.offsetWidth;
+      reveal.textContent = this._chestRewardText(reward);
+      reveal.classList.add('show');
+    }
+    setTimeout(() => { this._chestRevealing = false; this._renderChest(); this._updateMenuProgress(); }, 1600);
+  }
+
+  /** Entrega la recompensa del cofre al inventario persistente. */
+  _applyChestReward(r) {
+    if (r.type === 'tokens') addStarTokens(r.amount);
+    else if (r.type === 'livesBank') addLivesBank(r.amount);
+    else if (r.type === 'skin') { unlockSkin(r.skinId); }
+    else addPowerup(r.type, r.amount); // extraLives | trapBlocks | fallShields
+  }
+
+  _chestRewardText(r) {
+    if (r.type === 'skin') return tf('chest.rewardSkin', r.icon, t('skin.' + r.skinId + '.name'));
+    return tf('chest.reward', r.icon, r.amount, t('chest.r.' + r.type));
+  }
+
+  // --- Recompensa diaria ----------------------------------------------------
+  _showDaily() {
+    this._renderDaily();
+    this.screens.show(SCREENS.DAILY);
+  }
+
+  _dailyState() {
+    return evaluateDaily(getDaily(), todayStr());
+  }
+
+  _renderDaily() {
+    const st = this._dailyState();
+    const cur = getDaily();
+    setText('daily-streak', tf('daily.streak', st.canClaim ? st.nextStreak : cur.streak));
+    setText('daily-reward', tf('daily.todayReward', st.reward.icon, st.reward.amount, t('daily.r.' + st.reward.type)));
+    // Calendario de 7 días (visual).
+    const cal = document.getElementById('daily-calendar');
+    if (cal) {
+      cal.innerHTML = '';
+      const activeDay = ((st.canClaim ? st.nextStreak : cur.streak) - 1) % 7;
+      DAILY_REWARDS.forEach((d, i) => {
+        const cell = document.createElement('div');
+        const claimed = !st.canClaim ? i <= activeDay : i < ((st.nextStreak - 1) % 7);
+        cell.className = 'daily-cell' + (i === activeDay ? ' today' : '') + (claimed ? ' claimed' : '');
+        cell.innerHTML = `<span class="daily-day">${i + 1}</span><span class="daily-ic">${d.icon}</span><span class="daily-amt">${d.amount}</span>`;
+        cal.appendChild(cell);
+      });
+    }
+    const btn = document.getElementById('btn-daily-claim');
+    if (btn) {
+      btn.classList.toggle('disabled', !st.canClaim);
+      btn.textContent = st.canClaim ? t('daily.claim') : t('daily.claimed');
+    }
+    const fb = document.getElementById('daily-feedback');
+    if (fb && !this._dailyClaiming) { fb.textContent = ''; fb.className = 'shop-feedback'; }
+  }
+
+  _claimDaily() {
+    const st = this._dailyState();
+    if (!st.canClaim) { sfx.nope(); return; }
+    this._applyDailyReward(st.reward);
+    setDaily(todayStr(), st.nextStreak);
+    sfx.buy(); sfx.starGet();
+    this._dailyClaiming = true;
+    const fb = document.getElementById('daily-feedback');
+    if (fb) {
+      fb.className = 'shop-feedback';
+      void fb.offsetWidth;
+      fb.textContent = tf('daily.claimedOk', st.reward.icon, st.reward.amount, t('daily.r.' + st.reward.type));
+      fb.classList.add('show', 'ok');
+    }
+    setTimeout(() => { this._dailyClaiming = false; this._renderDaily(); this._updateMenuProgress(); }, 200);
+  }
+
+  _applyDailyReward(r) {
+    if (r.type === 'tokens') addStarTokens(r.amount);
+    else if (r.type === 'livesBank') addLivesBank(r.amount);
+    else addPowerup(r.type, r.amount);
+  }
+
   // --- Selección de bola ----------------------------------------------------
   _showBalls() {
     this._renderBallCards();
@@ -623,7 +888,7 @@ export class Game {
     for (const def of BALLS) {
       const card = document.createElement('button');
       card.className = 'ball-card' + (def.id === this.selectedBall ? ' selected' : '');
-      const thumb = makeBallThumbnail(def, 96);
+      const thumb = makeBallThumbnail(applySkin(def, getActiveSkin()), 96);
       thumb.className = 'ball-thumb';
       card.appendChild(thumb);
       const name = document.createElement('span');
@@ -634,6 +899,13 @@ export class Game {
       dino.className = 'ball-dino';
       dino.textContent = `${tDinoName(def.species)} · ${tBallColor(def)}`;
       card.appendChild(dino);
+      // Habilidad especial de la bola (nombre + descripción corta).
+      if (def.ability) {
+        const ab = document.createElement('span');
+        ab.className = 'ball-ability';
+        ab.innerHTML = `<b>${t('ability.' + def.ability.id + '.name')}</b> · ${t('ability.' + def.ability.id + '.desc')}`;
+        card.appendChild(ab);
+      }
       if (def.blurb) {
         const blurb = document.createElement('span');
         blurb.className = 'ball-blurb';
@@ -649,16 +921,22 @@ export class Game {
     sfx.click();
     this.selectedBall = id;
     setSelectedBall(id);
-    this.ball.setSkin(getBall(id));
+    this.ball.setSkin(this._ballVisual(id));
     this._renderBallCards();
     this._updateBallPreviews();
   }
 
+  /** Definición de bola RESUELTA con la skin activa (color/material) para los visuales. */
+  _ballVisual(id = this.selectedBall) {
+    return applySkin(getBall(id), getActiveSkin());
+  }
+
   _updateBallPreviews() {
-    const def = getBall(this.selectedBall);
-    setThumb('menu-ball', def, 56);
+    const def = this._ballVisual();
+    setThumb('menu-ball', def, 64);
     setThumb('prep-ball', def, 64);
-    setText('prep-ball-name', `${tBallLabel(def)} · ${tDinoName(def.species)}`);
+    const baseDef = getBall(this.selectedBall);
+    setText('prep-ball-name', `${tBallLabel(baseDef)} · ${tDinoName(baseDef.species)}`);
   }
 
   /** Cambia rápidamente a la siguiente bola sin salir de la preparación. */
@@ -667,7 +945,7 @@ export class Game {
     const next = BALLS[(i + 1) % BALLS.length];
     this.selectedBall = next.id;
     setSelectedBall(next.id);
-    this.ball.setSkin(next);
+    this.ball.setSkin(this._ballVisual(next.id));
     this._updateBallPreviews();
   }
 
@@ -746,12 +1024,29 @@ export class Game {
     // Recompensas disponibles en este nivel (monedas + estrella si toca).
     const { coins, star } = generateCollectibles(lvl, this.levelIndex);
     setText('prep-rewards', tf('prep.rewards', coins.length, !!star));
+    // Eventos especiales del nivel (jefe / clima / contrarreloj) como avisos.
+    this._renderPrepEvents(this.levelIndex + 1);
     this._updateBallPreviews();
     // Potenciadores: se eligen de nuevo para cada nivel.
     this._pendingTrapBlock = false;
     this._pendingFallShield = false;
     this._renderPrepPowerups();
     this.screens.show(SCREENS.PREP);
+  }
+
+  /** Pinta los avisos de eventos especiales del nivel en la preparación (chips). */
+  _renderPrepEvents(levelNum) {
+    const wrap = document.getElementById('prep-events');
+    if (!wrap) return;
+    const chips = [];
+    const boss = bossFor(levelNum);
+    if (boss) chips.push(`<span class="ev-chip ev-boss">${BOSS_EMOJI[boss.kind] || '🦖'} ${t(boss.nameKey)}</span>`);
+    const ta = timeAttackFor(levelNum);
+    if (ta) chips.push(`<span class="ev-chip ev-ta">⏳ ${tf('prep.timeAttack', ta)}</span>`);
+    const wx = weatherFor(levelNum);
+    if (wx) chips.push(`<span class="ev-chip ev-wx">${WEATHER_EMOJI[wx] || '🌦️'} ${t('weather.' + wx)}</span>`);
+    wrap.innerHTML = chips.join(' ');
+    wrap.style.display = chips.length ? 'flex' : 'none';
   }
 
   /** Activa/desactiva un potenciador para el próximo nivel (si hay stock). */
@@ -789,8 +1084,32 @@ export class Game {
 
   _startLevel() {
     const lvl = getLevel(this.levelIndex);
-    this.ball.setSkin(getBall(this.selectedBall));
+    const levelNum = this.levelIndex + 1;
+    this.ball.setSkin(this._ballVisual());
     this.physics.loadLevel(lvl);
+
+    // --- Habilidad de la bola: aplica modificadores físicos (pasivos, balanceados) ---
+    const ability = getAbility(this.selectedBall);
+    this.physics.setMods(ability ? ability.mods : {});
+    this._coinMagnet = ability && ability.mods.coinMagnet ? ability.mods.coinMagnet : 0;
+    this._guardCharges = ability && ability.mods.guard ? ability.mods.guard : 0;
+
+    // --- Clima del nivel (visual) + empuje de viento (físico, muy leve) ---
+    const wx = weatherFor(levelNum);
+    weather.setWeather(wx);
+    const push = windPushFor(levelNum);
+    // Viento lateral, sentido alterno por nivel para variedad (constante durante el nivel).
+    this.physics.setWind(push ? push * (levelNum % 2 === 0 ? 1 : -1) : 0, 0);
+
+    // --- Jefe (cada 10 niveles): ambiente + temblores leves programados ---
+    this._boss = bossFor(levelNum);
+    this._bossShakeTimer = 0;
+
+    // --- Contrarreloj (cada 11 niveles): límite de tiempo especial ---
+    this._timeAttackLimit = timeAttackFor(levelNum);
+    this._timeLeft = this._timeAttackLimit || 0;
+    this._timeAttackBonusGiven = false;
+
     this.scene.resize();
     this.scene.mountLevel(lvl, this.ball.mesh);
     this.ball.reset(lvl.start.x, lvl.start.z);
@@ -798,6 +1117,7 @@ export class Game {
 
     // --- Recompensas del nivel (monedas + estrella-token cada 2 niveles) ---
     const { coins, star } = generateCollectibles(lvl, this.levelIndex);
+    this._coinsAvailableThisLevel = coins.length;
     this._collect = [
       ...coins.map((c) => ({ x: c.x, z: c.z, type: 'coin', taken: false })),
       ...(star ? [{ x: star.x, z: star.z, type: 'star', taken: false }] : []),
@@ -807,6 +1127,14 @@ export class Game {
     this._starGotThisLevel = false;
     this._levelHasStar = !!star;
     this._pickupR2 = PICKUP_RADIUS * PICKUP_RADIUS;
+    // Atracción Alegre (bola rosa): radio de recogida de MONEDAS ampliado un poco.
+    const coinR = PICKUP_RADIUS + (this._coinMagnet || 0);
+    this._coinPickupR2 = coinR * coinR;
+
+    // Cohete del nivel (ítem visual): colocado fuera de monedas/estrella y peligros.
+    const occupied = [...coins, ...(star ? [star] : [])];
+    const rocket = generateRocket(lvl, this.levelIndex, occupied);
+    this.scene.mountRockets(rocket ? [rocket] : []);
 
     // --- Potenciadores activados en preparación (se consumen aquí) ---
     this._fallShieldActive = false;
@@ -833,7 +1161,9 @@ export class Game {
     hud.setCoins(0);
     hud.setPowers(this._activePowers());
     hud.setTime(0);
-    setThumb('hud-ball', getBall(this.selectedBall), 34);
+    // Contrarreloj: muestra/oculta el cronómetro especial del HUD.
+    this._setTimeAttackHud();
+    setThumb('hud-ball', this._ballVisual(), 34);
     setLastLevel(this.levelIndex + 1);
 
     // Eventos ambientales: 2 vuelos de pterodáctilo por nivel (ida y vuelta) +
@@ -842,6 +1172,15 @@ export class Game {
     this._pteroTimes = critters.pteroFlightTimes(lvl.par);
     this._pteroFired = [false, false];
     this._triceratopsPlayed = false;
+
+    // Cavernícola con lanza: aparece desde el nivel 5 y cada 5 niveles (5,10,…,50).
+    this._cavemanActive = false;
+    this._cavemanCooldown = 0;
+    if ((this.levelIndex + 1) % 5 === 0 && lvl.goal) {
+      this.scene.spawnCaveman(lvl.goal, lvl.footprint, lvl.traps, lvl.portals);
+      this._cavemanActive = true;
+      this._cavemanCooldown = 1.4; // gracia inicial: no golpea nada más empezar
+    }
 
     this.input.reset();
     this.input.enable();
@@ -853,8 +1192,71 @@ export class Game {
     this.playing = true;
     this.screens.show(SCREENS.GAME);
     sfx.start();
-    hud.toast(tLevelHint(lvl), 1700);
+    // Intro de jefe / contrarreloj: banner destacado; si no, la pista del nivel.
+    if (this._boss) {
+      this._showBossIntro(this._boss);
+    } else if (this._timeAttackLimit) {
+      hud.toast(tf('ta.intro', this._timeAttackLimit), 1900);
+    } else {
+      hud.toast(tLevelHint(lvl), 1700);
+    }
     hud.hint(this.isTouch ? t('hud.hintTouch') : t('hud.hintDesktop'));
+  }
+
+  /** Banner de jefe (overlay breve, no bloquea el input). */
+  _showBossIntro(boss) {
+    const el = document.getElementById('boss-banner');
+    if (el) {
+      el.innerHTML =
+        `<span class="boss-emoji" aria-hidden="true">${BOSS_EMOJI[boss.kind] || '🦖'}</span>` +
+        `<span class="boss-text">${t(boss.nameKey)}</span>`;
+      el.classList.remove('show');
+      void el.offsetWidth;
+      el.classList.add('show');
+      clearTimeout(this._bossBannerTimer);
+      this._bossBannerTimer = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+    sfx.roar();
+    this.scene.shake(0.18);
+    hud.flash('gold');
+  }
+
+  /** Configura el cronómetro de contrarreloj en el HUD (o lo oculta). */
+  _setTimeAttackHud() {
+    const el = document.getElementById('hud-timeattack');
+    if (!el) return;
+    if (this._timeAttackLimit) {
+      el.style.display = '';
+      el.classList.remove('danger');
+      el.textContent = '⏳ ' + this._timeAttackLimit.toFixed(1) + 's';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  /**
+   * Actualiza la cuenta atrás del contrarreloj. Devuelve true si se consumió el tiempo
+   * (se aplicó penalización este frame y hay que cortar el resto del step).
+   */
+  _updateTimeAttack(dt) {
+    this._timeLeft = Math.max(0, this._timeLeft - dt);
+    const el = document.getElementById('hud-timeattack');
+    if (el) {
+      el.textContent = '⏳ ' + this._timeLeft.toFixed(1) + 's';
+      el.classList.toggle('danger', this._timeLeft <= 5);
+    }
+    if (this._timeLeft <= 0) {
+      hud.flash('danger');
+      sfx.fail();
+      this.scene.shake(0.25);
+      this._taunt();
+      hud.toast(t('ta.timeout'), 1300);
+      this._loseLife('timeout');             // pierde 1 vida/intento
+      this._timeLeft = this._timeAttackLimit; // reinicia el reloj para el reintento
+      this._setTimeAttackHud();
+      return true;
+    }
+    return false;
   }
 
   _elapsed() {
@@ -903,8 +1305,27 @@ export class Game {
     this.ball.roll(this.physics.vx, this.physics.vz, dt);
     hud.setTime(this._elapsed());
 
+    // Contrarreloj: descuenta tiempo y, si llega a 0, penaliza (pierde una vida/intento).
+    if (this._timeAttackLimit && this._updateTimeAttack(dt)) return;
+
+    // Jefe: temblores ambientales muy leves y periódicos (no afectan a la física/control).
+    // Para el T-Rex (20) y el gran final (50), cada "pisotón" suena (rugido suave) y, de
+    // vez en cuando, cruza un pterodáctilo → sensación de jefe sin tocar la jugabilidad.
+    if (this._boss && this._boss.shake > 0) {
+      this._bossShakeTimer -= dt;
+      if (this._bossShakeTimer <= 0) {
+        this._bossShakeTimer = 3.4 + Math.random() * 2.6;
+        this.scene.shake(this._boss.shake);
+        if (this._boss.kind === 'trex' || this._boss.kind === 'finale') {
+          sfx.roar();
+          if (Math.random() < 0.5) critters.flyPtero(Math.random() < 0.5 ? 'ltr' : 'rtl');
+        }
+      }
+    }
+
     this._maybeFlyPtero();
     this._checkPickups();
+    this._checkRocket();
 
     // Portal (no termina el nivel): efecto de invocación en ambos extremos + sonido.
     const pfx = this.physics.consumePortalFx();
@@ -919,6 +1340,15 @@ export class Game {
     else if (ev === 'fall') {
       if (this._fallShieldActive) this._startRescue();
       else this._startResolve('fall');
+    } else {
+      // Cavernícola: si la bola lo toca (y no en gracia), inicia su ataque.
+      if (this._cavemanCooldown > 0) this._cavemanCooldown -= dt;
+      else if (this._cavemanActive) {
+        const c = this.scene.cavemanPos();
+        if (c && Math.hypot(c.x - this.physics.x, c.z - this.physics.z) < PHYS.BALL_RADIUS + c.r) {
+          this._startCavemanAttack();
+        }
+      }
     }
   }
 
@@ -930,6 +1360,26 @@ export class Game {
     if (!this._pteroFired[1] && e >= this._pteroTimes[1]) { this._pteroFired[1] = true; critters.flyPtero('rtl'); }
   }
 
+  /** Cohete del nivel: si la bola pasa por encima, lo lanza. Es VISUAL: no toca la física,
+   *  no cambia el estado de la bola ni el flujo de victoria/derrota. No se reactiva (hitbox off). */
+  _checkRocket() {
+    const i = this.scene.rocketHitTest(this.physics.x, this.physics.z, PHYS.BALL_RADIUS, ROCKET_HIT_R);
+    if (i < 0) return;
+    const fx = this.scene.launchRocket(i);
+    if (!fx) return;
+    if (fx.type === 'red') {
+      // Coreografía: aparece el ptero → (retardo) despega el cohete LENTO → impacto → caída.
+      hud.toast(t('msg.rocketRed'), 1300);
+      setTimeout(() => sfx.rocketLaunch(), 480);  // despega tras el retardo (T_DELAY≈0.5 s)
+      setTimeout(() => sfx.bonk(), 2000);         // impacto cartoon (T_IMPACT≈2 s)
+      setTimeout(() => sfx.whoosh(), 2150);       // caída del pterodáctilo
+    } else {
+      sfx.rocketLaunch();
+      hud.toast(t('msg.rocket'), 1100);
+      setTimeout(() => sfx.firework(), 840);      // estallido de fuegos artificiales
+    }
+  }
+
   /** Recoge monedas/estrella si la bola pasa cerca. Suma puntos/estrellas-token. */
   _checkPickups() {
     const bx = this.physics.x, bz = this.physics.z;
@@ -937,7 +1387,8 @@ export class Game {
       const c = this._collect[i];
       if (c.taken) continue;
       const dx = c.x - bx, dz = c.z - bz;
-      if (dx * dx + dz * dz > this._pickupR2) continue;
+      const r2 = c.type === 'coin' ? this._coinPickupR2 : this._pickupR2;
+      if (dx * dx + dz * dz > r2) continue;
       c.taken = true;
       this.scene.collectAt(i);
       if (c.type === 'star') {
@@ -981,9 +1432,11 @@ export class Game {
     setTimeout(() => el.remove(), 1000);
   }
 
-  /** Devuelve los iconos de los poderes activos en el nivel en curso. */
+  /** Devuelve los iconos de los poderes/habilidades activos en el nivel en curso. */
   _activePowers() {
     const p = [];
+    if (this._guardCharges > 0) p.push('🛡️');           // Resistencia Rex disponible
+    if (this._coinMagnet > 0) p.push('🧲');              // Atracción Alegre activa
     if (this._trapBlockedThisLevel) p.push('🪨');
     if (this._fallShieldActive) p.push('🦅');
     return p;
@@ -1109,10 +1562,76 @@ export class Game {
     if (this._celebT >= CELEBRATION_DUR) this._completeLevel();
   }
 
+  // --- Cavernícola con lanza ------------------------------------------------
+
+  /** La bola tocó al cavernícola: se detiene, patea la bola y prepara el lanzamiento. */
+  _startCavemanAttack() {
+    this.ballState = 'caveman';
+    this.scene.cavemanStartAttack();
+    // Dirección de la patada: desde el cavernícola hacia fuera (la bola sale despedida).
+    const c = this.scene.cavemanPos() || { x: this.physics.x, z: this.physics.z };
+    let dx = this.physics.x - c.x, dz = this.physics.z - c.z;
+    const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
+    const m = this.ball.mesh.position;
+    this._cavemanSeq = {
+      t: 0, flashed: false,
+      x0: m.x, y0: m.y, z0: m.z,
+      tx: this.physics.x + dx * 6, tz: this.physics.z + dz * 6,
+    };
+    this.input.reset();
+    sfx.drop();            // golpe de la patada
+    this.scene.shake(0.25);
+    hud.toast(t('msg.cavemanHit'), 900);
+  }
+
+  /** Secuencia del cavernícola: patada (bola vuela) → giro → lanzamiento → pérdida. */
+  _updateCaveman(dt) {
+    const seq = this._cavemanSeq; if (!seq) { this.ballState = 'rolling'; return; }
+    seq.t += dt;
+    const DUR = 1.5;
+    const p = Math.min(1, seq.t / DUR);
+    this.scene.animateCavemanAttack(p);
+    // La bola sale despedida por la patada con un pequeño arco (primera mitad).
+    const kp = Math.min(1, p / 0.5);
+    const e = easeOut(kp);
+    const arc = Math.sin(kp * Math.PI) * 0.8;
+    this.ball.mesh.position.set(lerp(seq.x0, seq.tx, e), seq.y0 + arc, lerp(seq.z0, seq.tz, e));
+    // Aplana la inclinación mientras dura la escena.
+    const damp = Math.min(1, 8 * dt);
+    this.input.tiltX += (0 - this.input.tiltX) * damp;
+    this.input.tiltZ += (0 - this.input.tiltZ) * damp;
+    this.scene.setTilt(this.input.tiltX, this.input.tiltZ);
+    // Lanza hacia el jugador → destello de impacto.
+    if (!seq.flashed && p >= 0.8) { seq.flashed = true; hud.flash('danger'); sfx.fail(); }
+    if (p >= 1) this._cavemanResolve();
+  }
+
+  _cavemanResolve() {
+    this._cavemanSeq = null;
+    const lvl = getLevel(this.levelIndex);
+    this.scene.cavemanEndAttack(lvl.start.x, lvl.start.z); // vuelve a patrullar, lejos del inicio
+    this._cavemanCooldown = 1.4;                            // gracia tras reaparecer la bola
+    this._loseLife('caveman');                              // flujo de pérdida existente
+  }
+
   _loseLife(kind) {
+    const lvl = getLevel(this.levelIndex);
+    // Habilidad "Resistencia Rex" (bola blanca/T-Rex): resiste la primera pérdida del
+    // nivel (no aplica al timeout del contrarreloj, para que ese modo siga teniendo reto).
+    if (this._guardCharges > 0 && kind !== 'timeout') {
+      this._guardCharges -= 1;
+      hud.flash('gold');
+      sfx.rescue();
+      hud.toast(t('ability.rexGuard.proc'), 1500);
+      this.physics.reset(lvl.start);
+      this.ball.reset(lvl.start.x, lvl.start.z);
+      this.input.reset();
+      hud.setPowers(this._activePowers());
+      this.ballState = 'rolling';
+      return;
+    }
     this.lives -= 1;
     hud.setLives(this.lives);
-    const lvl = getLevel(this.levelIndex);
     if (this.lives <= 0) {
       // Vida extra del inventario: se consume automáticamente y sigues en juego.
       if (consumePowerup('extraLives')) {
@@ -1129,29 +1648,53 @@ export class Game {
       this._noLives();
       return;
     }
-    hud.toast(kind === 'fall' ? tf('msg.fell', this.lives) : tf('msg.trap', this.lives), 1300);
+    const msg = kind === 'caveman' ? tf('msg.caveman', this.lives)
+      : kind === 'fall' ? tf('msg.fell', this.lives)
+      : kind === 'timeout' ? tf('ta.lifeLost', this.lives)
+      : tf('msg.trap', this.lives);
+    hud.toast(msg, 1300);
     this.physics.reset(lvl.start);
     this.ball.reset(lvl.start.x, lvl.start.z);
     this.input.reset();
+    // Contrarreloj: cada intento dispone de la ventana completa de tiempo.
+    if (this._timeAttackLimit) { this._timeLeft = this._timeAttackLimit; this._setTimeAttackHud(); }
     this.ballState = 'rolling';
   }
 
   _completeLevel() {
     this.playing = false;
     this.input.disable();
+    weather.clear();
     const lvl = getLevel(this.levelIndex);
     const time = this._elapsed();
     const timeBonus = Math.max(0, Math.floor(lvl.par - time)) * SCORE.TIME_BONUS_PER_SEC;
     const lifeBonus = this.lives * SCORE.LIFE_BONUS;
     this.score += SCORE.BASE_LEVEL + lifeBonus + timeBonus;
 
+    // --- Estrellas de nivel (1/2/3): reglas automáticas, justas y sin objetivos por nivel ---
+    //   3★ = rendimiento EXCELENTE: sin perder vidas Y bajo el tiempo objetivo (par).
+    //   2★ = BUEN rendimiento: cumple al menos UNA de {sin perder vidas, bajo par, monedas}.
+    //   1★ = completar el nivel.
     const lost = this._livesAtLevelStart - this.lives;
-    let stars = 3;
-    if (lost >= 1) stars -= 1;
-    if (time > lvl.par) stars -= 1;
-    stars = Math.max(1, stars);
+    const noLifeLost = lost <= 0;
+    const underPar = time <= lvl.par;
+    const coinGoal = Math.max(1, Math.ceil((this._coinsAvailableThisLevel || 0) * 0.6));
+    const enoughCoins = this._coinsThisLevel >= coinGoal;
+    let stars;
+    if (noLifeLost && underPar) stars = 3;
+    else if (noLifeLost || underPar || enoughCoins) stars = 2;
+    else stars = 1;
+    const prevStars = getStars(lvl.id);
     setStars(lvl.id, stars);
     setBestTime(lvl.id, time);
+
+    // Bonus de contrarreloj: completar un nivel cronometrado da estrellas de canje extra.
+    let taBonus = 0;
+    if (this._timeAttackLimit) { taBonus = 2; addStarTokens(taBonus); }
+
+    // Auto-desbloqueo de skins por estrellas acumuladas + aviso de cofre listo.
+    const newSkins = this._autoUnlockStarSkins();
+
     const prevUnlocked = getUnlocked();
     unlockLevel(this.levelIndex + 2);
     const newUnlocked = getUnlocked();
@@ -1178,8 +1721,27 @@ export class Game {
       showEl('win-unlock', unlockedNew);
     }
     showEl('win-record', isRecord);
+
+    // Línea de "extras": bonus de contrarreloj, skins nuevas, cofre listo, mejora de ★.
+    const extras = [];
+    if (taBonus > 0) extras.push(tf('win.taBonus', taBonus));
+    if (stars > prevStars) extras.push(tf('win.starsUp', stars));
+    for (const id of newSkins) extras.push(tf('win.skinUnlocked', t('skin.' + id + '.name')));
+    if (getChestsAvailable() > 0) extras.push(t('win.chestReady'));
+    setText('win-extra', extras.join('   ·   '));
+    showEl('win-extra', extras.length > 0);
+
     showEl('btn-win-next', !isLast);
     this.screens.show(SCREENS.WIN);
+  }
+
+  /** Desbloquea automáticamente las skins por estrellas alcanzadas. @returns {string[]} nuevas. */
+  _autoUnlockStarSkins() {
+    const newly = [];
+    for (const id of skinsUnlockedByStars(getTotalStars())) {
+      if (!ownsSkin(id)) { unlockSkin(id); newly.push(id); }
+    }
+    return newly;
   }
 
   _onWinNext() {
@@ -1192,6 +1754,7 @@ export class Game {
   _noLives() {
     this.playing = false;
     this.input.disable();
+    weather.clear();
     const isRecord = setHighScore(this.score);
     if (isRecord) sfx.record();
     setText('over-score', tf('over.score', this.score));
@@ -1306,6 +1869,7 @@ export class Game {
     this.input.disable();
     this.scene.clearBoard();
     critters.clear();
+    weather.clear();
     this._applyAudio();
     this._showShop();
   }
@@ -1322,6 +1886,7 @@ export class Game {
           if (this.ballState === 'rolling') this._stepPlay(dt);
           else if (this.ballState === 'celebrating') this._updateCelebration(dt);
           else if (this.ballState === 'rescuing') { /* la escena anima el ptero y mueve la bola */ }
+          else if (this.ballState === 'caveman') this._updateCaveman(dt);
           else this._updateAnim(dt);
         }
         this.scene.update(dt);

@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.17.0 — Pantalla de acceso/registro (simulada) + dinos premium (sin push aún) |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.15.2) · 🛠️ Local v0.17.0 (acumula 0.16.0 dinos premium) lista para **revisión de Stefano** antes de desplegar |
-| **Fecha** | 2026-06-21 |
+| **Versión** | 0.21.0 — Rediseño visual del menú principal (premium, mobile-first) sobre la evolución de progresión v0.20 (sin push aún) |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.17.0) · 🛠️ Local v0.21.0 (acumula 0.18.x–0.21.0) lista para **revisión de Stefano** antes de desplegar |
+| **Fecha** | 2026-06-23 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
 | **Dependencias runtime** | 0 (Three.js en `libs/`) |
@@ -15,6 +15,32 @@
 | **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · v0.8.0 (2026-06-19) |
 
 ---
+
+## Novedades v0.21.0 — Rediseño visual del menú principal
+
+- Menú **premium y mobile-first**: cabecera compacta (avatar + título + saludo), tarjeta de
+  stats (pills ⭐/🔓/🏆 + barra %), **CTAs** `Continuar` (ámbar) y `Jugar` (verde héroe), grid
+  de **tiles** (Diario/Dino/Skins/Cofre/Canje/Niveles con badges/glow) y fila utilitaria.
+- Resuelve la sensación de saturación/scroll del menú anterior **sin perder funciones**.
+- QA visual con capturas reales (Edge headless) a 360/390/820 px. Detalle en `docs/menu.md`;
+  previsualización en `docs/menu-preview.html`.
+- Validado: `npm test`, `test:graph`, `test:visual`, `test:ui`: **verde**. ⚠️ **No desplegado**.
+
+## Novedades v0.20.0 — Evolución de progresión y rejugabilidad
+
+- **Estrellas 1/2/3** refinadas (reglas automáticas: vidas + tiempo + monedas, sin objetivos
+  por nivel) mostradas en selector, victoria y progreso.
+- **Cofre jurásico** cada 15 ⭐ de nivel (pantalla animada, recompensas, indicador, persistencia).
+- **8 skins de bola** (color + material) desbloqueables por estrellas, canje o cofre; equipables.
+- **Habilidades por bola** (pasivas, balanceadas): Resistencia Rex, Impulso Raptor, Atracción
+  Alegre, Estabilidad Tricera, Peso Bronto. Se aplican en la física y se explican en el selector.
+- **Jefes** en 10/20/30/40/50 (banner + ambiente: temblores, rugidos, clima).
+- **Eventos climáticos** (lluvia/niebla/viento/ceniza/tormenta/calor) en capa overlay segura;
+  el viento empuja **muy levemente** solo en niveles avanzados.
+- **Recompensa diaria** con racha de 7 días e indicador en el menú.
+- **Contrarreloj** en 11/22/33/44 (HUD con cronómetro, penalización y bonus).
+- Validado: `npm test` (incl. `systems-smoke`), `test:graph`, `test:visual` y `test:ui` (nuevo): **verde**.
+  Sistemas existentes intactos. ⚠️ **No desplegado** — pendiente de revisión de Stefano.
 
 ## Novedades v0.15.0 — Responsive móvil real + familia Triceratops
 

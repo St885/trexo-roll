@@ -42,6 +42,10 @@
          interfaz ni bloquean el input. -->
     <div id="critter-layer" aria-hidden="true"></div>
 
+    <!-- Capa de clima (lluvia/niebla/viento/ceniza/tormenta/calor): mismo contrato que
+         critter-layer (pointer-events:none, por debajo del HUD) → nunca tapa controles. -->
+    <div id="weather-layer" aria-hidden="true"></div>
+
     <!-- Interfaz / pantallas -->
     <div id="ui">
       <!-- 0. Acceso / registro (simulado, sin backend real; preparado para futura integración) -->
@@ -152,36 +156,83 @@
         </div>
       </section>
 
-      <!-- 2. Menú principal -->
+      <!-- 2. Menú principal (rediseño premium v0.21: cabecera compacta, stats,
+           2 CTAs héroe, grid de tiles y fila utilitaria) -->
       <section class="screen" id="screen-menu">
         <div class="bg-decor" aria-hidden="true">
           <span class="floaty f1">🌿</span>
           <span class="floaty f3">🥚</span>
           <span class="floaty f4">🦴</span>
         </div>
-        <div class="panel center">
-          <div class="ball-preview" id="menu-ball" aria-hidden="true"></div>
-          <h2 class="title small">TREXoRoll</h2>
-          <p class="menu-greeting" id="menu-greeting"></p>
-          <div class="progress-wrap">
-            <div class="progress-bar"><div class="progress-fill" id="menu-progress-fill"></div></div>
-            <p class="progress-label" id="menu-progress-label">Progreso</p>
+        <div class="panel menu-panel">
+          <!-- Cabecera: avatar del dino + título + saludo -->
+          <header class="menu-head">
+            <div class="ball-preview menu-avatar" id="menu-ball" aria-hidden="true"></div>
+            <div class="menu-head-text">
+              <h2 class="menu-title">TREX<span>o</span>Roll</h2>
+              <p class="menu-greeting" id="menu-greeting"></p>
+            </div>
+          </header>
+
+          <!-- Tarjeta de estadísticas: pills + barra de progreso -->
+          <div class="menu-stats">
+            <div class="menu-pills">
+              <span class="stat-pill"><span class="pill-ic">⭐</span><b id="menu-stars">0/150</b></span>
+              <span class="stat-pill"><span class="pill-ic">🔓</span><b id="menu-unlocked">1/50</b></span>
+              <span class="stat-pill"><span class="pill-ic">🏆</span><b id="menu-best">0</b></span>
+            </div>
+            <div class="menu-progress">
+              <div class="progress-bar"><div class="progress-fill" id="menu-progress-fill"></div></div>
+              <span class="progress-pct" id="menu-progress-label">0%</span>
+            </div>
           </div>
-          <div class="menu-buttons">
-            <button class="btn primary" id="btn-continue" style="display:none" data-i18n="menu.continue">⏩ Continuar</button>
-            <button class="btn primary" id="btn-play" data-i18n="menu.play">▶ Jugar</button>
-            <button class="btn" id="btn-balls" data-i18n="menu.balls">🦕 Elegir dino</button>
-            <button class="btn" id="btn-shop" data-i18n="menu.shop">🛒 Canje</button>
-            <button class="btn" id="btn-levels" data-i18n="menu.levels">🗺️ Niveles</button>
-            <button class="btn" id="btn-howto" data-i18n="menu.howto">❓ Cómo jugar</button>
-            <button class="btn" id="btn-settings" data-i18n="menu.settings">⚙️ Ajustes</button>
-            <button class="btn" id="btn-fullscreen" data-i18n="menu.fullscreen">⛶ Pantalla completa</button>
+
+          <!-- CTAs principales -->
+          <div class="menu-cta">
+            <button class="btn primary cta-main" id="btn-continue" style="display:none" data-i18n="menu.continue">⏩ Continuar</button>
+            <button class="btn primary cta-main cta-hero" id="btn-play" data-i18n="menu.play">▶ Jugar</button>
           </div>
-          <p class="muted" id="menu-highscore">Mejor: 0</p>
-          <div class="lang-select">
-            <span class="lang-label" data-i18n="lang.label">Idioma</span>
-            <button class="lang-btn" id="btn-lang-es" data-lang="es" aria-label="Español">ES</button>
-            <button class="lang-btn" id="btn-lang-en" data-lang="en" aria-label="English">EN</button>
+
+          <!-- Acciones secundarias: grid de tiles -->
+          <nav class="menu-tiles" aria-label="Secciones">
+            <button class="menu-tile tile-feature" id="btn-daily">
+              <span class="tile-badge dot" id="tile-daily-badge" hidden></span>
+              <span class="tile-ic">🎁</span>
+              <span class="tile-label" data-i18n="menu.t.daily">Diario</span>
+            </button>
+            <button class="menu-tile" id="btn-balls">
+              <span class="tile-ic">🦕</span>
+              <span class="tile-label" data-i18n="menu.t.dino">Dino</span>
+            </button>
+            <button class="menu-tile" id="btn-skins">
+              <span class="tile-ic">🎨</span>
+              <span class="tile-label" data-i18n="menu.t.skins">Skins</span>
+            </button>
+            <button class="menu-tile tile-feature" id="btn-chest">
+              <span class="tile-badge" id="tile-chest-badge" hidden></span>
+              <span class="tile-ic">🧰</span>
+              <span class="tile-label" data-i18n="menu.t.chest">Cofre</span>
+            </button>
+            <button class="menu-tile" id="btn-shop">
+              <span class="tile-badge amber" id="tile-shop-badge" hidden></span>
+              <span class="tile-ic">🛒</span>
+              <span class="tile-label" data-i18n="menu.t.shop">Canje</span>
+            </button>
+            <button class="menu-tile" id="btn-levels">
+              <span class="tile-ic">🗺️</span>
+              <span class="tile-label" data-i18n="menu.t.levels">Niveles</span>
+            </button>
+          </nav>
+
+          <!-- Fila utilitaria: ayuda / ajustes / pantalla + idioma -->
+          <div class="menu-util">
+            <button class="util-btn" id="btn-howto"><span class="util-ic">❓</span><span class="util-tx" data-i18n="menu.u.howto">Ayuda</span></button>
+            <button class="util-btn" id="btn-settings"><span class="util-ic">⚙️</span><span class="util-tx" data-i18n="menu.u.settings">Ajustes</span></button>
+            <button class="util-btn" id="btn-fullscreen"><span class="util-ic">⛶</span><span class="util-tx" data-i18n="menu.u.fullscreen">Pantalla</span></button>
+            <div class="lang-mini" role="group" aria-label="Idioma">
+              <button class="lang-btn" id="btn-lang-es" data-lang="es" aria-label="Español">ES</button>
+              <button class="lang-btn" id="btn-lang-en" data-lang="en" aria-label="English">EN</button>
+            </div>
           </div>
         </div>
       </section>
@@ -204,7 +255,55 @@
           <p class="shop-balance"><span data-i18n="shop.available">Disponibles:</span> <span id="shop-tokens">⭐ 0</span></p>
           <div id="shop-list" class="shop-list"></div>
           <p class="shop-feedback" id="shop-feedback"></p>
+          <button class="btn amber" id="btn-shop-chest" data-i18n="shop.toChest">🧰 Cofre jurásico</button>
           <button class="btn ghost" id="btn-shop-back" data-i18n="common.back">← Volver</button>
+        </div>
+      </section>
+
+      <!-- 2c-2. Skins de bola (colección) -->
+      <section class="screen" id="screen-skins">
+        <div class="panel">
+          <h2 class="title small" data-i18n="skins.title">🎨 Skins de bola</h2>
+          <p class="muted center" data-i18n="skins.subtitle">Colecciona y equipa aspectos para tu bola. La especie y su habilidad no cambian.</p>
+          <p class="shop-balance"><span data-i18n="shop.available">Disponibles:</span> <span id="skins-tokens">⭐ 0</span></p>
+          <div id="skins-list" class="skins-grid"></div>
+          <p class="shop-feedback" id="skins-feedback"></p>
+          <button class="btn ghost" id="btn-skins-back" data-i18n="common.back">← Volver</button>
+        </div>
+      </section>
+
+      <!-- 2c-3. Cofre jurásico -->
+      <section class="screen" id="screen-chest">
+        <div class="panel center">
+          <h2 class="title small" data-i18n="chest.title">🧰 Cofre jurásico</h2>
+          <div class="chest-stage" aria-hidden="true">
+            <div class="chest-box" id="chest-box">
+              <div class="chest-lid"></div>
+              <div class="chest-body"><span class="chest-amber">🟧</span></div>
+              <div class="chest-sparkle s1">✨</div>
+              <div class="chest-sparkle s2">🦴</div>
+              <div class="chest-sparkle s3">🍃</div>
+            </div>
+          </div>
+          <p class="chest-count" id="chest-count">Cofres listos: 0</p>
+          <p class="muted" id="chest-progress">Sigue ganando estrellas.</p>
+          <p class="chest-reveal" id="chest-reveal" aria-live="polite"></p>
+          <button class="btn primary" id="btn-chest-open" data-i18n="chest.open">Abrir cofre</button>
+          <button class="btn ghost" id="btn-chest-back" data-i18n="common.back">← Volver</button>
+        </div>
+      </section>
+
+      <!-- 2c-4. Recompensa diaria -->
+      <section class="screen" id="screen-daily">
+        <div class="panel center">
+          <h2 class="title small" data-i18n="daily.title">🎁 Recompensa diaria</h2>
+          <p class="muted center" data-i18n="daily.subtitle">Entra cada día y aumenta tu racha para premios mejores.</p>
+          <p class="daily-streak" id="daily-streak">Racha: 0</p>
+          <div class="daily-calendar" id="daily-calendar"></div>
+          <p class="daily-reward" id="daily-reward"></p>
+          <p class="shop-feedback" id="daily-feedback"></p>
+          <button class="btn primary" id="btn-daily-claim" data-i18n="daily.claim">Reclamar</button>
+          <button class="btn ghost" id="btn-daily-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
 
@@ -266,6 +365,10 @@
             <li data-i18n-html="howto.10">⭐ Gana <strong>3 estrellas</strong> de nivel: sin perder vidas y bajo el tiempo objetivo.</li>
             <li data-i18n-html="howto.11">🥚 Tienes <strong>3 vidas</strong>. Completa los <strong>50 tableros</strong> (10 mundos) para ganar.</li>
             <li data-i18n-html="howto.12">🟠 <strong>Portales naranjas</strong> (desde el Mundo 6): entra en uno y sal por el otro. ¡No quitan vida!</li>
+            <li data-i18n-html="howto.13">🦕 <strong>Cada dino tiene una habilidad</strong> (resistencia, velocidad, imán de monedas…). ¡Elige la tuya!</li>
+            <li data-i18n-html="howto.14">🎨 <strong>Skins</strong> y 🧰 <strong>cofre jurásico</strong>: gana estrellas, abre cofres y colecciona aspectos.</li>
+            <li data-i18n-html="howto.15">👑 <strong>Jefes</strong> cada 10 niveles, 🌦️ <strong>clima</strong> y ⏳ <strong>contrarreloj</strong> en niveles especiales.</li>
+            <li data-i18n-html="howto.16">🎁 <strong>Recompensa diaria</strong>: entra cada día y sube tu racha para mejores premios.</li>
           </ul>
           <button class="btn ghost" id="btn-howto-back" data-i18n="common.back">← Volver</button>
         </div>
@@ -280,6 +383,7 @@
           <p class="prep-lives" id="prep-lives">🥚🥚🥚</p>
           <p class="prep-objective" id="prep-objective">Lleva la bola al hoyo.</p>
           <p class="prep-rewards" id="prep-rewards">🪙 3 monedas</p>
+          <div class="prep-events" id="prep-events" style="display:none"></div>
           <div class="prep-ball-row">
             <div class="ball-preview sm" id="prep-ball" aria-hidden="true"></div>
             <span class="prep-ball-label"><span data-i18n="prep.yourBall">Tu bola:</span> <strong id="prep-ball-name">Blanca</strong></span>
@@ -305,11 +409,13 @@
           <span class="hud-chip" id="hud-level">Nivel 1</span>
           <span class="hud-chip" id="hud-lives">🥚🥚🥚</span>
           <span class="hud-chip" id="hud-time">⏱️ 0.0s</span>
+          <span class="hud-chip hud-ta" id="hud-timeattack" style="display:none">⏳ 0.0s</span>
           <span class="hud-chip" id="hud-score">Puntos: 0</span>
           <span class="hud-chip" id="hud-coins">🪙 0</span>
           <span class="hud-chip hud-powers" id="hud-powers" style="display:none"></span>
           <button class="btn tiny" id="btn-pause" aria-label="Pausa">⏸</button>
         </div>
+        <div class="boss-banner" id="boss-banner" aria-hidden="true"></div>
         <div class="hud-toast" id="hud-toast"></div>
         <!-- D-pad (control móvil robusto), abajo-izquierda -->
         <div class="dpad" id="dpad" aria-label="Controles direccionales">
@@ -358,6 +464,7 @@
           <p class="record-badge" id="win-record" data-i18n="win.record">🏅 ¡Nuevo récord!</p>
           <p class="big-score" id="win-score">Puntos: 0</p>
           <p class="win-unlock" id="win-unlock" style="display:none">🔓 ¡Nivel desbloqueado!</p>
+          <p class="win-extra" id="win-extra" style="display:none"></p>
           <p class="muted" id="win-detail"></p>
           <p class="muted win-rewards" id="win-rewards"></p>
           <p class="muted" id="win-time"></p>

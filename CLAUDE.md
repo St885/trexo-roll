@@ -7,7 +7,8 @@ el hoyo) con temática **jurásica**, para web y móvil. Vive en `03_juegos/trex
 sigue la convención vanilla del workspace (`index.html` + ES modules + `npx serve`).
 
 > Documentos de diseño en [`docs/`](docs/): `ficha-producto.md`, `mvp.md`, `gdd.md`,
-> `technical-design.md`, `backlog.md`, `changelog.md`.
+> `technical-design.md`, `backlog.md`, `changelog.md`, `skins.md`, `eventos-y-retencion.md`,
+> `economia.md`.
 
 ---
 

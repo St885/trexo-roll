@@ -14,22 +14,41 @@ export class Ball {
       map: makeBallTexture(this.ballDef),
       roughness: 0.25,
       metalness: 0.05,
+      emissive: new THREE.Color(0x000000),
     });
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.castShadow = true;
     this.mesh.position.set(0, PHYS.BALL_RADIUS, 0);
     this._spinAxis = new THREE.Vector3();
     this._q = new THREE.Quaternion();
+    this._applySkinMat(this.ballDef.skinMat);
   }
 
-  /** Cambia la apariencia de la bola (color + cara de dino). */
+  /** Cambia la apariencia de la bola (color del cuerpo + cara de dino + material de skin). */
   setSkin(ballDef) {
     if (!ballDef) return;
     this.ballDef = ballDef;
     const old = this.mesh.material.map;
     this.mesh.material.map = makeBallTexture(ballDef);
+    this._applySkinMat(ballDef.skinMat);
     this.mesh.material.needsUpdate = true;
     if (old) old.dispose();
+  }
+
+  /** Aplica el acabado del material según la skin (roughness/metalness/emissive). */
+  _applySkinMat(skinMat) {
+    const m = this.mesh.material;
+    const s = skinMat || { roughness: 0.25, metalness: 0.05, emissive: 0 };
+    m.roughness = s.roughness != null ? s.roughness : 0.25;
+    m.metalness = s.metalness != null ? s.metalness : 0.05;
+    const e = s.emissive || 0;
+    if (e > 0) {
+      m.emissive.set(s.emissiveHex || '#ff7a3a');
+      m.emissiveIntensity = e;
+    } else {
+      m.emissive.set('#000000');
+      m.emissiveIntensity = 1;
+    }
   }
 
   /** Coloca la bola en coordenadas del plano del tablero. */

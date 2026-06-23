@@ -88,6 +88,18 @@ console.log('\n[Responsive: viewport y layout base]');
   ok(/html,\s*body\s*\{[\s\S]*?overflow:\s*hidden/.test(css), 'html/body: overflow hidden (sin scroll en gameplay)');
   ok(/html,\s*body\s*\{[\s\S]*?touch-action:\s*none/.test(css), 'html/body: touch-action none');
   ok(/#critter-layer\s*\{[^}]*pointer-events:\s*none/.test(css), '#critter-layer: pointer-events none (no bloquea input)');
+  // La capa de clima debe seguir el MISMO contrato (no bloquea el input).
+  ok(/id="weather-layer"/.test(html), '#weather-layer presente en el DOM');
+  ok(/#weather-layer\s*\{[^}]*pointer-events:\s*none/.test(css), '#weather-layer: pointer-events none (no bloquea input)');
+}
+
+console.log('\n[Eventos de nivel: jefes / clima / contrarreloj]');
+{
+  const { bossFor, weatherFor, timeAttackFor } = await import('../src/levels/levelEvents.js');
+  ok([10, 20, 30, 40, 50].every((n) => !!bossFor(n)), 'jefes en 10/20/30/40/50');
+  ok([1, 5, 11, 25].every((n) => !bossFor(n)), 'no hay jefe en niveles normales');
+  ok([11, 22, 33, 44].every((n) => timeAttackFor(n) > 0), 'contrarreloj en 11/22/33/44');
+  ok(weatherFor(6) === 'rain' && weatherFor(9) === 'fog', 'clima distribuido (lluvia 6, niebla 9)');
 }
 
 console.log(`\n${failures === 0 ? '✅ Eventos (portales + critters) OK' : '❌ ' + failures + ' fallo(s)'}\n`);

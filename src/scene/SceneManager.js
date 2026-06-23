@@ -5,8 +5,10 @@ import * as THREE from 'three';
 import { makeContactShadowTexture, getTheme, makeGlowTexture } from './textures.js';
 import { buildBoard } from './BoardBuilder.js';
 import { buildDino, buildConfetti } from './CelebrationDino.js';
+import { buildCaveman, buildThrownSpear } from './Caveman.js';
+import { makeRocket, makeRocketFlame, makeGlow, makeFireworkBurst } from './RocketArt.js';
 import { makeCoin, makeStarToken, makeTrapCover, makePtero } from './collectibleArt.js';
-import { footprintBounds } from '../physics/footprint.js';
+import { footprintBounds, isInsideFootprint } from '../physics/footprint.js';
 import { PHYS } from '../utils/constants.js';
 
 const CAM_DIR = new THREE.Vector3(0, 0.92, 1.0).normalize(); // dirección fija de la cámara
@@ -61,6 +63,10 @@ export class SceneManager {
     this._ptero = null;      // estado del ptero-rescate
     this._bursts = [];       // ráfagas de partículas (estrella, rescate)
     this._portalRings = [];  // anillos de luz al teletransportar (entrada/salida)
+    this._caveman = null;    // cavernícola con lanza (niveles 5, 10, …)
+    this._spearFx = null;    // lanza-proyectil (al lanzar hacia el jugador)
+    this._rockets = [];      // cohetes en reposo sobre el tablero (ítems recogibles)
+    this._rocketFx = [];     // cohetes en animación (lanzamiento/fuegos/evento ptero)
 
     // Sombra de contacto bajo la bola (da sensación de peso y apoyo).
     this._contactShadow = new THREE.Mesh(
@@ -162,6 +168,12 @@ export class SceneManager {
     this._pickFx = [];
     this._bursts = [];        // sus puntos colgaban del tablero (ya liberados)
     this._portalRings = [];   // sus mallas colgaban del tablero (ya liberadas)
+    this._caveman = null;     // su grupo colgaba del tablero (ya liberado)
+    this._rockets = [];       // sus mallas colgaban del tablero (ya liberadas)
+    // Las animaciones de cohete viven en la raíz de la escena: liberar a mano.
+    for (const fx of this._rocketFx) this._disposeRocketFx(fx);
+    this._rocketFx = [];
+    if (this._spearFx) { this.scene.remove(this._spearFx.mesh); disposeTree(this._spearFx.mesh); this._spearFx = null; }
     if (this._ptero) { this.scene.remove(this._ptero.group); disposeTree(this._ptero.group); this._ptero = null; }
   }
 
@@ -397,6 +409,421 @@ export class SceneManager {
     c.points.material.opacity = Math.max(0, 1 - t / 1.4);
   }
 
+  // --- Cavernícola con lanza (enemigo dinámico desde el nivel 5) --------------
+
+  /** Coloca un cavernícola que patrulla LEJOS del hoyo verde y sin tocar ningún hoyo. */
+  spawnCaveman(goal, footprint, traps, portals) {
+    if (!this.boardGroup || !goal) return;
+    const { group, legL, legR, armL, armThrow, head, body, spear } = buildCaveman();
+    group.traverse((o) => { o.frustumCulled = false; });
+    this.boardGroup.add(group);
+    const b = this._bounds || { minX: goal.x - 4, maxX: goal.x + 4, minZ: goal.z - 4, maxZ: goal.z + 4 };
+    const r = 0.55;
+    const c = {
+      group, legL, legR, armL, armThrow, head, body, spear,
+      footprint: footprint || null, traps: traps || [], portals: portals || [],
+      goalX: goal.x, goalZ: goal.z, goalR: goal.r || 1,
+      // Separación mínima CLARA del hoyo verde (no bloquea su entrada).
+      goalMin: Math.max(2.4, (goal.r || 1) + r + 1.1),
+      bounds: b, r, baseY: 0.0, speed: 1.25,
+      x: goal.x, z: goal.z, target: null, facing: 0, mode: 'walk', attackP: 0, walkT: 0, nextPick: 0, active: true,
+    };
+    this._caveman = c;
+    // Posición inicial válida en la banda LEJOS del hoyo (no lo tapa, dentro del tablero).
+    const start = this._safeCavemanSpot() || { x: this._clampBound(goal.x + c.goalMin, 'x'), z: goal.z };
+    c.x = start.x; c.z = start.z;
+    group.position.set(c.x, c.baseY, c.z);
+    this._pickCavemanTarget();
+  }
+
+  _clampBound(v, axis) {
+    const b = this._caveman.bounds;
+    return axis === 'x' ? Math.max(b.minX + 0.8, Math.min(b.maxX - 0.8, v))
+      : Math.max(b.minZ + 0.8, Math.min(b.maxZ - 0.8, v));
+  }
+
+  /** ¿(x,z) es transitable? Dentro de la huella y sin tocar NINGÚN hoyo (meta/trampas/portales). */
+  _cavemanWalkable(x, z) {
+    const c = this._caveman;
+    const b = c.bounds;
+    if (x < b.minX + 0.8 || x > b.maxX - 0.8 || z < b.minZ + 0.8 || z > b.maxZ - 0.8) return false;
+    if (c.footprint) {
+      if (!isInsideFootprint(c.footprint, x, z)) return false;
+      for (const [ox, oz] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]]) {
+        if (!isInsideFootprint(c.footprint, x + ox, z + oz)) return false;
+      }
+    }
+    if (Math.hypot(x - c.goalX, z - c.goalZ) < c.goalMin) return false;   // lejos del hoyo verde
+    const M = 0.45; // holgura del cuerpo respecto al borde de cualquier hoyo
+    for (const t of c.traps) { if (Math.hypot(x - t.x, z - t.z) < (t.r || 1) + c.r + M) return false; }
+    for (const p of c.portals) { if (Math.hypot(x - p.x, z - p.z) < (p.r || 1) + c.r + M) return false; }
+    return true;
+  }
+
+  /** El segmento (x0,z0)→(x1,z1) no cruza ningún hoyo (muestreo). */
+  _cavemanPathClear(x0, z0, x1, z1) {
+    const steps = 7;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      if (!this._cavemanWalkable(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t)) return false;
+    }
+    return true;
+  }
+
+  /** Punto transitable en la banda alrededor del hoyo (goalMin … goalMin+1.4), o null. */
+  _safeCavemanSpot() {
+    const c = this._caveman;
+    for (let tries = 0; tries < 30; tries++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = c.goalMin + Math.random() * 1.4;
+      const x = c.goalX + Math.cos(ang) * rad, z = c.goalZ + Math.sin(ang) * rad;
+      if (this._cavemanWalkable(x, z)) return { x, z };
+    }
+    return null;
+  }
+
+  /** Nuevo destino transitable con el CAMINO despejado (sin cruzar ningún hoyo). */
+  _pickCavemanTarget() {
+    const c = this._caveman; if (!c) return;
+    for (let tries = 0; tries < 14; tries++) {
+      const spot = this._safeCavemanSpot();
+      if (spot && this._cavemanPathClear(c.x, c.z, spot.x, spot.z)) { c.target = spot; return; }
+    }
+    c.target = this._safeCavemanSpot() || { x: c.x, z: c.z }; // último recurso
+  }
+
+  /** Posición lógica del cavernícola para la colisión (o null). */
+  cavemanPos() {
+    const c = this._caveman;
+    if (!c || !c.active || c.mode !== 'walk') return null;
+    return { x: c.x, z: c.z, r: c.r };
+  }
+
+  /** Inicia el ataque (deja de caminar). Game controla el progreso. */
+  cavemanStartAttack() {
+    const c = this._caveman; if (!c) return;
+    c.mode = 'attack'; c.attackP = 0; c._spearThrown = false;
+  }
+
+  /** Renderiza la pose del ataque para progreso p∈[0,1]: patada → giro → lanzamiento. */
+  animateCavemanAttack(p) {
+    const c = this._caveman; if (!c || c.mode !== 'attack') return;
+    c.attackP = p;
+    const g = c.group;
+    // Patada (0–0.28): pierna derecha golpea adelante, leve inclinación.
+    const kick = p < 0.28 ? Math.sin((p / 0.28) * Math.PI) : 0;
+    c.legR.rotation.x = -1.5 * kick;
+    c.legL.rotation.x = 0.3 * kick;
+    g.rotation.z = 0.12 * kick;
+    // Giro hacia el jugador (0.28–0.5): rota a mirar +Z (cámara).
+    if (p >= 0.28) {
+      const tp = Math.min(1, (p - 0.28) / 0.22);
+      g.rotation.y = c.facing * (1 - tp);
+      c.legR.rotation.x = 0; c.legL.rotation.x = 0; g.rotation.z = 0;
+    }
+    // Armado y lanzamiento (0.5–0.85): el brazo se echa atrás y golpea adelante.
+    if (p >= 0.5) {
+      const tp = (p - 0.5) / 0.35; // 0..1
+      const wind = tp < 0.5 ? tp / 0.5 : 1; // armado
+      const fire = tp < 0.5 ? 0 : (tp - 0.5) / 0.5; // disparo
+      c.armThrow.rotation.x = -2.2 * wind + 3.0 * fire;
+      c.head.rotation.x = -0.15 * wind;
+      // Suelta la lanza-proyectil hacia el jugador a mitad del disparo.
+      if (!c._spearThrown && fire > 0.25) { c._spearThrown = true; this._throwSpear(); }
+    }
+  }
+
+  /** Termina el ataque: vuelve a caminar y recoloca lejos de la bola. */
+  cavemanEndAttack(awayX, awayZ) {
+    const c = this._caveman; if (!c) return;
+    c.mode = 'walk'; c.attackP = 0;
+    c.armThrow.rotation.set(0, 0, -0.35); c.armL.rotation.set(-0.2, 0, 0.5);
+    c.legL.rotation.x = 0; c.legR.rotation.x = 0; c.group.rotation.set(0, 0, 0);
+    if (c.spear) c.spear.visible = true; // recupera su lanza (otra para el próximo)
+    // Recolócate en la banda LEJOS del hoyo y lejos del reinicio de la bola.
+    if (typeof awayX === 'number') {
+      for (let tries = 0; tries < 22; tries++) {
+        const ang = Math.random() * Math.PI * 2;
+        const r = c.goalMin + Math.random() * 1.4;
+        const x = c.goalX + Math.cos(ang) * r, z = c.goalZ + Math.sin(ang) * r;
+        if (this._cavemanWalkable(x, z) && Math.hypot(x - awayX, z - awayZ) > 2.0) {
+          c.x = x; c.z = z; c.group.position.set(c.x, c.baseY, c.z); break;
+        }
+      }
+    }
+    c.nextPick = 0;
+    this._pickCavemanTarget();
+  }
+
+  /** Crea la lanza-proyectil que vuela hacia el jugador (cámara). */
+  _throwSpear() {
+    const c = this._caveman; if (!c) return;
+    if (c.spear) c.spear.visible = false; // la lanza sujeta "sale volando"
+    const mesh = buildThrownSpear();
+    mesh.traverse((o) => { o.frustumCulled = false; });
+    const from = new THREE.Vector3(); c.armThrow.getWorldPosition(from); from.y += 0.2;
+    mesh.position.copy(from);
+    this.scene.add(mesh);
+    const to = this.camera.position.clone(); // hacia el jugador
+    this._spearFx = { mesh, t: 0, dur: 0.5, from, to };
+  }
+
+  _animateSpearFx(dt) {
+    const s = this._spearFx; if (!s) return;
+    s.t += dt;
+    const p = Math.min(1, s.t / s.dur);
+    s.mesh.position.lerpVectors(s.from, s.to, p);
+    s.mesh.lookAt(s.to);
+    s.mesh.scale.setScalar(0.6 + p * 2.4); // se agranda al acercarse (impacto)
+    if (p >= 1) { this.scene.remove(s.mesh); disposeTree(s.mesh); this._spearFx = null; }
+  }
+
+  _walkCaveman(dt) {
+    const c = this._caveman;
+    if (!c || c.mode !== 'walk') return;
+    c.walkT += dt;
+    if (!c.target) this._pickCavemanTarget();
+    const dx = c.target.x - c.x, dz = c.target.z - c.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.12) {
+      // Re-elige destino al llegar, con una pequeña pausa (evita recálculos en bucle).
+      if (c.walkT >= c.nextPick) { this._pickCavemanTarget(); c.nextPick = c.walkT + 0.35; }
+    } else {
+      const step = Math.min(d, c.speed * dt);
+      c.x += (dx / d) * step; c.z += (dz / d) * step;
+      c.facing = Math.atan2(dx, dz); // +Z es "adelante"
+      c.group.rotation.y = c.facing;
+    }
+    // Caminar: piernas y brazos alternan + rebote del cuerpo.
+    const sw = Math.sin(c.walkT * 8);
+    c.legL.rotation.x = sw * 0.6; c.legR.rotation.x = -sw * 0.6;
+    c.armThrow.rotation.x = -sw * 0.3; c.armL.rotation.x = -0.2 + sw * 0.3;
+    const bob = Math.abs(Math.sin(c.walkT * 8)) * 0.05;
+    c.group.position.set(c.x, c.baseY + bob, c.z);
+  }
+
+  // --- Cohetes (ítems de celebración: color y raya roja) ---------------------
+
+  /** Monta los cohetes del nivel sobre el tablero. rockets: [{x,z,type}]. */
+  mountRockets(rockets) {
+    this._rockets = [];
+    if (!this.boardGroup) return;
+    for (const r of rockets || []) {
+      const mesh = makeRocket(r.type);
+      mesh.position.set(r.x, 0.12, r.z);
+      const glow = makeGlow(r.type === 'red' ? '#ff7a6a' : '#ffe7a0', 1.5);
+      glow.position.set(r.x, 0.05, r.z);
+      const grp = new THREE.Group(); grp.add(mesh); grp.add(glow);
+      grp.traverse((o) => { o.frustumCulled = false; });
+      this.boardGroup.add(grp);
+      this._rockets.push({ grp, mesh, glow, x: r.x, z: r.z, type: r.type, active: true, phase: Math.random() * 6.28 });
+    }
+  }
+
+  /** ¿La bola (bx,bz, radio) está sobre un cohete activo? Devuelve su índice o -1. */
+  rocketHitTest(bx, bz, ballR, hitR) {
+    for (let i = 0; i < this._rockets.length; i++) {
+      const r = this._rockets[i];
+      if (!r.active) continue;
+      if (Math.hypot(r.x - bx, r.z - bz) < ballR + hitR) return i;
+    }
+    return -1;
+  }
+
+  /** Lanza el cohete de índice i: deja el tablero y empieza su animación en el aire. */
+  launchRocket(i) {
+    const r = this._rockets[i];
+    if (!r || !r.active) return null;
+    r.active = false;
+    // Saca el cohete del tablero conservando su transformación mundial (vuela en el cielo).
+    const m = r.mesh;
+    m.updateWorldMatrix(true, false);
+    const wp = new THREE.Vector3(); m.getWorldPosition(wp);
+    const wq = new THREE.Quaternion(); m.getWorldQuaternion(wq);
+    r.grp.remove(m); this.scene.add(m);
+    m.position.copy(wp); m.quaternion.copy(wq);
+    // Quita la malla en reposo (queda el grupo con el aura → la desvanecemos).
+    this.boardGroup.remove(r.grp); disposeTree(r.grp);
+    const flame = makeRocketFlame(); m.add(flame);
+    const fx = {
+      type: r.type, mesh: m, flame, t: 0, vy: 5.2, x0: wp.x, z0: wp.z, baseY: wp.y,
+      state: r.type === 'red' ? 'rocketLaunching' : 'launching',
+      trail: [], fw: null, glow: null, exploded: false, ptero: null, impactDone: false,
+    };
+    if (r.type === 'red') this._spawnEventPtero(fx, wp);
+    this._rocketFx.push(fx);
+    return fx;
+  }
+
+  /** Pterodáctilo del EVENTO (distinto de los ambientales). Coreografía cinematográfica:
+   *  retardo (aparece y empieza a volar) → ASCENSO LENTO del cohete → impacto JUSTO cuando
+   *  el ptero cruza la x del cohete (bien visible) → caída. */
+  _spawnEventPtero(fx, rocketWp) {
+    const meetY = rocketWp.y + 4.3;          // altura del encuentro (cielo, bien visible)
+    const T_DELAY = 0.5, T_RISE = 1.5;        // despegue tardío + ascenso lento (≈2 s al impacto)
+    const tImpact = T_DELAY + T_RISE;
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const startX = rocketWp.x - dir * 13;     // entra desde fuera de pantalla
+    const speed = (rocketWp.x - startX) / tImpact; // llega a la x del cohete EXACTO en el impacto
+    const ptero = makePtero('#8a5a3a');
+    ptero.traverse((o) => { o.frustumCulled = false; });
+    ptero.position.set(startX, meetY, rocketWp.z);
+    ptero.rotation.y = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    this.scene.add(ptero);
+    fx.meetY = meetY; fx.tDelay = T_DELAY; fx.tRise = T_RISE; fx.tImpact = tImpact;
+    fx.ptero = { mesh: ptero, x: startX, speed, dir, vy: 0, flapT: 0, falling: false };
+  }
+
+  _spawnTrailPuff(fx) {
+    const puff = makeGlow(fx.type === 'red' ? '#ffcf9a' : '#fff0c0', 0.5);
+    puff.rotation.x = 0; // mira a cámara (billboard sencillo: plano horizontal-ish)
+    puff.position.set(fx.mesh.position.x, fx.mesh.position.y - 0.25, fx.mesh.position.z);
+    this.scene.add(puff);
+    fx.trail.push({ mesh: puff, t: 0 });
+  }
+
+  _explodeRocket(fx) {
+    const { points, velocities } = makeFireworkBurst();
+    points.position.copy(fx.mesh.position);
+    points.frustumCulled = false;
+    this.scene.add(points);
+    fx.fw = { points, velocities, t: 0 };
+    const glow = makeGlow('#fff0c0', 3.2); glow.rotation.x = 0;
+    glow.position.copy(fx.mesh.position); this.scene.add(glow);
+    fx.glow = { mesh: glow, t: 0 };
+    if (fx.flame) { fx.mesh.remove(fx.flame); }
+    this.scene.remove(fx.mesh); disposeTree(fx.mesh); fx.mesh = null;
+    fx.exploded = true;
+  }
+
+  _impactRocket(fx) {
+    // Destello + pequeña nube cartoon (sin sangre): glow + chispas.
+    const pos = fx.mesh ? fx.mesh.position.clone() : fx.ptero.mesh.position.clone();
+    const { points, velocities } = makeFireworkBurst();
+    points.position.copy(pos); points.frustumCulled = false; this.scene.add(points);
+    fx.fw = { points, velocities, t: 0 };
+    const glow = makeGlow('#ffe7a0', 2.2); glow.rotation.x = 0; glow.position.copy(pos); this.scene.add(glow);
+    fx.glow = { mesh: glow, t: 0 };
+    if (fx.mesh) { this.scene.remove(fx.mesh); disposeTree(fx.mesh); fx.mesh = null; } // el cohete se consume en el impacto
+    fx.impactDone = true;
+    fx.ptero.falling = true; fx.ptero.vy = 1.6; // sale rebotado por el golpe y empieza a caer
+  }
+
+  _updateRockets(dt) {
+    // Cohetes en reposo: flote + giro suave + brillo del aura.
+    for (const r of this._rockets) {
+      if (!r.active) continue;
+      r.phase += dt;
+      r.mesh.rotation.y += dt * 1.4;
+      r.mesh.position.y = 0.12 + Math.sin(r.phase * 2.2) * 0.06;
+      if (r.glow) r.glow.material.opacity = 0.55 + 0.25 * Math.sin(r.phase * 3);
+    }
+    // Cohetes en animación.
+    for (let i = this._rocketFx.length - 1; i >= 0; i--) {
+      const fx = this._rocketFx[i];
+      if (this._stepRocketFx(fx, dt)) { this._disposeRocketFx(fx); this._rocketFx.splice(i, 1); }
+    }
+  }
+
+  /** Avanza una animación de cohete. Devuelve true cuando ha terminado. */
+  _stepRocketFx(fx, dt) {
+    fx.t += dt;
+    // Estela: partículas de brillo que se desvanecen.
+    for (let j = fx.trail.length - 1; j >= 0; j--) {
+      const p = fx.trail[j]; p.t += dt;
+      const k = Math.min(1, p.t / 0.5);
+      p.mesh.material.opacity = 0.8 * (1 - k);
+      p.mesh.scale.setScalar(1 + k * 1.5);
+      if (k >= 1) { this.scene.remove(p.mesh); disposeTree(p.mesh); fx.trail.splice(j, 1); }
+    }
+    // Fuegos / destello.
+    if (fx.fw) {
+      fx.fw.t += dt;
+      const pos = fx.fw.points.geometry.attributes.position;
+      for (let k = 0; k < pos.count; k++) {
+        fx.fw.velocities[k * 3 + 1] -= 3.2 * dt; // gravedad suave
+        pos.setX(k, pos.getX(k) + fx.fw.velocities[k * 3] * dt);
+        pos.setY(k, pos.getY(k) + fx.fw.velocities[k * 3 + 1] * dt);
+        pos.setZ(k, pos.getZ(k) + fx.fw.velocities[k * 3 + 2] * dt);
+      }
+      pos.needsUpdate = true;
+      fx.fw.points.material.opacity = Math.max(0, 1 - fx.fw.t / 1.15);
+    }
+    if (fx.glow) { fx.glow.t += dt; fx.glow.mesh.material.opacity = Math.max(0, 0.85 * (1 - fx.glow.t / 0.5)); fx.glow.mesh.scale.setScalar(1 + fx.glow.t * 4); }
+
+    if (fx.type === 'color') return this._stepColorRocket(fx, dt);
+    return this._stepRedRocket(fx, dt);
+  }
+
+  _stepColorRocket(fx, dt) {
+    if (fx.state === 'launching' && fx.mesh) {
+      fx.vy += 7 * dt;
+      fx.mesh.position.y += fx.vy * dt;
+      fx.mesh.rotation.y += dt * 6;
+      if (fx.flame) fx.flame.scale.set(1, 0.8 + Math.random() * 0.5, 1);
+      if (fx.t - (fx._lastPuff || 0) > 0.06) { fx._lastPuff = fx.t; this._spawnTrailPuff(fx); }
+      if (fx.t >= 0.85) { this._explodeRocket(fx); fx.state = 'exploding'; }
+      return false;
+    }
+    // exploding → done cuando se apagan los fuegos.
+    return (!fx.fw || fx.fw.t >= 1.15) && fx.trail.length === 0;
+  }
+
+  _stepRedRocket(fx, dt) {
+    const pt = fx.ptero;
+    // Pterodáctilo: cruza la pantalla aleteando, o cae tras el impacto.
+    if (pt) {
+      pt.flapT += dt;
+      if (pt.mesh.userData.wings) {
+        const flap = Math.sin(pt.flapT * (pt.falling ? 8 : 16)) * 0.6;
+        pt.mesh.userData.wings[0].rotation.z = flap;
+        pt.mesh.userData.wings[1].rotation.z = -flap;
+      }
+      if (!pt.falling) {
+        pt.x += pt.speed * dt;
+        pt.mesh.position.set(pt.x, fx.meetY, pt.mesh.position.z); // y FIJA → impacto preciso
+      } else {
+        pt.vy -= 9 * dt; // gravedad
+        pt.mesh.position.y += pt.vy * dt;
+        pt.mesh.position.x += pt.dir * 1.5 * dt;
+        pt.mesh.rotation.z += dt * 6; // tumbo cartoon (mareado), sin sangre
+        pt.mesh.rotation.x += dt * 3;
+      }
+    }
+    if (fx.state === 'rocketLaunching' && fx.mesh) {
+      if (fx.t < fx.tDelay) {
+        // Ignición en la rampa: la llama prende y el cohete tiembla (aún NO despega).
+        const ip = fx.t / fx.tDelay;
+        fx.mesh.position.set(fx.x0 + Math.sin(fx.t * 42) * 0.02, fx.baseY, fx.z0);
+        fx.mesh.rotation.z = Math.sin(fx.t * 30) * 0.04;
+        if (fx.flame) fx.flame.scale.set(1, 0.25 + ip * 0.75, 1);
+        if (fx.t - (fx._lastPuff || 0) > 0.1) { fx._lastPuff = fx.t; this._spawnTrailPuff(fx); }
+      } else {
+        // Ascenso LENTO y claro (ease-in) hasta la altura del encuentro.
+        const riseP = Math.min(1, (fx.t - fx.tDelay) / fx.tRise);
+        const eased = Math.pow(riseP, 1.5);
+        fx.mesh.position.set(fx.x0, fx.baseY + (fx.meetY - fx.baseY) * eased, fx.z0);
+        fx.mesh.rotation.z = 0;
+        if (fx.flame) fx.flame.scale.set(1, 0.9 + Math.random() * 0.5, 1);
+        if (fx.t - (fx._lastPuff || 0) > 0.05) { fx._lastPuff = fx.t; this._spawnTrailPuff(fx); }
+        if (fx.t >= fx.tImpact) { this._impactRocket(fx); fx.state = 'falling'; }
+      }
+      return false;
+    }
+    // Cayendo → terminado cuando el ptero sale por abajo y se apagan los efectos.
+    if (pt && pt.mesh.position.y < -7) { this.scene.remove(pt.mesh); disposeTree(pt.mesh); fx.ptero = null; }
+    return !fx.ptero && (!fx.fw || fx.fw.t >= 1.15) && fx.trail.length === 0;
+  }
+
+  _disposeRocketFx(fx) {
+    if (fx.mesh) { this.scene.remove(fx.mesh); disposeTree(fx.mesh); fx.mesh = null; }
+    if (fx.fw) { this.scene.remove(fx.fw.points); disposeTree(fx.fw.points); fx.fw = null; }
+    if (fx.glow) { this.scene.remove(fx.glow.mesh); disposeTree(fx.glow.mesh); fx.glow = null; }
+    if (fx.ptero) { this.scene.remove(fx.ptero.mesh); disposeTree(fx.ptero.mesh); fx.ptero = null; }
+    for (const p of fx.trail) { this.scene.remove(p.mesh); disposeTree(p.mesh); }
+    fx.trail = [];
+  }
+
   /**
    * Encuadra la cámara para que el tablero entre COMPLETO incluso al inclinarse.
    * El radio a encuadrar cubre: (a) las esquinas reales del tablero (diagonal, no
@@ -530,6 +957,13 @@ export class SceneManager {
         this._portalRings.splice(i, 1);
       }
     }
+
+    // Cavernícola: patrulla cuando camina; el ataque lo dirige Game por progreso.
+    if (this._caveman) this._walkCaveman(dt);
+    if (this._spearFx) this._animateSpearFx(dt);
+
+    // Cohetes (ítems): flote en reposo + animaciones de lanzamiento/fuegos/evento.
+    if (this._rockets.length || this._rocketFx.length) this._updateRockets(dt);
 
     // La sombra de contacto sigue a la bola y se atenúa cuando la bola se hunde/cae.
     if (this._ballMesh && this._contactShadow.parent) {

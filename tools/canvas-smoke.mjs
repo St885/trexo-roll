@@ -72,5 +72,21 @@ for (const b of BALLS) {
 }
 await run('buildConfetti', () => cel.buildConfetti('#2ecc71'));
 
+console.log('\n[Cavernícola con lanza]');
+const cave = await import('../src/scene/Caveman.js');
+await run('buildCaveman', () => {
+  const { group } = cave.buildCaveman();
+  if (!group || !group.children || group.children.length === 0) throw new Error('grupo vacío');
+});
+await run('buildThrownSpear', () => cave.buildThrownSpear());
+
+console.log('\n[Cohetes + fuegos artificiales]');
+const rk = await import('../src/scene/RocketArt.js');
+await run('makeRocket(color)', () => { const g = rk.makeRocket('color'); if (!g.children.length) throw new Error('vacío'); });
+await run('makeRocket(red)', () => { const g = rk.makeRocket('red'); if (!g.children.length) throw new Error('vacío'); });
+await run('makeRocketFlame', () => rk.makeRocketFlame());
+await run('makeGlow', () => rk.makeGlow('#ffe7a0', 1.5));
+await run('makeFireworkBurst', () => rk.makeFireworkBurst());
+
 console.log(`\n${failures === 0 ? '✅ Código de dibujo/3D sin errores de runtime' : '❌ ' + failures + ' fallo(s)'}\n`);
 process.exit(failures === 0 ? 0 : 1);

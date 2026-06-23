@@ -2,6 +2,209 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.21.0] — 2026-06-23 — Rediseño visual del menú principal (premium / mobile-first)
+
+> Rediseño del **menú principal** para recuperar limpieza, compacidad y jerarquía tras la
+> ampliación de la v0.20, **sin perder ninguna función**. **Sin desplegar.**
+
+### Cambiado
+- **Jerarquía clara en 5 zonas**: cabecera compacta (avatar + título + saludo) → tarjeta de
+  stats (pills ⭐/🔓/🏆 + barra de progreso con %) → CTAs principales → grid de tiles → fila
+  utilitaria. Adiós a los 11 botones apilados (panel largo y con scroll).
+- **CTAs diferenciados y protagonistas**: `Continuar` en ámbar ("reanudar") y `Jugar` en
+  verde **héroe** (mayor, con brillo animado). Ambos destacan sobre el resto.
+- **Acciones secundarias como tiles** (icono + etiqueta corta) en rejilla 3×2: Diario, Dino,
+  Skins, Cofre, Canje, Niveles. Diario/Cofre con **badge + glow** cuando hay algo listo;
+  Canje muestra las ⭐ disponibles.
+- **Utilitarios** (Ayuda/Ajustes/Pantalla + idioma) con menos peso visual, separados por una
+  línea fina.
+- **Look premium**: panel glass (`blur+saturate`), borde dorado fino, glow sutil, sombras
+  elegantes, sub-tarjeta de stats con profundidad, hover/tap pulidos.
+- **Responsive real**: vertical 3×2 sin scroll; **paisaje** con CTAs en par y tiles en una
+  fila de 6; tablet/desktop con panel algo mayor. Objetivos táctiles correctos; respeta
+  `prefers-reduced-motion`.
+
+### Técnico
+- `index.html`: nuevo marcado del `#screen-menu` (cabecera/stats/cta/tiles/util) conservando
+  **todos los `id`** de botones (navegación intacta).
+- `Game.js`: `_updateMenuProgress()` rellena pills, barra y **badges** de tiles sin
+  sobrescribir icono/etiqueta (helpers `_setTileBadge`/`_markTileReady`).
+- `styles/main.css`: sistema de menú premium (panel, head, stats, pills, cta, tiles, badges,
+  util) + media queries (≤560, ≤380, paisaje, táctil).
+- i18n: etiquetas cortas `menu.t.*` / `menu.u.*` (ES/EN). `docs/menu.md` + `docs/menu-preview.html`.
+
+### Validado
+- Capturas reales (Edge headless) a 360/390/820 px: sin cortes/desbordes/scroll, jerarquía y
+  badges correctos. `npm test`, `test:graph`, `test:visual`, `test:ui`: **verde**.
+  Navegación del menú verificada (todos los `id` presentes).
+
+## [0.20.0] — 2026-06-23 — Evolución de progresión: estrellas, cofre, skins, habilidades, jefes, clima, diario y contrarreloj
+
+> Gran ampliación de **progresión, recompensas y rejugabilidad** manteniendo intactos
+> todos los sistemas existentes (50 niveles, controles, audio, acceso, economía, eventos).
+> **Sin desplegar** — pendiente de revisión de Stefano. No hay *git push* ni deploy.
+>
+> **Decisión de producto (a petición):** NO se implementan objetivos/misiones por nivel
+> ni un mapa visual de mundos. El selector de niveles actual se conserva y se mejora.
+
+### Añadido
+- **Estrellas de nivel 1/2/3 refinadas** (reglas automáticas y justas, sin objetivos por
+  nivel): 3★ = sin perder vidas **y** bajo el tiempo objetivo; 2★ = cumplir **una** de
+  {sin perder vidas, bajo tiempo, monedas suficientes}; 1★ = completar. Se guarda el mejor
+  resultado por nivel y se muestra en selector, victoria y progreso. (Las monedas ahora dan
+  un camino claro a 2★.)
+- **Cofre jurásico**: 1 cofre cada **15 ⭐ de nivel** acumuladas. Pantalla con cofre
+  animado (madera, ámbar, brillos, partículas), recompensas ponderadas (estrellas de canje,
+  vida extra, bloqueo de trampa, escudo de caída, banco de vidas, **skin** o pequeño
+  jackpot) y persistencia. Acceso desde **menú** y **tienda de canje**; indicador "listo".
+- **Skins de bola (8)**: Clásica, Fósil, Huevo, Hielo, Ámbar, Volcánica, Meteorito, Dorada.
+  Cambian color y material (brillo/emisivo/metalizado) **sin** alterar la especie ni su
+  habilidad. Pantalla de colección: equipar, comprar con ⭐ de canje, desbloqueo automático
+  por estrellas, y la **Meteorito solo por cofre**. Se aplican en gameplay y miniaturas.
+- **Habilidades por bola (pasivas, balanceadas)**: Blanca→🛡️ *Resistencia Rex* (resiste la
+  1ª pérdida del nivel); Verde→💨 *Impulso Raptor* (rueda algo más ágil); Rosa→🧲 *Atracción
+  Alegre* (imán suave de monedas); Amarilla→🧱 *Estabilidad Tricera* (menos rebote/desliz);
+  Azul→⚓ *Peso Bronto* (rodada lenta y controlada). Se explican en el selector y se ven en
+  el HUD de poderes.
+- **Jefes cada 10 niveles** (10/20/30/40/50): banner de intro, ambiente (temblores leves,
+  rugidos y pterodáctilos en T-Rex/Final), y clima asociado (ceniza/tormenta). No tocan la
+  física base ni el flujo de victoria/derrota.
+- **Eventos climáticos** (capa overlay propia `#weather-layer`, `pointer-events:none`, por
+  debajo del HUD): lluvia, niebla, viento, ceniza, tormenta, calor. Distribución por nivel.
+  El **viento** aplica un empuje lateral **muy leve** solo en niveles avanzados; el resto es
+  visual. Respeta `prefers-reduced-motion` y es ligero en móvil.
+- **Recompensa diaria**: 1 reclamo por día, racha consecutiva (se reinicia si faltas), tabla
+  de 7 días (⭐, vidas, bloqueos, escudos, banco) con calendario visual e indicador en el menú.
+- **Modo contrarreloj cada 11 niveles** (11/22/33/44): cronómetro destacado en el HUD; si
+  llega a 0 pierdes un intento (y reinicia la ventana); completar a tiempo da **+2 ⭐ de canje**.
+
+### Técnico
+- Nuevos módulos: `data/skins.js`, `levels/levelEvents.js`, `effects/weather.js`,
+  `systems/chest.js`, `systems/daily.js`. Habilidad añadida a `data/balls.js`.
+- `physics/BallPhysics.js`: modificadores de habilidad (escala de aceleración, fricción y
+  rebote) y empuje de viento, **neutros por defecto** → física base y solvencia intactas.
+- `utils/storage.js`: `chestsOpened`, `ownedSkins`/`activeSkin`, `daily`, helpers de cofre/
+  skins/diario y `addPowerup`. Tolerante a saves antiguos.
+- Nuevas pantallas (skins, cofre, diario), chips de evento en preparación, HUD de
+  contrarreloj y banner de jefe. i18n ES/EN completo (paridad verificada).
+
+### Validado
+- `npm test` (física, **50 niveles superables**, input, coleccionables, imports, i18n,
+  eventos, **sistemas nuevos**): **verde**. `npm run test:graph` y `test:visual`: **verde**.
+  Nuevo `npm run test:ui` (runtime de pantallas nuevas con DOM simulado): **verde**.
+- Sistemas existentes intactos: controles desktop/móvil, audio, acceso/registro, economía/
+  tienda, portales, cavernícola, cohetes, pterodáctilo del cohete rojo, diplodocus, familia
+  triceratops, dinos de victoria, mono burlón, ptero-rescate, progreso/localStorage.
+
+## [0.19.1] — 2026-06-23 — Cohete rojo: evento del pterodáctilo más lento y coreografiado
+
+> Mejora de timing/VFX del evento del cohete con raya roja. **Sin desplegar.**
+
+### Cambiado
+- **Despegue más lento y claro**: el cohete rojo ahora hace **ignición en la rampa**
+  (retardo ~0,5 s con llama y temblor) y luego **asciende lento** (curva *ease-in* en 1,5 s),
+  en vez de salir disparado al instante.
+- **Impacto sincronizado de verdad**: el pterodáctilo entra antes, cruza el cielo a velocidad
+  calculada para llegar a la **x del cohete EXACTAMENTE** cuando este alcanza la altura del
+  encuentro (≈2 s). Antes el cohete podía "impactar" antes de que el ptero llegara; ahora
+  el golpe se ve claramente (verificado por simulación: cohete y ptero coinciden en (x,y)).
+- El pterodáctilo se mantiene a **altura fija** mientras cruza (impacto preciso) y, tras el
+  golpe, **cae** dando tumbos cartoon y sale por debajo. Rebote del golpe un poco más marcado.
+- Sonidos resincronizados: lanzamiento al despegar (~0,5 s), *bonk* del impacto (~2 s),
+  silbido de caída (~2,15 s).
+
+### Validado
+- `npm test`, `npm run test:graph`, `npm run test:visual`: **verde**. Simulación offline de
+  la coreografía: **impacto sincronizado** (separación 0,00). Cohete de colores y resto del
+  juego, intactos.
+
+## [0.19.0] — 2026-06-22 — Cohetes: de colores (fuegos) y con raya roja (evento pterodáctilo)
+
+> Dos ítems-cohete recogibles en el tablero (puramente visuales, sin daño). **Sin desplegar.**
+
+### Añadido
+- **Cohete de colores** (niveles 3, 8, 13, 18, 23, 28, 33, 38, 43, 48): al pasar la bola por
+  encima, sale **disparado hacia arriba** con estela, **explota en fuegos artificiales**
+  multicolor y desaparece. Corto y satisfactorio.
+- **Cohete con raya roja** (niveles 7, 17, 27, 37, 47): al pasar la bola, **se lanza** y
+  aparece un **pterodáctilo del evento** (3D, distinto de los ambientales) que **vuela de
+  lado a lado por el cielo**; el cohete lo **alcanza en el aire** (impacto **cartoon**:
+  destello + chispas, **sin sangre ni violencia**), el pterodáctilo **cae** dando tumbos
+  y **desaparece por debajo** de la pantalla.
+- Arte premium (`RocketArt.js`): cuerpo colorido, punta, aletas, ventanilla y **raya roja**
+  bien marcada; estela de propulsión, **fuegos artificiales radiales** y destellos.
+- Sonidos sintetizados nuevos: `rocketLaunch`, `firework`, `bonk` (impacto), `whoosh` (caída).
+- Colocación **procedural determinista y validada**: nunca sobre **hoyos, trampas, portales,
+  monedas/estrella, inicio o meta**; dentro del tablero, con margen de borde y alcanzable.
+
+### Diseño / seguridad de integración
+- Los cohetes y sus animaciones son **VISUALES**: corren en `scene.update` **sin tocar la
+  física, el `ballState`, el input ni el flujo de victoria/derrota**. La **victoria tiene
+  prioridad** (la animación se completa en segundo plano o se limpia al cambiar de nivel);
+  en una pérdida de vida no se cuelgan estados ni se bloquea el reinicio.
+- **Sin reactivación**: al lanzarse, el cohete desactiva su hitbox y se retira del tablero.
+- **Disjuntos del cavernícola**: los niveles de cohete **no** son múltiplos de 5, así que
+  cohete y cavernícola **nunca coinciden** (sistemas separados garantizados por la distribución).
+- No tapan HUD ni controles (vuelan en el cielo, por encima del tablero).
+
+### Validado
+- `npm test`, `npm run test:graph` (carga `rockets.js`/`RocketArt.js`), `npm run test:visual`
+  (**construye ambos cohetes + fuegos** sin errores): **verde**. Verificación offline:
+  colocación válida en los 15 niveles configurados (holgura ≥1.4 a cualquier hoyo, disjuntos
+  del cavernícola). i18n ES/EN OK.
+
+## [0.18.1] — 2026-06-22 — Ajuste: el cavernícola sale más lejos del hoyo y no toca hoyos
+
+> Posición y zona de patrulla del cavernícola. **Sin desplegar.**
+
+### Cambiado
+- **Separación mínima clara del hoyo verde**: el cavernícola aparece y patrulla en una
+  banda a `goalMin … goalMin+1.4` del hoyo (`goalMin = max(2.4, goal.r + cuerpo + 1.1)`,
+  ~2.6–2.75), en vez de poder pegarse a él (antes ~1.0). Ya **no bloquea la entrada** al hoyo.
+- **No toca NINGÚN hoyo**: la zona transitable excluye, con holgura del cuerpo, el **hoyo
+  verde**, las **trampas** y los **portales** (se pasan `goal`, `traps` y `portals` al
+  cavernícola). Además el **camino** entre destinos se valida por muestreo para que tampoco
+  cruce un hoyo al desplazarse.
+- Pequeña pausa al re-elegir destino (evita recálculos en bucle si una zona está saturada).
+
+### Validado
+- Verificación offline en los 10 niveles ×5: posición válida garantizada, **~4 de distancia
+  al hoyo verde** y **holgura ≥1.35 a cualquier hoyo** (el cuerpo nunca lo toca).
+- `npm test`, `npm run test:graph`, `npm run test:visual`: **verde**.
+
+## [0.18.0] — 2026-06-22 — Cavernícola con lanza (enemigo dinámico desde el nivel 5)
+
+> Nueva mecánica de obstáculo/enemigo en el tablero. **Sin desplegar.**
+
+### Añadido
+- **Cavernícola con lanza** (personaje 3D, `src/scene/Caveman.js`) que aparece en los
+  niveles **5, 10, 15, 20, 25, 30, 35, 40, 45 y 50** y **patrulla** aleatoriamente cerca
+  del **hoyo verde** (destinos validados contra la huella; no pisa el hoyo ni se sale).
+- **Estilo "caricatura premium"**: chunky/cartoon, cabezón expresivo con **pelo y barba**
+  prehistóricos, **nariz grande** y ceño marcado, **piel (pelt) al hombro** y taparrabos
+  con flecos, **manos y pies** con dedos, y una **lanza** con asta de madera, atadura y
+  **punta de piedra**. Materiales con volumen (piel, sombra, pieles, marfil, piedra).
+- **Secuencia de ataque** al tocar la bola: el cavernícola se **detiene**, **patea** la
+  bola hacia fuera (con arco), **se gira hacia el jugador** y **lanza su lanza** (proyectil
+  3D que vuela hacia la cámara + destello) → el jugador **pierde una vida** por el flujo
+  existente (reinicio de bola o Game Over). Tras el golpe, el cavernícola **vuelve a
+  patrullar** lejos del reinicio, con una breve **gracia** anti-repetición.
+- Animaciones: caminar (piernas/brazos alternados + rebote), patada, giro y lanzamiento.
+- Mensajes ES/EN (`msg.cavemanHit`, `msg.caveman`).
+
+### Mantiene intacto
+- 50 niveles, portales, monedas, estrellas, tienda/canje, pterodáctilos, Diplodocus,
+  familia Triceratops, dinos de victoria, mono al perder, ptero-rescate, música, controles,
+  responsive, progreso/localStorage y la pantalla de acceso/registro.
+
+### Notas de diseño (mobile-first / justo)
+- Solo una instancia, breve animación de ataque (~1,5 s), colisión por distancia clara,
+  el enemigo patrulla cerca del hoyo (obstáculo evitable, no injusto), no tapa HUD/controles.
+
+### Validado
+- `npm test`, `npm run test:graph` (carga `Caveman.js`), `npm run test:visual`
+  (**construye el cavernícola y la lanza** sin errores): **verde**. i18n ES/EN OK.
+
 ## [0.17.0] — 2026-06-22 — Pantalla de acceso/registro (simulada, mobile-first)
 
 > Nueva puerta de entrada jurásica con acceso/registro **local y simulado** (sin backend,

@@ -215,3 +215,49 @@ La sesión (`src/utils/session.js`, `trexoroll.session.v1`) guarda solo `authMod
 **independiente del progreso**. Tras acceder, el flujo sigue al landing → menú habitual.
 "Cerrar sesión" (en Ajustes) vuelve al acceso sin borrar el avance. Estructura preparada
 para una integración real futura sin tocar el resto del juego.
+
+---
+
+## 13. Cavernícola con lanza (v0.18.0) — enemigo dinámico
+
+A partir del **nivel 5** y cada 5 niveles (5, 10, …, 50), aparece un **cavernícola con
+lanza** (personaje 3D en el tablero, `src/scene/Caveman.js`, estilo caricatura premium) que
+**patrulla aleatoriamente cerca del hoyo verde**, actuando como obstáculo evitable.
+
+**Si la bola lo toca:** (1) se detiene, (2) **patea** la bola hacia fuera, (3) **se gira
+hacia el jugador**, (4) **lanza su lanza** (proyectil 3D hacia la cámara + destello),
+(5) el jugador **pierde una vida** por el flujo de pérdida existente, (6) la bola se reinicia
+(o Game Over si no quedan vidas) y (7) el cavernícola vuelve a patrullar lejos del reinicio,
+con una breve gracia anti-repetición.
+
+Implementación: el cavernícola lo gestiona `SceneManager` (modelo + caminar + pose de ataque
++ lanza-proyectil); `Game` detecta la colisión (`ballState='caveman'`), dirige la secuencia
+por progreso y llama a `_loseLife('caveman')`. Mobile-first: una instancia, animación corta,
+no tapa HUD/controles, destinos validados contra la huella (no se sale del tablero).
+
+---
+
+## 14. Cohetes (v0.19.0) — ítems de celebración
+
+Dos ítems **cohete** recogibles aparecen dentro del tablero (`src/levels/rockets.js`,
+`src/scene/RocketArt.js`). Son **puramente visuales** (no hacen daño): al pasar la bola por
+encima se activan, animan en el cielo y desaparecen, **sin tocar la física ni el flujo de
+victoria/derrota** (corren en `scene.update`).
+
+- **Cohete de colores** — niveles 3, 8, 13, 18, 23, 28, 33, 38, 43, 48. Estados:
+  `idle → activated → launching → exploding → done`. Sube con estela y explota en
+  **fuegos artificiales** multicolor.
+- **Cohete con raya roja** — niveles 7, 17, 27, 37, 47. Estados:
+  `idle → rocketLaunching → pterodactylFlying → impact → falling → done`. Al lanzarse,
+  un **pterodáctilo del evento** (3D, estado propio, distinto de los ambientales) cruza el
+  cielo; el cohete lo alcanza (**impacto cartoon**, sin sangre), y el pterodáctilo cae y sale
+  por abajo. **Coreografía (v0.19.1):** ignición en rampa (~0,5 s) → **ascenso lento** (1,5 s,
+  *ease-in*) → **impacto sincronizado** (el ptero llega a la x del cohete EXACTO en el momento
+  del golpe, ≈2 s, bien visible) → caída (~1,5 s). El ptero vuela a altura fija para que el
+  impacto sea preciso y claro.
+
+**Reglas:** colocación procedural **determinista y validada** (nunca sobre hoyos/trampas/
+portales/monedas/estrella/inicio/meta, dentro del tablero, alcanzable); **una activación por
+intento** (hitbox off al lanzarse); niveles de cohete **disjuntos** de los del cavernícola
+(no son múltiplos de 5) → nunca coinciden. Mobile-first: una instancia breve, sin tapar
+HUD/controles.

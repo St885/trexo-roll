@@ -128,6 +128,16 @@
 | X-10 | Triceratops no intrusivo (overlay, sin tocar física/HUD/controles/input) | Alta | ✅ |
 | X-11 | Tests: SVG Triceratops bien formado + checks responsive en `events-smoke` | Media | ✅ |
 
+## Iteración v0.19.0 (completada) — Ítems cohete
+| ID | Historia | Prioridad | Estado |
+|----|----------|-----------|--------|
+| K-01 | **Cohete de colores** (niveles 3,8,…,48): lanzamiento + fuegos artificiales | Alta | ✅ |
+| K-02 | **Cohete con raya roja** (niveles 7,17,…,47): evento del pterodáctilo (vuela/impacto/cae) | Alta | ✅ |
+| K-03 | Colocación procedural validada (fuera de hoyos/trampas/portales/monedas/estrella) | Alta | ✅ |
+| K-04 | Activación por contacto sin tocar física/estado; sin reactivación; limpieza al ganar/perder | Alta | ✅ |
+| K-05 | Disjuntos del cavernícola (no múltiplos de 5); impacto cartoon sin sangre | Media | ✅ |
+| K-06 | sfx (lanzamiento/fuegos/bonk/silbido) + checks (canvas-smoke, colocación offline) | Media | ✅ |
+
 ## Post-MVP (pendientes)
 | ID | Historia | Prioridad |
 |----|----------|-----------|

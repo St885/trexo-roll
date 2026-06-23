@@ -66,6 +66,9 @@ export const SCREENS = {
   CREDITS: 'screen-credits',
   LEVELS: 'screen-levels',
   HOWTO: 'screen-howto',
+  SKINS: 'screen-skins',       // colección de skins de bola
+  CHEST: 'screen-chest',       // cofre jurásico
+  DAILY: 'screen-daily',       // recompensa diaria
   PREP: 'screen-prep',
   GAME: 'screen-game',
   PAUSE: 'screen-pause',

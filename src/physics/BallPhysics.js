@@ -28,6 +28,28 @@ export class BallPhysics {
     this._offTime = 0; // tiempo acumulado fuera de la huella (gracia de caída)
     this._portalCd = 0;    // cooldown anti-loop tras teletransportar (s)
     this._portalFx = null; // evento de portal pendiente de consumir por la capa visual
+    // Modificadores por habilidad de bola + clima (neutros por defecto → física base intacta).
+    this.accelScale = 1;       // escala de la aceleración (Raptor >1, Bronto <1)
+    this.dampingScale = 1;     // escala de la fricción (Tricera/Bronto >1)
+    this.restitutionScale = 1; // escala del rebote contra paredes (Tricera <1)
+    this.windAx = 0;           // empuje lateral del viento (clima), unidades de aceleración
+    this.windAz = 0;
+  }
+
+  /**
+   * Aplica los modificadores de la habilidad de bola (escala física). Valores ausentes
+   * vuelven a neutro. NO toca la geometría ni la solvencia del nivel.
+   */
+  setMods(mods = {}) {
+    this.accelScale = mods.accelScale || 1;
+    this.dampingScale = mods.dampingScale || 1;
+    this.restitutionScale = mods.restitutionScale || 1;
+  }
+
+  /** Empuje lateral del viento (clima). ax,az en unidades de aceleración del plano. */
+  setWind(ax = 0, az = 0) {
+    this.windAx = ax || 0;
+    this.windAz = az || 0;
   }
 
   /** Carga la geometría lógica del nivel y coloca la bola en el inicio. */
@@ -88,9 +110,13 @@ export class BallPhysics {
   _step(h, tiltX, tiltZ) {
     if (this._portalCd > 0) this._portalCd = Math.max(0, this._portalCd - h);
 
-    // Gravedad proyectada en el plano del tablero.
-    let ax = -PHYS.GRAVITY * Math.cos(tiltX) * Math.sin(tiltZ);
-    let az = PHYS.GRAVITY * Math.sin(tiltX);
+    // Gravedad proyectada en el plano del tablero (escalada por la habilidad de bola).
+    let ax = -PHYS.GRAVITY * this.accelScale * Math.cos(tiltX) * Math.sin(tiltZ);
+    let az = PHYS.GRAVITY * this.accelScale * Math.sin(tiltX);
+
+    // Empuje del viento (clima): muy leve, constante mientras dura el nivel.
+    ax += this.windAx;
+    az += this.windAz;
 
     // Atracción suave hacia un hoyo cercano (para que "caiga" en vez de rozar).
     const pull = this._holePull();
@@ -99,9 +125,10 @@ export class BallPhysics {
       az += pull.z;
     }
 
-    // Integración de velocidad + fricción de rodadura estable.
-    this.vx = (this.vx + ax * h) / (1 + PHYS.DAMPING * h);
-    this.vz = (this.vz + az * h) / (1 + PHYS.DAMPING * h);
+    // Integración de velocidad + fricción de rodadura estable (escalada por habilidad).
+    const damp = PHYS.DAMPING * this.dampingScale;
+    this.vx = (this.vx + ax * h) / (1 + damp * h);
+    this.vz = (this.vz + az * h) / (1 + damp * h);
 
     // Límite de velocidad (evita atravesar paredes/hoyos).
     const sp = this.speed;
@@ -271,8 +298,9 @@ export class BallPhysics {
       this.z += nz * penetration;
       const vDotN = this.vx * nx + this.vz * nz;
       if (vDotN < 0) {
-        this.vx -= (1 + PHYS.RESTITUTION) * vDotN * nx;
-        this.vz -= (1 + PHYS.RESTITUTION) * vDotN * nz;
+        const rest = PHYS.RESTITUTION * this.restitutionScale;
+        this.vx -= (1 + rest) * vDotN * nx;
+        this.vz -= (1 + rest) * vDotN * nz;
       }
     }
   }

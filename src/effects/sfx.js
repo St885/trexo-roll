@@ -117,6 +117,55 @@ export const sfx = {
     // Eco agudo (la "aparición" en el otro extremo).
     setTimeout(() => beep(1760, 0.12, 'triangle', 0.06), 110);
   },
+  /** Cohete: lanzamiento (barrido ascendente con cuerpo, tipo "whoosh"). */
+  rocketLaunch() {
+    if (muted) return;
+    const a = ac(); if (!a) return;
+    const t = a.currentTime;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(180, t);
+    o.frequency.exponentialRampToValueAtTime(900, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.57);
+  },
+  /** Fuegos artificiales: pequeño "pop" + chispas brillantes. */
+  firework() {
+    beep(140, 0.12, 'sine', 0.12);                              // pequeño boom
+    setTimeout(() => beep(1568, 0.08, 'triangle', 0.07), 40);   // chispa
+    setTimeout(() => beep(2093, 0.08, 'triangle', 0.06), 110);  // chispa
+    setTimeout(() => beep(2637, 0.1, 'triangle', 0.05), 190);   // chispa
+  },
+  /** Impacto cartoon ("bonk" corto, sin dramatismo). */
+  bonk() {
+    if (muted) return;
+    const a = ac(); if (!a) return;
+    const t = a.currentTime;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(440, t);
+    o.frequency.exponentialRampToValueAtTime(160, t + 0.14);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.1, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.2);
+  },
+  /** Silbido descendente (caída). */
+  whoosh() {
+    if (muted) return;
+    const a = ac(); if (!a) return;
+    const t = a.currentTime;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.exponentialRampToValueAtTime(180, t + 0.55);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.07, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.62);
+  },
   /** Rescate del ptero: barrido descendente-ascendente "aleteo". */
   rescue() {
     beep(300, 0.12, 'sine', 0.1);
