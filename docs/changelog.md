@@ -2,6 +2,92 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.24.2] — 2026-06-24 — Ajuste fino: tablero aún más grande en móvil horizontal
+
+> Tras probar en el emulador Android, el tablero en horizontal admitía un acercamiento extra
+> seguro: el encaje por inclinación máxima dejaba ~19% de pantalla sin usar.
+
+### Cambiado
+- **Zoom específico de móvil horizontal** (`LANDSCAPE_MOBILE_ZOOM = 1.13`) + menos margen en
+  el perfil `landscapeMobile` (0.04 → 0.02): la cámara se acerca **~13–15%** → el tablero se
+  ve **~15% más grande** que en v0.24.1, **sin recortar** (verificado contra la geometría real
+  en los 50 niveles: el footprint del tablero nunca se corta —cobertura máx 0.85— y la
+  decoración queda dentro de la tolerancia 1.05).
+- **Solo afecta a móvil horizontal**: vertical (portrait) y landscape de escritorio sin cambios.
+
+### Técnico
+- `scene/SceneManager.js`: nuevo `LANDSCAPE_MOBILE_ZOOM`; `computeAxisFrame` aplica el zoom y
+  el margen reducido solo si `fit.landscapeMobile`. `tools/canvas-smoke.mjs`: aserciones
+  separadas para TABLERO (footprint ≤ 1.0, estricto) vs DECORACIÓN (≤ 1.05) y comprobación de
+  que el ajuste fino acerca un 10–18% (niveles 1, 2, 9, 13, 25).
+
+### Validado
+- `npm test` (225), `test:graph`, `test:visual` (127, incl. cámara), `test:ui`, `npm run build`,
+  `npm run cap:sync` (copiado a `android/`): **todo verde**. Vertical, controles y web intactos.
+
+## [0.24.1] — 2026-06-24 — Encuadre de cámara en horizontal: tablero mucho más grande
+
+> El tablero se veía pequeño en **horizontal/landscape** (móvil Android y web): la cámara
+> usaba un encaje por **esfera** cuyo radio lo dominaba el **ANCHO** del tablero, así que en
+> horizontal alejaba la cámara y el escenario perdía protagonismo.
+
+### Corregido
+- Nuevo **encuadre por eje** en horizontal (`computeAxisFrame`): ajusta las 8 esquinas reales
+  del tablero a AMBOS FOV (ancho → FOV horizontal amplio, alto → vertical) → la cámara se
+  acerca y el tablero se ve **~1.2–1.4× más grande** (p. ej. "Sendero Largo" 24×8: +41%),
+  aprovechando el ancho. El grosor vertical absorbe el balanceo de la inclinación máxima →
+  **no se recorta** ninguna esquina al inclinar.
+- El modo **vertical (portrait) queda intacto** (rama de esfera separada, sin regresión).
+
+### Técnico
+- `scene/SceneManager.js`: `_frame` delega en funciones PURAS exportadas `computeSphereFrame`
+  (vertical) y `computeAxisFrame` (horizontal). Sin cambios en `resize`/`setViewportFit`/HUD/
+  controles (el HUD superior y los controles en las esquinas no se solapan con el tablero).
+- `tools/canvas-smoke.mjs`: verificación determinista con Three real — en los 5 tableros de
+  muestra comprueba que en horizontal **no recorta** al inclinar, **no aleja** la cámara
+  respecto al método previo, los tableros anchos quedan **mucho más grandes** y la cobertura
+  de pantalla ≥ 0.78. (121 checks visuales, verde.)
+
+### Validado
+- `npm test` (225), `test:graph`, `test:visual` (121, incl. cámara), `test:ui`: **verde**.
+  Vertical, controles, música, niveles y web/GitHub Pages intactos.
+
+## [0.24.0] — 2026-06-23 — Android-ready: Capacitor + ficha de Play Store (sin publicar)
+
+> Prepara TREXoRoll para **Google Play** como app Android con **Capacitor**, manteniendo la
+> **web/GitHub Pages intacta** y el modo invitado/local. Sin claves reales, sin Analytics,
+> sin anuncios, sin compras, sin permisos sensibles. **No se publica nada.**
+
+### Estrategia
+- Capacitor con **carpeta `www/` curada** (el juego es estático sin bundler → "build" = copiar
+  runtime). `webDir: www`, `appId: com.st885.trexoroll`, `appName: TREXoRoll`.
+
+### Añadido
+- `capacitor.config.json` + dependencias de Capacitor en `package.json` + scripts
+  `build`, `build:android`, `cap:add/sync/open`. `tools/build-web.mjs` (genera `www/`).
+- **Ficha de Play Store** en `playstore/`: icono **512×512** y gráfico destacado **1024×500**
+  (generados desde el arte del juego), descripciones (corta/larga/título), notas de versión,
+  guías de capturas e icono, y copia de privacidad/Data Safety.
+- **Política de privacidad pública** `privacy.html` (URL para Play:
+  `https://st885.github.io/trexo-roll/privacy.html`) + `docs/privacy-policy.md` y `docs/terms.md`.
+- Docs: `docs/android-build.md`, `docs/release-process.md` (firma/keystore/AAB),
+  `docs/play-store-checklist.md` (Play Console + Data Safety + pruebas en móvil).
+
+### Cambiado
+- **Acceso para Play Store**: Google/Apple/Samsung pasan a **«Próximamente»** (no parecen
+  login funcional); "Crear cuenta" → "Crear perfil local"; mensaje **«Modo local: tu progreso
+  se guarda en este dispositivo»**. Sin prometer nube.
+- `.gitignore`: ignora `www/`, artefactos de `android/`, keystores y `key.properties`.
+
+### Seguridad / privacidad (esta fase)
+- Sin Analytics activo · sin anuncios · sin compras · sin login real obligatorio · sin
+  ubicación/GPS · sin permisos sensibles (solo `INTERNET` técnico). Sin claves reales.
+
+### Validado
+- `npm test` (225 asserts), `test:graph/visual/ui`: **verde**. `npm run build` genera `www/`;
+  servido como en la app (rutas relativas, mismo origen): **HTTP 200** en todo. Web/Pages y
+  modo invitado intactos.
+
 ## [0.23.0] — 2026-06-23 — Firebase: SDK vendorizado + CSP preparada (sin claves reales)
 
 > Prepara la parte técnica para activar Firebase: **SDK vendorizado** en `libs/firebase/` y

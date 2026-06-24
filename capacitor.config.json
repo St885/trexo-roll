@@ -1,0 +1,14 @@
+{
+  "appId": "com.st885.trexoroll",
+  "appName": "TREXoRoll",
+  "webDir": "www",
+  "backgroundColor": "#0a3a20",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0a3a20",
+    "captureInput": true
+  }
+}

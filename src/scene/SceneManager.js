@@ -12,13 +12,86 @@ import { footprintBounds, isInsideFootprint } from '../physics/footprint.js';
 import { PHYS } from '../utils/constants.js';
 
 const CAM_DIR = new THREE.Vector3(0, 0.92, 1.0).normalize(); // dirección fija de la cámara
+const WORLD_UP = new THREE.Vector3(0, 1, 0);                  // "arriba" del mundo (base de cámara)
 const V_FOV = 48;
+// Acercamiento extra SOLO en móvil horizontal (tablero más grande sin recortar). 1.0 = sin
+// cambio; >1 = más cerca. Aprovecha el margen conservador del encaje por inclinación máxima.
+const LANDSCAPE_MOBILE_ZOOM = 1.13;
 // Banda de decoración alrededor del tablero (debe coincidir con decorate() en
 // BoardBuilder). El encuadre la incluye para que la decoración no se "corte".
 const DECOR_MARGIN = 2.0;
 // Altura del "suelo" (donde se proyecta la sombra del tablero). Ya no hay plano de
 // suelo opaco: el fondo del gameplay es la imagen jurásica (CSS) detrás del lienzo.
 const GROUND_Y = -4.2;
+
+// ── Encuadre de cámara (funciones PURAS, testeables) ────────────────────────
+// Devuelven {dist, target:{x,y,z}, pos:{x,y,z}} a partir de los datos del tablero y de la
+// cámara, sin tocar estado. Las usa SceneManager._frame y se verifican en los tests.
+//   · VERTICAL  → computeSphereFrame: encaje por esfera (estable; se mantiene tal cual).
+//   · HORIZONTAL → computeAxisFrame: encaje por EJE (ancho→FOV horizontal, alto→vertical)
+//     para que el tablero se vea GRANDE sin desperdiciar el ancho.
+
+/** VERTICAL: una esfera centrada en el tablero lo contiene a cualquier inclinación. */
+export function computeSphereFrame(bounds, boardCenter, fovDeg, aspect, fit = {}) {
+  const cx = boardCenter.x, cy = boardCenter.y || 0, cz = boardCenter.z;
+  const centerLen = Math.hypot(cx, cy, cz);
+  const halfDiag = Math.hypot(bounds.width / 2, bounds.depth / 2);
+  const decorReach = Math.max(bounds.width, bounds.depth) / 2 + DECOR_MARGIN;
+  const radius = Math.max(halfDiag, decorReach) + centerLen + 0.5;
+
+  const vFov = THREE.MathUtils.degToRad(fovDeg);
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  const limiting = Math.min(vFov, hFov);
+  let marginK = 0.03, raiseK = 0.05;
+  if (fit.smallPortrait) { marginK = 0.012; raiseK = 0.085; }
+  const dist = radius / Math.sin(limiting / 2) + radius * marginK;
+  const target = { x: cx, y: cy, z: cz + radius * raiseK };
+  const pos = { x: CAM_DIR.x * dist + cx, y: CAM_DIR.y * dist + cy, z: CAM_DIR.z * dist + cz };
+  return { dist, target, pos };
+}
+
+/** HORIZONTAL: ajusta las 8 esquinas reales del tablero a AMBOS FOV (tablero más grande). */
+export function computeAxisFrame(bounds, boardCenter, fovDeg, aspect, fit = {}) {
+  const cx = boardCenter.x, cy = boardCenter.y || 0, cz = boardCenter.z;
+  const centerLen = Math.hypot(cx, cy, cz);
+  const hx = bounds.width / 2 + DECOR_MARGIN;   // semiancho (X)
+  const hz = bounds.depth / 2 + DECOR_MARGIN;    // semiprofundidad (Z)
+  // Balanceo vertical por inclinación máxima (cota segura desde el pivote/origen).
+  const tiltSwing = (centerLen + Math.hypot(hx, hz)) * Math.sin(PHYS.MAX_TILT);
+  const hy = 1.7 + tiltSwing;
+
+  // Base de cámara (dirección fija; "arriba" del mundo = +Y).
+  const forward = CAM_DIR.clone().negate();
+  const right = new THREE.Vector3().crossVectors(forward, WORLD_UP).normalize();
+  const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+
+  const vFov = THREE.MathUtils.degToRad(fovDeg);
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  const tanV = Math.tan(vFov / 2), tanH = Math.tan(hFov / 2);
+
+  let marginK = 0.06, raiseK = 0.02;
+  if (fit.landscapeMobile) { marginK = 0.02; raiseK = 0.0; }
+  const raiseZ = Math.max(hx, hz) * raiseK;
+  const target = { x: cx, y: cy, z: cz + raiseZ };
+
+  let dist = Math.hypot(hx, hz); // suelo: no meter la cámara dentro del tablero
+  const o = new THREE.Vector3();
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+    o.set(sx * hx, sy * hy, sz * hz - raiseZ); // offset de la esquina respecto al target
+    const a = Math.abs(o.dot(right));   // extensión horizontal en pantalla
+    const b = Math.abs(o.dot(up));      // extensión vertical en pantalla
+    const c = o.dot(forward);           // profundidad (perspectiva)
+    dist = Math.max(dist, a / tanH - c, b / tanV - c);
+  }
+  dist *= (1 + marginK);
+  // Ajuste fino MÓVIL HORIZONTAL: la cota por inclinación máxima ('hy') es conservadora y
+  // dejaba ~19% de pantalla sin usar. Acercamos la cámara un punto extra para que el tablero
+  // se vea más grande, sin recortar (verificado contra la geometría real en canvas-smoke).
+  if (fit.landscapeMobile) dist /= LANDSCAPE_MOBILE_ZOOM;
+
+  const pos = { x: CAM_DIR.x * dist + target.x, y: CAM_DIR.y * dist + target.y, z: CAM_DIR.z * dist + target.z };
+  return { dist, target, pos };
+}
 
 export class SceneManager {
   constructor(container) {
@@ -832,37 +905,12 @@ export class SceneManager {
    * desaparece la decoración al girar.
    */
   _frame(bounds) {
-    const halfDiag = Math.hypot(bounds.width / 2, bounds.depth / 2);
-    const decorReach = Math.max(bounds.width, bounds.depth) / 2 + DECOR_MARGIN;
-    // El tablero gira alrededor del pivote (origen): una ESFERA de este radio centrada
-    // en el centro del tablero lo contiene COMPLETO a cualquier inclinación, porque la
-    // rotación conserva la distancia al pivote. Por eso NO hace falta un término extra
-    // de "balanceo" → la cámara puede acercarse (tablero más grande) sin recortar
-    // esquinas ni objetos. 'offset' cubre tableros cuyo centro no esté en el pivote.
-    const offset = this._boardCenter.length();
-    const radius = Math.max(halfDiag, decorReach) + offset + 0.5;
-
-    const aspect = this.camera.aspect;
-    const vFov = THREE.MathUtils.degToRad(this.camera.fov);
-    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
-    const limiting = Math.min(vFov, hFov);
-    const portrait = aspect < 1;
-    // Encaje por esfera (sin·, no tan·) con margen pequeño: tablero grande pero estable.
-    // El perfil de viewport afina el resultado por dispositivo:
-    //  · teléfono pequeño vertical → menos margen (tablero MÁS grande) + más elevación
-    //    (sitio para HUD arriba y controles abajo);
-    //  · móvil horizontal → margen contenido para aprovechar el ancho.
-    let marginK = portrait ? 0.03 : 0.07;
-    let raiseK = portrait ? 0.05 : 0;
-    if (this._fit.smallPortrait) { marginK = 0.012; raiseK = 0.085; }
-    else if (this._fit.landscapeMobile) { marginK = 0.05; raiseK = 0; }
-    const margin = radius * marginK;
-    const dist = radius / Math.sin(limiting / 2) + margin;
-    const target = this._boardCenter.clone();
-    target.z += radius * raiseK; // sube un pelín el tablero (sitio para los controles)
-    const pos = CAM_DIR.clone().multiplyScalar(dist).add(this._boardCenter);
-    this.camera.position.copy(pos);
-    this.camera.lookAt(target);
+    const portrait = this.camera.aspect < 1;
+    const r = portrait
+      ? computeSphereFrame(bounds, this._boardCenter, this.camera.fov, this.camera.aspect, this._fit)
+      : computeAxisFrame(bounds, this._boardCenter, this.camera.fov, this.camera.aspect, this._fit);
+    this.camera.position.set(r.pos.x, r.pos.y, r.pos.z);
+    this.camera.lookAt(r.target.x, r.target.y, r.target.z);
     if (this.sun) this.sun.target.position.copy(this._boardCenter);
   }
 

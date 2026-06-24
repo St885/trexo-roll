@@ -22,3 +22,36 @@ Thumbs.db
 *firebase-adminsdk*.json
 .env
 .env.*
+
+# --- Android / Capacitor ---
+# Build web para Capacitor (se regenera con `npm run build`):
+www/
+# Proyecto Android nativo COMPLETO: es generado/regenerable con `npm run cap:add` +
+# `npm run cap:sync`. No se versiona para mantener el repo web limpio y, sobre todo, para
+# que NUNCA pueda colarse un secreto nativo (google-services.json, keystore.properties,
+# local.properties, config de firma, etc.). Re-crearlo: ver docs/android-build.md.
+android/
+# (Defensa en profundidad por si algún día se versiona android/ de forma curada:)
+android/app/build/
+android/build/
+android/.gradle/
+android/captures/
+android/local.properties
+android/app/release/
+android/app/debug/
+android/.idea/
+google-services.json
+GoogleService-Info.plist
+android/keystores/
+
+# --- Firma / secretos (NUNCA al repo) ---
+*.keystore
+*.jks
+*.p12
+*.pem
+keystore.properties
+key.properties
+serviceAccount*.json
+*firebase-adminsdk*.json
+secrets/
+playstore/private/

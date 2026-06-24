@@ -1,0 +1,10 @@
+Primera versión de prueba interna de TREXoRoll 🦖
+
+• 50 niveles en 10 mundos jurásicos.
+• 5 dinos con habilidades + 8 skins coleccionables.
+• Estrellas por nivel, cofre jurásico y recompensa diaria.
+• Jefes cada 10 niveles, niveles contrarreloj y eventos climáticos.
+• Controles táctiles, música y progreso guardado en el dispositivo.
+• Sin anuncios, sin compras, sin analítica, sin permisos sensibles.
+
+Versión: 0.24.0 (versionCode 1)

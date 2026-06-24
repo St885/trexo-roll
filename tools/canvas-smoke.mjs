@@ -88,5 +88,67 @@ await run('makeRocketFlame', () => rk.makeRocketFlame());
 await run('makeGlow', () => rk.makeGlow('#ffe7a0', 1.5));
 await run('makeFireworkBurst', () => rk.makeFireworkBurst());
 
+console.log('\n[Encuadre de cámara: horizontal más grande + sin recortar al inclinar]');
+{
+  const THREE = await import('three');
+  const { computeSphereFrame, computeAxisFrame } = await import('../src/scene/SceneManager.js');
+  const { footprintBounds } = await import('../src/physics/footprint.js');
+  const { PHYS } = await import('../src/utils/constants.js');
+  const FOV = 48, DECOR = 2.0;
+
+  // Proyecta las esquinas a NDC a la inclinación MÁXIMA (en los 4 sentidos) y devuelve el
+  // peor |ndc|. Reproduce el mecanismo real del juego (boardGroup.rotation.x/z + localToWorld).
+  // margin = banda extra alrededor del footprint (0.3 ≈ borde del tablero; 2.0 ≈ decoración).
+  const maxNdcAtTilt = (frame, b, aspect, margin, yMax) => {
+    const cam = new THREE.PerspectiveCamera(FOV, aspect, 0.1, 260);
+    cam.position.set(frame.pos.x, frame.pos.y, frame.pos.z);
+    cam.lookAt(frame.target.x, frame.target.y, frame.target.z);
+    cam.updateMatrixWorld(true);
+    const board = new THREE.Object3D();
+    const xs = [b.minX - margin, b.maxX + margin], zs = [b.minZ - margin, b.maxZ + margin], ys = [0, yMax];
+    let worst = 0;
+    for (const tx of [PHYS.MAX_TILT, -PHYS.MAX_TILT]) for (const tz of [PHYS.MAX_TILT, -PHYS.MAX_TILT]) {
+      board.rotation.set(tx, 0, tz); board.updateMatrixWorld(true);
+      for (const x of xs) for (const y of ys) for (const z of zs) {
+        const v = new THREE.Vector3(x, y, z); board.localToWorld(v); v.project(cam);
+        worst = Math.max(worst, Math.abs(v.x), Math.abs(v.y));
+      }
+    }
+    return worst; // ≤ 1 ⇒ dentro de pantalla
+  };
+  const boardNdc = (f, b, aspect) => maxNdcAtTilt(f, b, aspect, 0.3, 0.5);  // TABLERO (footprint+rim)
+  const decorNdc = (f, b, aspect) => maxNdcAtTilt(f, b, aspect, DECOR, 0.6); // con DECORACIÓN
+
+  const samples = [LEVELS[0], LEVELS[1], LEVELS[8], LEVELS[12], LEVELS[24]]; // niveles 1,2,9,13,25
+  for (const lvl of samples) {
+    const b = footprintBounds(lvl.footprint);
+    const center = { x: (b.minX + b.maxX) / 2, y: 0, z: (b.minZ + b.maxZ) / 2 };
+    const wide = b.width / b.depth >= 1.5; // tableros anchos = los que se veían pequeños
+    const landM = computeAxisFrame(b, center, FOV, 2.0, { landscapeMobile: true });  // MÓVIL horizontal (con zoom fino)
+    const landD = computeAxisFrame(b, center, FOV, 2.0, {});                         // landscape genérico (sin zoom)
+    const port = computeSphereFrame(b, center, FOV, 0.46, { smallPortrait: true });  // móvil vertical
+    const sphereLand = computeSphereFrame(b, center, FOV, 2.0, {});                   // método ESFERA (pre-v0.24.1)
+    await run(`L${lvl.id}: el TABLERO no se corta al inclinar (footprint ≤ 1.0)`, () => {
+      const w = boardNdc(landM, b, 2.0); if (w > 1.0) throw new Error('tablero recortado (ndc ' + w.toFixed(3) + ')');
+    });
+    await run(`L${lvl.id}: la decoración dentro de tolerancia (≤ 1.05)`, () => {
+      const w = decorNdc(landM, b, 2.0); if (w > 1.05) throw new Error('decoración recortada (ndc ' + w.toFixed(3) + ')');
+    });
+    await run(`L${lvl.id}: VERTICAL no se corta (sin cambios)`, () => {
+      const w = decorNdc(port, b, 0.46); if (w > 1.05) throw new Error('recorta (ndc ' + w.toFixed(3) + ')');
+    });
+    await run(`L${lvl.id}: ajuste fino móvil acerca ~10–18% (zoom landscapeMobile)`, () => {
+      const closer = 1 - landM.dist / landD.dist;
+      if (closer < 0.10 || closer > 0.20) throw new Error('fuera de rango (' + (closer * 100).toFixed(1) + '% más cerca)');
+    });
+    if (wide) await run(`L${lvl.id} (ancho ${(b.width / b.depth).toFixed(1)}:1): MUCHO más grande que el método esfera`, () => {
+      if (!(landM.dist < sphereLand.dist * 0.78)) throw new Error(`poca mejora (axis ${landM.dist.toFixed(1)} vs esfera ${sphereLand.dist.toFixed(1)})`);
+    });
+    await run(`L${lvl.id}: el tablero llena bien la pantalla (footprint ≥ 0.74)`, () => {
+      const cov = boardNdc(landM, b, 2.0); if (cov < 0.74) throw new Error('infrautiliza (cobertura ' + cov.toFixed(3) + ')');
+    });
+  }
+}
+
 console.log(`\n${failures === 0 ? '✅ Código de dibujo/3D sin errores de runtime' : '❌ ' + failures + ' fallo(s)'}\n`);
 process.exit(failures === 0 ? 0 : 1);
