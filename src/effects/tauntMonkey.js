@@ -36,6 +36,22 @@ export function showTaunt() {
   setTimeout(() => { wrap.remove(); _active = false; }, 1500);
 }
 
+/**
+ * Inserta una versión ESTÁTICA del mono prehistórico (sin animación de burla) dentro de un
+ * contenedor. Reutiliza el mismo arte original que el overlay. Usado en la pantalla de
+ * derrota (Game Over) para darle carácter sin romper el diseño. Defensivo: no falla si el
+ * contenedor o el canvas no existen (p. ej. DOM simulado en tests).
+ * @param {HTMLElement|null} container
+ * @param {number} [size=120]
+ */
+export function renderMonkeyInto(container, size = 120) {
+  if (!container || typeof document === 'undefined') return;
+  container.innerHTML = '';
+  const canvas = drawMonkey(size);
+  canvas.className = 'over-monkey-art';
+  container.appendChild(canvas);
+}
+
 /** Dibuja un simio prehistórico estilizado y burlón. Devuelve un <canvas>. */
 function drawMonkey(size) {
   const canvas = document.createElement('canvas');

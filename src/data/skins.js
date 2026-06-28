@@ -14,51 +14,52 @@
 //        { type: 'chest' }                → solo puede salir de un cofre jurásico
 // Todo procedural y original (sin assets ni IP de terceros).
 
+// rarity ∈ base | comun | rara | epica | legendaria → color/gema de rareza en la UI.
 export const SKINS = [
   {
-    id: 'classic', name: 'Clásica TREXo', icon: '⚪',
+    id: 'classic', name: 'Clásica TREXo', icon: '⚪', rarity: 'base',
     body: null, body2: null,
     mat: { roughness: 0.25, metalness: 0.05, emissive: 0 },
     unlock: { type: 'default' },
   },
   {
-    id: 'fosil', name: 'Fósil', icon: '🦴',
+    id: 'fosil', name: 'Fósil', icon: '🦴', rarity: 'comun',
     body: '#e8e2d0', body2: '#b9ad93',
     mat: { roughness: 0.7, metalness: 0.0, emissive: 0 },
     unlock: { type: 'stars', need: 6 },
   },
   {
-    id: 'huevo', name: 'Huevo de Dino', icon: '🥚',
+    id: 'huevo', name: 'Huevo de Dino', icon: '🥚', rarity: 'comun',
     body: '#f3ead6', body2: '#d8c39c',
     mat: { roughness: 0.5, metalness: 0.0, emissive: 0 },
     unlock: { type: 'stars', need: 12 },
   },
   {
-    id: 'hielo', name: 'Hielo', icon: '🧊',
+    id: 'hielo', name: 'Hielo', icon: '🧊', rarity: 'rara',
     body: '#dff3ff', body2: '#7fb8e6',
     mat: { roughness: 0.12, metalness: 0.15, emissive: 0.10, emissiveHex: '#7fd3ff' },
     unlock: { type: 'tokens', cost: 5 },
   },
   {
-    id: 'ambar', name: 'Ámbar', icon: '🟧',
+    id: 'ambar', name: 'Ámbar', icon: '🟧', rarity: 'rara',
     body: '#ffce5e', body2: '#d98a1a',
     mat: { roughness: 0.18, metalness: 0.25, emissive: 0.14, emissiveHex: '#ffae2e' },
     unlock: { type: 'tokens', cost: 8 },
   },
   {
-    id: 'volcanica', name: 'Volcánica', icon: '🌋',
+    id: 'volcanica', name: 'Volcánica', icon: '🌋', rarity: 'epica',
     body: '#3a160e', body2: '#d2401a',
     mat: { roughness: 0.35, metalness: 0.1, emissive: 0.45, emissiveHex: '#ff5a1e' },
     unlock: { type: 'stars', need: 24 },
   },
   {
-    id: 'meteorito', name: 'Meteorito', icon: '☄️',
+    id: 'meteorito', name: 'Meteorito', icon: '☄️', rarity: 'epica',
     body: '#54504a', body2: '#26221e',
     mat: { roughness: 0.85, metalness: 0.35, emissive: 0.08, emissiveHex: '#ff7a3a' },
     unlock: { type: 'chest' },
   },
   {
-    id: 'dorada', name: 'Dorada', icon: '🏆',
+    id: 'dorada', name: 'Dorada', icon: '🏆', rarity: 'legendaria',
     body: '#ffe9a0', body2: '#e2a522',
     mat: { roughness: 0.12, metalness: 0.9, emissive: 0.18, emissiveHex: '#ffcf52' },
     unlock: { type: 'stars', need: 45 },

@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.24.1 — Cámara en horizontal: tablero mucho más grande; Android-ready v0.24 (Capacitor + Play Store); Firebase-ready v0.23 inerte |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.23.0) · 🛠️ Local v0.24.1 listo para **Android Studio / generar AAB** (sin publicar en Play) |
-| **Fecha** | 2026-06-24 |
+| **Versión** | 0.24.8 — Ajuste fino de encuadre horizontal (zoom efectivo 1.195, tablero centrado, sin recortes); tablero protagonista v0.24.7; pulido pantallas v0.24.6 |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.24.x) · 🛠️ Local v0.24.8 — **cumple políticas Play (con pendientes de cuenta)**; listo para prueba interna tras completar Console |
+| **Fecha** | 2026-06-28 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
 | **Dependencias runtime** | 0 (Three.js en `libs/`) |

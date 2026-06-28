@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QA · TREXoRoll pantallas secundarias</title>
+<link rel="stylesheet" href="../styles/main.css">
+<style>
+  body { background:#06140d; padding:16px; }
+  .qa-grid { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; justify-content:center; }
+  .qa-frame { position:relative; border:1px solid #2a4a36; border-radius:14px; overflow:hidden; background:radial-gradient(120% 100% at 50% 0%, #163a26, #07160e); }
+  .qa-frame .screen { position:relative !important; display:flex !important; inset:auto !important; width:100%; height:100%; opacity:1 !important; transform:none !important; }
+  .qa-label { position:absolute; top:6px; left:8px; z-index:99; font:700 11px/1 system-ui; color:#0c2; background:#0008; padding:3px 7px; border-radius:6px; }
+  .ph390 { width:390px; height:820px; }
+  .ph360 { width:360px; height:680px; }
+  /* Placeholder de miniatura de bola (el arte real lo valida test:visual) */
+  .qa-thumb { display:inline-block; border-radius:50%; background:radial-gradient(circle at 38% 32%, #fff, #e8e2cf 40%, #b9b29a 75%, #7d7860); box-shadow:inset 0 -6px 10px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+<div class="qa-grid">
+
+  <!-- PAUSA -->
+  <div class="qa-frame ph360"><span class="qa-label">Pausa · 360×680</span>
+    <section class="screen" id="screen-pause">
+      <div class="panel center">
+        <h2 class="title small">⏸ Pausa</h2>
+        <p class="muted">Nivel 17 · Pantano Raptor</p>
+        <div class="pause-mini"><span class="stat-chip">🥚🥚🥚</span><span class="stat-chip"><b>1 240</b> pts</span></div>
+        <p class="muted pause-powers">🦅 Escudo ×1 · 🪨 Bloqueo ×2</p>
+        <button class="btn primary">▶ Continuar</button>
+        <button class="btn">↻ Reiniciar nivel</button>
+        <button class="btn">♻️ Canje</button>
+        <button class="btn">🔊 Sonido: ON</button>
+        <button class="btn ghost">Menú</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- RECOMPENSA DIARIA (calendario real) -->
+  <div class="qa-frame ph360"><span class="qa-label">Diaria · 360×680</span>
+    <section class="screen" id="screen-daily">
+      <div class="panel center">
+        <h2 class="title small">🎁 Recompensa diaria</h2>
+        <p class="muted center">Entra cada día y aumenta tu racha para premios mejores.</p>
+        <p class="daily-streak">Racha: 3</p>
+        <div class="daily-calendar">
+          <div class="daily-cell claimed"><span class="daily-day">1</span><span class="daily-ic">🪙</span><span class="daily-amt">5</span></div>
+          <div class="daily-cell claimed"><span class="daily-day">2</span><span class="daily-ic">⭐</span><span class="daily-amt">1</span></div>
+          <div class="daily-cell today"><span class="daily-day">3</span><span class="daily-ic">🥚</span><span class="daily-amt">1</span></div>
+          <div class="daily-cell"><span class="daily-day">4</span><span class="daily-ic">🪙</span><span class="daily-amt">10</span></div>
+          <div class="daily-cell"><span class="daily-day">5</span><span class="daily-ic">⭐</span><span class="daily-amt">2</span></div>
+          <div class="daily-cell"><span class="daily-day">6</span><span class="daily-ic">🪨</span><span class="daily-amt">1</span></div>
+          <div class="daily-cell"><span class="daily-day">7</span><span class="daily-ic">🦅</span><span class="daily-amt">1</span></div>
+        </div>
+        <p class="daily-reward">Hoy: 🥚 1 vida extra</p>
+        <p class="shop-feedback"></p>
+        <button class="btn primary">Reclamar</button>
+        <button class="btn ghost">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ELEGIR DINO -->
+  <div class="qa-frame ph390"><span class="qa-label">Elegir dino · 390×820</span>
+    <section class="screen" id="screen-balls">
+      <div class="panel">
+        <h2 class="title small">Elige tu dino</h2>
+        <p class="muted center">Cada bola es una especie distinta… ¡que sale a celebrar contigo al ganar!</p>
+        <div class="balls-grid">
+          <button class="ball-card selected">
+            <span class="qa-thumb ball-thumb" style="width:96px;height:96px"></span>
+            <span class="ball-name">Blanca</span>
+            <span class="ball-dino">T-Rex · Blanca</span>
+            <span class="ball-ability"><b>Resistencia Rex</b> · aguanta una caída extra</span>
+            <span class="ball-blurb">La clásica equilibrada.</span>
+          </button>
+          <button class="ball-card">
+            <span class="qa-thumb ball-thumb" style="width:96px;height:96px;background:radial-gradient(circle at 38% 32%,#bfe9ff,#69c0ef 55%,#2a7fb8)"></span>
+            <span class="ball-name">Raptor</span>
+            <span class="ball-dino">Raptor · Azul</span>
+            <span class="ball-ability"><b>Impulso Raptor</b> · acelera más rápido</span>
+            <span class="ball-blurb">Ágil y veloz.</span>
+          </button>
+        </div>
+        <button class="btn ghost">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- SKINS -->
+  <div class="qa-frame ph390"><span class="qa-label">Skins · 390×820</span>
+    <section class="screen" id="screen-skins">
+      <div class="panel skins-panel">
+        <header class="skins-head">
+          <div class="skins-emblem">🦴</div>
+          <div class="skins-headtext">
+            <h2 class="skins-title">Skins de bola</h2>
+            <p class="skins-sub">Colecciona y equipa aspectos para tu bola. La especie y su habilidad no cambian.</p>
+          </div>
+          <div class="skins-stars"><span class="skins-stars-ic">⭐</span><span class="skins-stars-lbl">Disponibles</span><b>7</b></div>
+        </header>
+        <nav class="skins-grid">
+          <button class="skin-card rar-comun selected owned" data-state="equipped">
+            <span class="skin-rarity">Común</span><span class="skin-type">⚪</span>
+            <span class="skin-equip-tag">✓ Equipada</span>
+            <span class="skin-orb"><span class="skin-orb-ring"></span><span class="qa-thumb skin-thumb" style="width:112px;height:112px"></span></span>
+            <span class="skin-name">Clásica</span><span class="skin-status state-equipped">Equipada</span>
+          </button>
+          <button class="skin-card rar-raro owned" data-state="owned">
+            <span class="skin-rarity">Raro</span><span class="skin-type">❄️</span>
+            <span class="skin-equip-tag">✓ Equipada</span>
+            <span class="skin-orb"><span class="skin-orb-ring"></span><span class="qa-thumb skin-thumb" style="width:112px;height:112px;background:radial-gradient(circle at 38% 32%,#dff4ff,#a9dcff 55%,#5aa6e0)"></span></span>
+            <span class="skin-name">Hielo</span><span class="skin-status state-owned">Tocar para equipar</span>
+          </button>
+          <button class="skin-card rar-epico locked" data-state="stars">
+            <span class="skin-rarity">Épico</span><span class="skin-type">🌋</span>
+            <span class="skin-equip-tag">✓ Equipada</span>
+            <span class="skin-orb"><span class="skin-orb-ring"></span><span class="qa-thumb skin-thumb" style="width:112px;height:112px;background:radial-gradient(circle at 38% 32%,#ffd0a0,#ff8a4a 55%,#b5471f)"></span><span class="skin-lock">🔒</span></span>
+            <span class="skin-name">Meteorito</span><span class="skin-status state-stars">Logra 24 ⭐</span>
+          </button>
+          <button class="skin-card rar-raro locked" data-state="buy">
+            <span class="skin-rarity">Raro</span><span class="skin-type">🌿</span>
+            <span class="skin-equip-tag">✓ Equipada</span>
+            <span class="skin-orb"><span class="skin-orb-ring"></span><span class="qa-thumb skin-thumb" style="width:112px;height:112px;background:radial-gradient(circle at 38% 32%,#d8ffce,#86d96f 55%,#3f8c3a)"></span><span class="skin-lock">🔒</span></span>
+            <span class="skin-name">Selva</span><span class="skin-status state-buy">Canjear · ⭐ 6</span>
+          </button>
+        </nav>
+        <p class="shop-feedback"></p>
+        <button class="btn skins-back">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- PREP / TRANSICIÓN -->
+  <div class="qa-frame ph360"><span class="qa-label">Preparación · 360×680</span>
+    <section class="screen" id="screen-prep">
+      <div class="panel center">
+        <p class="prep-world" id="prep-world">🐊 Mundo 2 · Pantano Raptor</p>
+        <span class="tier-chip" data-tier="Media">Media</span>
+        <h2 class="title small">Nivel 11 · Limo Profundo</h2>
+        <p class="prep-lives">🥚🥚🥚</p>
+        <p class="prep-objective">Cruza el limo hasta el hoyo verde.</p>
+        <p class="prep-rewards">🪙 4 monedas · ⭐ 1 estrella</p>
+        <div class="prep-events"><span class="ev-chip ev-ta">⏳ Contrarreloj 30s</span></div>
+        <div class="prep-ball-row">
+          <span class="qa-thumb ball-preview sm" style="width:48px;height:48px"></span>
+          <span class="prep-ball-label">Tu bola: <strong>Blanca · T-Rex</strong></span>
+          <button class="btn tiny ghost">Cambiar</button>
+        </div>
+        <p class="warn">⚠️ Evita los hoyos trampa y no caigas del tablero.</p>
+        <button class="btn primary">Iniciar nivel</button>
+        <button class="btn ghost">← Menú</button>
+      </div>
+    </section>
+  </div>
+
+</div>
+</body>
+</html>

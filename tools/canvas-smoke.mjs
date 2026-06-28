@@ -128,24 +128,32 @@ console.log('\n[Encuadre de cámara: horizontal más grande + sin recortar al in
     const landD = computeAxisFrame(b, center, FOV, 2.0, {});                         // landscape genérico (sin zoom)
     const port = computeSphereFrame(b, center, FOV, 0.46, { smallPortrait: true });  // móvil vertical
     const sphereLand = computeSphereFrame(b, center, FOV, 2.0, {});                   // método ESFERA (pre-v0.24.1)
+    // GUARDARRAÍL DURO: el TABLERO (footprint) nunca se recorta, ni al inclinar al máximo en
+    // diagonal. Es el criterio de "sin recortes" del juego. (v0.24.7: máx. real ≈ 0.963.)
     await run(`L${lvl.id}: el TABLERO no se corta al inclinar (footprint ≤ 1.0)`, () => {
       const w = boardNdc(landM, b, 2.0); if (w > 1.0) throw new Error('tablero recortado (ndc ' + w.toFixed(3) + ')');
     });
-    await run(`L${lvl.id}: la decoración dentro de tolerancia (≤ 1.05)`, () => {
-      const w = decorNdc(landM, b, 2.0); if (w > 1.05) throw new Error('decoración recortada (ndc ' + w.toFixed(3) + ')');
+    // DISEÑO v0.24.7 (móvil horizontal): se reserva menos banda de decoración para que el
+    // tablero sea el protagonista. La decoración EXTERIOR puede asomar fuera del borde solo al
+    // inclinar al máximo (transitorio, más inmersivo); el tablero sigue garantizado dentro.
+    await run(`L${lvl.id}: la decoración solo asoma al inclinar (≤ 1.27)`, () => {
+      const w = decorNdc(landM, b, 2.0); if (w > 1.27) throw new Error('decoración demasiado fuera (ndc ' + w.toFixed(3) + ')');
     });
     await run(`L${lvl.id}: VERTICAL no se corta (sin cambios)`, () => {
       const w = decorNdc(port, b, 0.46); if (w > 1.05) throw new Error('recorta (ndc ' + w.toFixed(3) + ')');
     });
-    await run(`L${lvl.id}: ajuste fino móvil acerca ~10–18% (zoom landscapeMobile)`, () => {
+    // El encuadre móvil horizontal es claramente MÁS CERCANO que el landscape genérico
+    // (reserva menos decoración + zoom fino): ~20–23% más cerca (v0.24.7; antes ~11%).
+    await run(`L${lvl.id}: móvil horizontal acerca ~20% (tablero más grande)`, () => {
       const closer = 1 - landM.dist / landD.dist;
-      if (closer < 0.10 || closer > 0.20) throw new Error('fuera de rango (' + (closer * 100).toFixed(1) + '% más cerca)');
+      if (closer < 0.16 || closer > 0.28) throw new Error('fuera de rango (' + (closer * 100).toFixed(1) + '% más cerca)');
     });
     if (wide) await run(`L${lvl.id} (ancho ${(b.width / b.depth).toFixed(1)}:1): MUCHO más grande que el método esfera`, () => {
-      if (!(landM.dist < sphereLand.dist * 0.78)) throw new Error(`poca mejora (axis ${landM.dist.toFixed(1)} vs esfera ${sphereLand.dist.toFixed(1)})`);
+      if (!(landM.dist < sphereLand.dist * 0.72)) throw new Error(`poca mejora (axis ${landM.dist.toFixed(1)} vs esfera ${sphereLand.dist.toFixed(1)})`);
     });
-    await run(`L${lvl.id}: el tablero llena bien la pantalla (footprint ≥ 0.74)`, () => {
-      const cov = boardNdc(landM, b, 2.0); if (cov < 0.74) throw new Error('infrautiliza (cobertura ' + cov.toFixed(3) + ')');
+    // El tablero llena MÁS la pantalla (v0.24.8: footprint en inclinación ≥ 0.82; v0.24.7 0.80; antes 0.74).
+    await run(`L${lvl.id}: el tablero llena bien la pantalla (footprint ≥ 0.82)`, () => {
+      const cov = boardNdc(landM, b, 2.0); if (cov < 0.82) throw new Error('infrautiliza (cobertura ' + cov.toFixed(3) + ')');
     });
   }
 }

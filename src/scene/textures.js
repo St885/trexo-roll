@@ -109,25 +109,63 @@ export function makeBallTexture(ballDef) {
   return tex;
 }
 
-/** Miniatura de una bola para la interfaz (devuelve un <canvas>). */
+/** rgba(...) a partir de un color hex y alfa. */
+function hexA(hex, a) {
+  const n = parseInt((hex || '#ffffff').slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/** Miniatura de una bola para la interfaz: esfera con VOLUMEN, brillo y glow premium. */
 export function makeBallThumbnail(ballDef, size = 120) {
   const def = ballDef || DEFAULT_BALL_DEF;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
   const c = size / 2;
-  // Cuerpo con brillo
-  const g = ctx.createRadialGradient(c * 0.7, c * 0.6, size * 0.08, c, c, c);
-  g.addColorStop(0, shade(def.body, 30));
-  g.addColorStop(0.7, def.body);
-  g.addColorStop(1, def.body2);
+  const r = c - Math.max(2, size * 0.045);
+
+  // Glow exterior para skins emisivas/premium (dorada, volcánica, hielo, ámbar).
+  const em = def.skinMat && def.skinMat.emissive;
+  if (em && em > 0) {
+    const col = def.skinMat.emissiveHex || '#ffcf52';
+    const gl = ctx.createRadialGradient(c, c, r * 0.72, c, c, c);
+    gl.addColorStop(0, hexA(col, Math.min(0.55, 0.28 + em)));
+    gl.addColorStop(1, hexA(col, 0));
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(c, c, c, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Cuerpo: degradado radial con luz arriba-izquierda → bola con volumen.
+  const g = ctx.createRadialGradient(c - r * 0.38, c - r * 0.42, r * 0.08, c, c, r * 1.18);
+  g.addColorStop(0, shade(def.body, 44));
+  g.addColorStop(0.45, def.body);
+  g.addColorStop(0.82, def.body2);
+  g.addColorStop(1, shade(def.body2, -24));
   ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(c, c, c - 2, 0, Math.PI * 2); ctx.fill();
-  // Silueta del dino de la especie, centrada
+  ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.fill();
+
+  // Sombra interior inferior-derecha (profundidad esférica). Recortada al círculo.
+  ctx.save();
+  ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip();
+  const sh = ctx.createRadialGradient(c + r * 0.28, c + r * 0.55, r * 0.18, c, c, r * 1.25);
+  sh.addColorStop(0, 'rgba(0,0,0,0)');
+  sh.addColorStop(1, 'rgba(0,0,0,0.34)');
+  ctx.fillStyle = sh; ctx.fillRect(0, 0, size, size);
+  ctx.restore();
+
+  // Emblema del dino de la especie, centrado.
   drawDino(ctx, def.species, c, c, size / 145, def.dino, def.dark);
-  // Brillo especular
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.beginPath(); ctx.ellipse(c * 0.7, c * 0.55, size * 0.12, size * 0.07, -0.5, 0, Math.PI * 2); ctx.fill();
+
+  // Aro fino para definición (separa la bola del fondo de la tarjeta).
+  ctx.lineWidth = Math.max(1, size * 0.02);
+  ctx.strokeStyle = 'rgba(0,0,0,0.26)';
+  ctx.beginPath(); ctx.arc(c, c, r - ctx.lineWidth / 2, 0, Math.PI * 2); ctx.stroke();
+
+  // Brillo especular: mancha grande suave + punto pequeño glossy.
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.beginPath(); ctx.ellipse(c - r * 0.32, c - r * 0.4, r * 0.34, r * 0.2, -0.6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.beginPath(); ctx.arc(c - r * 0.42, c - r * 0.46, r * 0.075, 0, Math.PI * 2); ctx.fill();
+
   return canvas;
 }
 

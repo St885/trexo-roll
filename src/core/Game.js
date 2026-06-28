@@ -19,7 +19,7 @@ import { SCREENS, LIVES_START, SCORE, PHYS } from '../utils/constants.js';
 import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
 import { music } from '../effects/music.js';
-import { showTaunt } from '../effects/tauntMonkey.js';
+import { showTaunt, renderMonkeyInto } from '../effects/tauntMonkey.js';
 import * as critters from '../effects/critters.js';
 import * as weather from '../effects/weather.js';
 import { t, tf, getLang, setLang, applyTranslations, onLangChange } from '../utils/i18n.js';
@@ -327,7 +327,7 @@ export class Game {
 
   _syncLangButtons() {
     const cur = getLang();
-    for (const id of ['btn-lang-es', 'btn-lang-en', 'btn-auth-lang-es', 'btn-auth-lang-en']) {
+    for (const id of ['btn-lang-es', 'btn-lang-en', 'btn-auth-lang-es', 'btn-auth-lang-en', 'btn-set-lang-es', 'btn-set-lang-en']) {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('active', el.dataset.lang === cur);
     }
@@ -395,6 +395,9 @@ export class Game {
     click('btn-fullscreen', () => this._toggleFullscreen());
 
     // Ajustes y créditos
+    click('btn-set-fullscreen', () => this._toggleFullscreen());
+    click('btn-set-lang-es', () => setLang('es'));
+    click('btn-set-lang-en', () => setLang('en'));
     click('btn-set-music', () => this._toggleMusic());
     click('btn-set-sfx', () => this._toggleSfx());
     click('btn-set-reset', () => this._askResetProgress());
@@ -804,7 +807,10 @@ export class Game {
             `<span class="shop-desc">${tShopDesc(item)}</span>` +
             `<span class="shop-owned">${t('shop.owned')} <b>${owned}</b></span>` +
           '</div>' +
-          `<button class="btn tiny shop-buy" data-key="${item.key}">⭐ ${item.cost}</button>`;
+          `<button class="btn tiny shop-buy" data-key="${item.key}">` +
+            `<span class="sb-verb">${t('shop.redeem')}</span>` +
+            `<span class="sb-cost">⭐ ${item.cost}</span>` +
+          '</button>';
         const buyBtn = card.querySelector('.shop-buy');
         if (tokens < item.cost) buyBtn.classList.add('disabled');
         buyBtn.addEventListener('click', () => this._buy(item));
@@ -836,47 +842,60 @@ export class Game {
   }
 
   _renderSkins() {
-    setText('skins-tokens', `⭐ ${getStarTokens()}`);
+    // Refleja la realidad: si ya tienes estrellas suficientes, desbloquea ANTES de pintar
+    // (evita estados confusos tipo "tienes 72, requiere 6" en una skin "bloqueada").
+    this._autoUnlockStarSkins();
+    setText('skins-tokens', `${getStarTokens()}`);
     const list = document.getElementById('skins-list');
     if (!list) return;
     list.innerHTML = '';
     const active = getActiveSkin();
-    const totalStars = getTotalStars();
     for (const skin of SKINS) {
       const owned = ownsSkin(skin.id);
       const isActive = skin.id === active;
+      const rarity = skin.rarity || 'comun';
+      const state = isActive ? 'equipped' : owned ? 'owned'
+        : skin.unlock.type === 'tokens' ? 'buy' : skin.unlock.type === 'chest' ? 'chest' : 'stars';
       const card = document.createElement('button');
-      card.className = 'skin-card' + (isActive ? ' selected' : '') + (owned ? ' owned' : ' locked');
-      // Miniatura: la skin aplicada sobre la bola actualmente elegida.
-      const thumb = makeBallThumbnail(applySkin(getBall(this.selectedBall), skin.id), 84);
+      card.className = 'skin-card rar-' + rarity + (isActive ? ' selected' : '') + (owned ? ' owned' : ' locked');
+      card.dataset.state = state;
+      card.setAttribute('aria-label', t('skin.' + skin.id + '.name'));
+      // Estructura premium: rareza · tipo · etiqueta equipada · orbe (bola) · nombre · estado.
+      card.innerHTML =
+        `<span class="skin-rarity">${t('rarity.' + rarity)}</span>` +
+        `<span class="skin-type" aria-hidden="true">${skin.icon}</span>` +
+        '<span class="skin-equip-tag">✓ ' + t('skins.equipped') + '</span>' +
+        '<span class="skin-orb"><span class="skin-orb-ring" aria-hidden="true"></span></span>' +
+        `<span class="skin-name">${t('skin.' + skin.id + '.name')}</span>` +
+        `<span class="skin-status state-${state}">${this._skinStatusText(skin, owned, isActive)}</span>`;
+      // Miniatura (bola con la skin sobre el dino elegido) dentro del orbe.
+      const orb = card.querySelector('.skin-orb');
+      const thumb = makeBallThumbnail(applySkin(getBall(this.selectedBall), skin.id), 112);
       thumb.className = 'skin-thumb';
-      card.appendChild(thumb);
-      const name = document.createElement('span');
-      name.className = 'skin-name';
-      name.textContent = `${skin.icon} ${t('skin.' + skin.id + '.name')}`;
-      card.appendChild(name);
-      const status = document.createElement('span');
-      status.className = 'skin-status';
-      status.textContent = this._skinStatusText(skin, owned, isActive, totalStars);
-      card.appendChild(status);
-      card.addEventListener('click', () => this._onSkinClick(skin));
+      if (orb) orb.appendChild(thumb);
+      if (!owned && orb) {
+        const lock = document.createElement('span');
+        lock.className = 'skin-lock'; lock.textContent = '🔒'; lock.setAttribute('aria-hidden', 'true');
+        orb.appendChild(lock);
+      }
+      card.addEventListener('click', () => this._onSkinClick(skin, card));
       list.appendChild(card);
     }
     const fb = document.getElementById('skins-feedback');
     if (fb) { fb.textContent = ''; fb.className = 'shop-feedback'; }
   }
 
-  _skinStatusText(skin, owned, isActive, totalStars) {
+  _skinStatusText(skin, owned, isActive) {
     if (isActive) return t('skins.equipped');
     if (owned) return t('skins.tapEquip');
     const u = skin.unlock;
-    if (u.type === 'stars') return tf('skins.needStars', u.need, totalStars);
+    if (u.type === 'stars') return tf('skins.needStars', u.need);
     if (u.type === 'tokens') return tf('skins.buyTokens', u.cost);
     if (u.type === 'chest') return t('skins.fromChest');
     return '';
   }
 
-  _onSkinClick(skin) {
+  _onSkinClick(skin, card) {
     const owned = ownsSkin(skin.id);
     if (owned) {
       setActiveSkin(skin.id);
@@ -905,9 +924,12 @@ export class Game {
       }
       return;
     }
-    // Bloqueada por estrellas o solo-cofre: explica cómo conseguirla.
+    // Bloqueada por estrellas o solo-cofre: explica cómo conseguirla + sacudida de feedback.
     sfx.nope();
-    this._skinsFeedback(this._skinStatusText(skin, false, false, getTotalStars()), false);
+    if (card && card.classList) {
+      card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    }
+    this._skinsFeedback(this._skinStatusText(skin, false, false), false);
   }
 
   _skinsFeedback(msg, ok) {
@@ -930,8 +952,14 @@ export class Game {
     setText('chest-count', tf('chest.available', avail));
     const need = starsToNextChest();
     setText('chest-progress', avail > 0 ? t('chest.readyHint') : tf('chest.nextHint', need, CHEST_STAR_COST));
+    // Barra de progreso hacia el próximo cofre (llena si ya hay alguno disponible).
+    const fill = document.getElementById('chest-bar-fill');
+    if (fill) {
+      const have = avail > 0 ? CHEST_STAR_COST : (CHEST_STAR_COST - need);
+      fill.style.width = Math.round((have / CHEST_STAR_COST) * 100) + '%';
+    }
     const box = document.getElementById('chest-box');
-    if (box) box.classList.toggle('ready', avail > 0);
+    if (box) { box.classList.toggle('ready', avail > 0); box.classList.toggle('locked', avail <= 0); }
     const btn = document.getElementById('btn-chest-open');
     if (btn) {
       btn.classList.toggle('disabled', avail <= 0);
@@ -1116,8 +1144,16 @@ export class Game {
   _renderLevelCards() {
     const list = document.getElementById('levels-list');
     if (!list) return;
-    list.innerHTML = '';
     const unlocked = getUnlocked();
+    // Progreso general (estrellas totales + niveles desbloqueados).
+    const totalStars = getTotalStars();
+    const maxStars = LEVELS.length * 3;
+    const pct = maxStars > 0 ? Math.round((totalStars / maxStars) * 100) : 0;
+    const pf = document.getElementById('levels-progress-fill');
+    if (pf) pf.style.width = pct + '%';
+    setText('levels-progress-label', tf('levels.progress', totalStars, maxStars, unlocked, LEVELS.length));
+
+    list.innerHTML = '';
     WORLDS.forEach((world, w) => {
       const from = w * 5;
       const to = Math.min(from + 5, LEVELS.length);
@@ -1139,15 +1175,24 @@ export class Game {
       grid.className = 'levels-grid';
       for (let i = from; i < to; i++) {
         const lvl = LEVELS[i];
-        const locked = i + 1 > unlocked;
+        const num = i + 1;
+        const locked = num > unlocked;
         const stars = getStars(lvl.id);
         const done = stars > 0;
+        const boss = bossFor(num);
+        const ta = timeAttackFor(num);
         const btn = document.createElement('button');
-        btn.className = 'level-card' + (locked ? ' locked' : '') + (done ? ' done' : '');
+        btn.className = 'level-card' + (locked ? ' locked' : '') + (done ? ' done' : '')
+          + (boss ? ' is-boss' : '') + (ta ? ' is-ta' : '');
         btn.dataset.tier = lvl.tier || '';
         btn.disabled = locked;
+        // Distintivo de nivel especial (jefe cada 10 / contrarreloj cada 11).
+        const flag = boss
+          ? '<span class="level-flag flag-boss" aria-hidden="true">👑</span>'
+          : (ta ? '<span class="level-flag flag-ta" aria-hidden="true">⏳</span>' : '');
         btn.innerHTML =
-          `<span class="level-num">${i + 1}</span>` +
+          flag +
+          `<span class="level-num">${num}</span>` +
           `<span class="level-card-name">${tLevelName(lvl)}</span>` +
           (locked
             ? '<span class="level-lock">🔒</span>'
@@ -1176,6 +1221,7 @@ export class Game {
   }
 
   _showPrep() {
+    this._showBoardBehind = false; // sale del modal de victoria → deja de renderizar detrás
     const lvl = getLevel(this.levelIndex);
     const w = worldOf(this.levelIndex);
     setText('prep-world', `${w.emoji} ${tf('prep.world', worldNum(this.levelIndex), tWorldName(worldIdx(this.levelIndex)))}`);
@@ -1874,36 +1920,35 @@ export class Game {
     if (isRecord) sfx.record();
 
     const isLast = this.levelIndex >= LEVELS.length - 1;
+    const levelReward = SCORE.BASE_LEVEL + lifeBonus + timeBonus; // puntos ganados ESTE nivel
+    // — Modal compacto: trofeo · título corto · estrellas · 4 stats · 1 línea de bonus —
     setText('win-title', isLast ? t('win.titleDone') : t('win.titleWin'));
-    setText('win-stars', starString(stars));
-    setText('win-score', tf('win.score', this.score));
-    setText('win-detail', tf('win.detail', SCORE.BASE_LEVEL, lifeBonus, timeBonus));
-    // Recap de recompensas recogidas este nivel.
-    const starTxt = this._starGotThisLevel ? t('win.rewardStar') : (this._levelHasStar ? t('win.rewardStarLost') : '');
-    setText('win-rewards', tf('win.rewards', this._coinsThisLevel, starTxt));
-    setText('win-time', tf('win.time', time.toFixed(1), (getBestTime(lvl.id) ?? time).toFixed(1)));
-    setText('win-progress', tf('win.progress', this.levelIndex + 1, LEVELS.length, getTotalStars(), MAX_STARS));
-    // Mensaje de desbloqueo (si abrió un nivel nuevo) o de juego completado (último nivel).
-    if (isLast) {
-      setText('win-unlock', tf('win.completeMsg', getTotalStars(), MAX_STARS, getHighScore()));
-      showEl('win-unlock', true);
-    } else {
-      const unlockedNew = newUnlocked > prevUnlocked;
-      if (unlockedNew) setText('win-unlock', tf('win.unlock', Math.min(newUnlocked, LEVELS.length)));
-      showEl('win-unlock', unlockedNew);
+    // Estrellas grandes: ganadas (★ dorada) y no ganadas (☆ apagada) con clases.
+    const starsEl = document.getElementById('win-stars');
+    if (starsEl) {
+      let html = '';
+      for (let i = 0; i < 3; i++) html += i < stars ? '<span class="won">★</span>' : '<span class="dim">☆</span>';
+      starsEl.innerHTML = html;
     }
-    showEl('win-record', isRecord);
+    setText('win-score', `${this.score}`);
+    setText('win-reward', `+${levelReward}`);
+    setText('win-time', fmtTime(time));
+    setText('win-progress', `${getTotalStars()}/${MAX_STARS}`);
 
-    // Línea de "extras": bonus de contrarreloj, skins nuevas, cofre listo, mejora de ★.
-    const extras = [];
-    if (taBonus > 0) extras.push(tf('win.taBonus', taBonus));
-    if (stars > prevStars) extras.push(tf('win.starsUp', stars));
-    for (const id of newSkins) extras.push(tf('win.skinUnlocked', t('skin.' + id + '.name')));
-    if (getChestsAvailable() > 0) extras.push(t('win.chestReady'));
-    setText('win-extra', extras.join('   ·   '));
-    showEl('win-extra', extras.length > 0);
+    // Bonus: UNA línea con lo más importante (máx 2 chips; el resto se guarda en silencio).
+    const bonuses = [];
+    if (isRecord) bonuses.push(t('win.bRecord'));
+    if (newSkins.length) bonuses.push(t('win.bSkin'));
+    if (stars > prevStars) bonuses.push(tf('win.bStars', stars));
+    if (taBonus > 0) bonuses.push(tf('win.bTokens', taBonus));
+    if (newUnlocked > prevUnlocked && !isLast) bonuses.push(t('win.bUnlock'));
+    if (getChestsAvailable() > 0) bonuses.push(t('win.bChest'));
+    const shown = bonuses.slice(0, 2);
+    setText('win-bonus', shown.length ? `${t('win.bonus')} ${shown.join(' · ')}` : '');
+    showEl('win-bonus', shown.length > 0);
 
     showEl('btn-win-next', !isLast);
+    this._showBoardBehind = true; // deja ver el tablero/celebración detrás del modal (dimmed)
     this.screens.show(SCREENS.WIN);
   }
 
@@ -1929,10 +1974,12 @@ export class Game {
     weather.clear();
     const isRecord = setHighScore(this.score);
     if (isRecord) sfx.record();
-    setText('over-score', tf('over.score', this.score));
-    setText('over-level', tf('over.levelReached', this.levelIndex + 1, LEVELS.length));
-    setText('over-high', tf('over.high', getHighScore()));
+    // Modal premium: las stats van como valor en su <b> (la etiqueta la pone el HTML/i18n).
+    setText('over-score', this.score);
+    setText('over-level', `${this.levelIndex + 1}/${LEVELS.length}`);
+    setText('over-high', getHighScore());
     showEl('over-record', isRecord);
+    renderMonkeyInto(document.getElementById('over-monkey'), 118);
     this._renderReviveBox();
     this.screens.show(SCREENS.GAMEOVER);
   }
@@ -1941,7 +1988,9 @@ export class Game {
     const bank = getLivesBank();
     const cont = document.getElementById('btn-over-continue');
     if (cont) {
-      cont.style.display = bank > 0 ? 'block' : 'none';
+      // "Continuar" solo aparece si hay vidas REALES en el banco interno (recurso de juego,
+      // sin dinero real). Vídeo/compra simulados quedan ocultos en .over-sim[hidden].
+      cont.style.display = bank > 0 ? '' : 'none';
       cont.textContent = tf('over.continueBank', bank);
     }
   }
@@ -2029,6 +2078,7 @@ export class Game {
   _quitToMenu() {
     this.playing = false;
     this.paused = false;
+    this._showBoardBehind = false;
     this.input.disable();
     this.scene.clearBoard();
     this._showMenu();
@@ -2038,6 +2088,7 @@ export class Game {
   _quitToShop() {
     this.playing = false;
     this.paused = false;
+    this._showBoardBehind = false;
     this.input.disable();
     this.scene.clearBoard();
     critters.clear();
@@ -2053,8 +2104,10 @@ export class Game {
     // Red de seguridad: un error en un frame NO debe matar el bucle de render
     // (antes, una excepción aquí dejaba el juego congelado). Se registra y se sigue.
     try {
-      if (this.playing) {
-        if (!this.paused) {
+      // Se renderiza también con _showBoardBehind: el modal de victoria deja ver el tablero
+      // (y la celebración del dino) detrás, oscurecido, sin avanzar la física.
+      if (this.playing || this._showBoardBehind) {
+        if (this.playing && !this.paused) {
           if (this.ballState === 'rolling') this._stepPlay(dt);
           else if (this.ballState === 'celebrating') this._updateCelebration(dt);
           else if (this.ballState === 'rescuing') { /* la escena anima el ptero y mueve la bola */ }
@@ -2069,6 +2122,14 @@ export class Game {
     }
     requestAnimationFrame(this._loop);
   }
+}
+
+/** Formatea segundos como "m:ss.s" (p. ej. 26.2 → "0:26.2", 75.4 → "1:15.4"). */
+function fmtTime(s) {
+  s = Math.max(0, Number(s) || 0);
+  const m = Math.floor(s / 60);
+  const sec = s - m * 60;
+  return `${m}:${sec.toFixed(1).padStart(4, '0')}`;
 }
 
 function setText(id, text) {

@@ -229,7 +229,7 @@
             </button>
             <button class="menu-tile" id="btn-shop">
               <span class="tile-badge amber" id="tile-shop-badge" hidden></span>
-              <span class="tile-ic">🛒</span>
+              <span class="tile-ic">♻️</span>
               <span class="tile-label" data-i18n="menu.t.shop">Canje</span>
             </button>
             <button class="menu-tile" id="btn-levels">
@@ -261,11 +261,11 @@
         </div>
       </section>
 
-      <!-- 2c. Tienda de Canje -->
+      <!-- 2c. Canje de estrellas (recursos internos, sin dinero real) -->
       <section class="screen" id="screen-shop">
         <div class="panel">
-          <h2 class="title small" data-i18n="shop.title">🛒 Tienda de Canje</h2>
-          <p class="muted center" data-i18n-html="shop.subtitle">Cambia tus <strong>estrellas especiales</strong> por ayudas. Consíguelas cada 2 niveles.</p>
+          <h2 class="title small" data-i18n="shop.title">♻️ Canje de estrellas</h2>
+          <p class="muted center" data-i18n-html="shop.subtitle">Usa tus <strong>estrellas especiales</strong> para conseguir ayudas. Ganas 1 cada 2 niveles.</p>
           <p class="shop-balance"><span data-i18n="shop.available">Disponibles:</span> <span id="shop-tokens">⭐ 0</span></p>
           <div id="shop-list" class="shop-list"></div>
           <p class="shop-feedback" id="shop-feedback"></p>
@@ -276,13 +276,22 @@
 
       <!-- 2c-2. Skins de bola (colección) -->
       <section class="screen" id="screen-skins">
-        <div class="panel">
-          <h2 class="title small" data-i18n="skins.title">🎨 Skins de bola</h2>
-          <p class="muted center" data-i18n="skins.subtitle">Colecciona y equipa aspectos para tu bola. La especie y su habilidad no cambian.</p>
-          <p class="shop-balance"><span data-i18n="shop.available">Disponibles:</span> <span id="skins-tokens">⭐ 0</span></p>
-          <div id="skins-list" class="skins-grid"></div>
+        <div class="panel skins-panel">
+          <header class="skins-head">
+            <div class="skins-emblem" aria-hidden="true">🦴</div>
+            <div class="skins-headtext">
+              <h2 class="skins-title" data-i18n="skins.title">Skins de bola</h2>
+              <p class="skins-sub" data-i18n="skins.subtitle">Colecciona y equipa aspectos para tu bola. La especie y su habilidad no cambian.</p>
+            </div>
+            <div class="skins-stars" aria-label="Estrellas disponibles">
+              <span class="skins-stars-ic" aria-hidden="true">⭐</span>
+              <span class="skins-stars-lbl" data-i18n="skins.available">Disponibles</span>
+              <b id="skins-tokens">0</b>
+            </div>
+          </header>
+          <nav id="skins-list" class="skins-grid" aria-label="Skins"></nav>
           <p class="shop-feedback" id="skins-feedback"></p>
-          <button class="btn ghost" id="btn-skins-back" data-i18n="common.back">← Volver</button>
+          <button class="btn skins-back" id="btn-skins-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
 
@@ -300,6 +309,7 @@
             </div>
           </div>
           <p class="chest-count" id="chest-count">Cofres listos: 0</p>
+          <div class="chest-bar" aria-hidden="true"><div class="chest-bar-fill" id="chest-bar-fill"></div></div>
           <p class="muted" id="chest-progress">Sigue ganando estrellas.</p>
           <p class="chest-reveal" id="chest-reveal" aria-live="polite"></p>
           <button class="btn primary" id="btn-chest-open" data-i18n="chest.open">Abrir cofre</button>
@@ -333,6 +343,12 @@
           <p class="settings-group-label" data-i18n="set.audio">Audio</p>
           <button class="btn settings-toggle" id="btn-set-music">🎵 Música: ON</button>
           <button class="btn settings-toggle" id="btn-set-sfx">🔊 Efectos: ON</button>
+          <p class="settings-group-label" data-i18n="set.display">Pantalla</p>
+          <button class="btn settings-toggle" id="btn-set-fullscreen" data-i18n="set.fullscreen">⛶ Pantalla completa</button>
+          <div class="lang-mini settings-lang" role="group" aria-label="Idioma">
+            <button class="lang-btn" id="btn-set-lang-es" data-lang="es" aria-label="Español">ES</button>
+            <button class="lang-btn" id="btn-set-lang-en" data-lang="en" aria-label="English">EN</button>
+          </div>
           <p class="settings-group-label" data-i18n="set.data">Datos</p>
           <button class="btn" id="btn-set-reset" data-i18n="set.reset">🗑️ Reiniciar progreso</button>
           <button class="btn" id="btn-set-logout" data-i18n="auth.logout">🚪 Cerrar sesión</button>
@@ -362,6 +378,14 @@
         <div class="panel">
           <h2 class="title small" data-i18n="levels.title">Niveles</h2>
           <p class="muted center" data-i18n="levels.subtitle">10 mundos · 50 tableros. Gana ⭐ para canjear ayudas.</p>
+          <div class="levels-progress">
+            <div class="lp-bar"><div class="lp-fill" id="levels-progress-fill"></div></div>
+            <span class="lp-label" id="levels-progress-label">⭐ 0/150 · 🔓 1/50</span>
+          </div>
+          <div class="levels-legend" aria-hidden="true">
+            <span class="lg-item"><span class="lg-ic flag-boss">👑</span><span data-i18n="levels.legendBoss">Jefe</span></span>
+            <span class="lg-item"><span class="lg-ic flag-ta">⏳</span><span data-i18n="levels.legendTA">Contrarreloj</span></span>
+          </div>
           <div id="levels-list" class="levels-list"></div>
           <button class="btn ghost" id="btn-levels-back" data-i18n="common.back">← Volver</button>
         </div>
@@ -371,24 +395,15 @@
       <section class="screen" id="screen-howto">
         <div class="panel">
           <h2 class="title small" data-i18n="howto.title">Cómo jugar</h2>
-          <ul class="howto">
-            <li data-i18n-html="howto.1">🎯 <strong>Objetivo:</strong> lleva la bola al <span class="goal-txt">hoyo verde</span>.</li>
-            <li data-i18n-html="howto.2">⚠️ <strong>Evita:</strong> los <span class="trap-txt">hoyos rojos</span> y caer fuera del tablero.</li>
-            <li data-i18n-html="howto.3">🖥️ <strong>Teclado:</strong> Flechas o <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> para inclinar.</li>
-            <li data-i18n-html="howto.4">📱 <strong>Móvil:</strong> usa el <strong>D-pad</strong> (izquierda) o el <strong>joystick</strong> (derecha). Mantén pulsada una dirección para inclinar; pulsa dos para diagonal.</li>
-            <li data-i18n-html="howto.5">🖱️ <strong>Ratón:</strong> arrastra sobre el tablero para inclinar.</li>
-            <li data-i18n-html="howto.6">⏸️ <strong>Pausa:</strong> botón ⏸ o tecla <kbd>P</kbd> / <kbd>Esc</kbd>.</li>
-            <li data-i18n-html="howto.7">🦕 <strong>Bola:</strong> elige entre 5 dinos; el tuyo celebra al ganar.</li>
-            <li data-i18n-html="howto.8">🪙 <strong>Monedas:</strong> rueda cerca para recogerlas y sumar puntos extra.</li>
-            <li data-i18n-html="howto.9">⭐ <strong>Estrella especial</strong> (cada 2 niveles): súmala y cánjeala por ayudas en la <strong>🛒 Tienda de Canje</strong>.</li>
-            <li data-i18n-html="howto.10">⭐ Gana <strong>3 estrellas</strong> de nivel: sin perder vidas y bajo el tiempo objetivo.</li>
-            <li data-i18n-html="howto.11">🥚 Tienes <strong>3 vidas</strong>. Completa los <strong>50 tableros</strong> (10 mundos) para ganar.</li>
-            <li data-i18n-html="howto.12">🟠 <strong>Portales naranjas</strong> (desde el Mundo 6): entra en uno y sal por el otro. ¡No quitan vida!</li>
-            <li data-i18n-html="howto.13">🦕 <strong>Cada dino tiene una habilidad</strong> (resistencia, velocidad, imán de monedas…). ¡Elige la tuya!</li>
-            <li data-i18n-html="howto.14">🎨 <strong>Skins</strong> y 🧰 <strong>cofre jurásico</strong>: gana estrellas, abre cofres y colecciona aspectos.</li>
-            <li data-i18n-html="howto.15">👑 <strong>Jefes</strong> cada 10 niveles, 🌦️ <strong>clima</strong> y ⏳ <strong>contrarreloj</strong> en niveles especiales.</li>
-            <li data-i18n-html="howto.16">🎁 <strong>Recompensa diaria</strong>: entra cada día y sube tu racha para mejores premios.</li>
-          </ul>
+          <p class="muted center" data-i18n="howto.lead">Solo 5 pasos para dominar el tablero:</p>
+          <ol class="howto-steps">
+            <li class="howto-step"><span class="hs-num">1</span><span class="hs-ic" aria-hidden="true">🎮</span><span class="hs-tx" data-i18n="howto.s1">Inclina el tablero para mover la bola.</span></li>
+            <li class="howto-step"><span class="hs-num">2</span><span class="hs-ic" aria-hidden="true">⛔</span><span class="hs-tx" data-i18n="howto.s2">Evita los hoyos rojos y no caigas del borde.</span></li>
+            <li class="howto-step"><span class="hs-num">3</span><span class="hs-ic" aria-hidden="true">🟢</span><span class="hs-tx" data-i18n="howto.s3">Llega al hoyo verde para superar el nivel.</span></li>
+            <li class="howto-step"><span class="hs-num">4</span><span class="hs-ic" aria-hidden="true">🪙</span><span class="hs-tx" data-i18n="howto.s4">Recoge monedas y estrellas por el camino.</span></li>
+            <li class="howto-step"><span class="hs-num">5</span><span class="hs-ic" aria-hidden="true">🦅</span><span class="hs-tx" data-i18n="howto.s5">Usa tus poderes cuando los tengas.</span></li>
+          </ol>
+          <p class="howto-controls" data-i18n-html="howto.controls">🎮 <strong>Controles:</strong> flechas/WASD o ratón en PC · D-pad o joystick en móvil.</p>
           <button class="btn ghost" id="btn-howto-back" data-i18n="common.back">← Volver</button>
         </div>
       </section>
@@ -460,7 +475,7 @@
           <p class="muted pause-powers" id="pause-powers"></p>
           <button class="btn primary" id="btn-resume" data-i18n="pause.resume">▶ Continuar</button>
           <button class="btn" id="btn-restart" data-i18n="pause.restart">↻ Reiniciar nivel</button>
-          <button class="btn" id="btn-pause-shop" data-i18n="pause.shop">🛒 Canje</button>
+          <button class="btn" id="btn-pause-shop" data-i18n="pause.shop">♻️ Canje</button>
           <button class="btn" id="btn-pause-sound">🔊 Sonido: ON</button>
           <button class="btn ghost" id="btn-pause-menu" data-i18n="common.menu">Menú</button>
         </div>
@@ -476,42 +491,55 @@
           <span style="left:70%;animation-delay:1.4s">🌟</span>
           <span style="left:86%;animation-delay:.8s">⭐</span>
         </div>
-        <div class="panel center">
-          <div class="win-emoji" aria-hidden="true">🏆</div>
-          <h2 class="title small" id="win-title">¡Nivel superado!</h2>
-          <p class="stars-row" id="win-stars">★★★</p>
-          <p class="record-badge" id="win-record" data-i18n="win.record">🏅 ¡Nuevo récord!</p>
-          <p class="big-score" id="win-score">Puntos: 0</p>
-          <p class="win-unlock" id="win-unlock" style="display:none">🔓 ¡Nivel desbloqueado!</p>
-          <p class="win-extra" id="win-extra" style="display:none"></p>
-          <p class="muted" id="win-detail"></p>
-          <p class="muted win-rewards" id="win-rewards"></p>
-          <p class="muted" id="win-time"></p>
-          <p class="muted" id="win-progress"></p>
-          <button class="btn primary" id="btn-win-next" data-i18n="win.next">Siguiente nivel ▶</button>
-          <button class="btn" id="btn-win-retry" data-i18n="win.retry">↻ Repetir nivel</button>
-          <button class="btn ghost" id="btn-win-menu" data-i18n="common.menu">Menú</button>
+        <div class="panel win-panel">
+          <div class="win-trophy" aria-hidden="true"><span class="win-trophy-ic">🏆</span></div>
+          <h2 class="win-title" id="win-title">¡Nivel superado!</h2>
+          <p class="win-stars" id="win-stars">★★★</p>
+          <div class="win-stats">
+            <div class="win-stat"><span class="ws-ic" aria-hidden="true">🎯</span><span class="ws-lbl" data-i18n="win.lblScore">Puntos</span><b class="ws-val" id="win-score">0</b></div>
+            <div class="win-stat"><span class="ws-ic" aria-hidden="true">✨</span><span class="ws-lbl" data-i18n="win.lblReward">Recompensa</span><b class="ws-val" id="win-reward">+0</b></div>
+            <div class="win-stat"><span class="ws-ic" aria-hidden="true">⏱️</span><span class="ws-lbl" data-i18n="win.lblTime">Tiempo</span><b class="ws-val" id="win-time">0:00.0</b></div>
+            <div class="win-stat"><span class="ws-ic" aria-hidden="true">⭐</span><span class="ws-lbl" data-i18n="win.lblProgress">Progreso</span><b class="ws-val" id="win-progress">0/150</b></div>
+          </div>
+          <p class="win-bonus" id="win-bonus" style="display:none"></p>
+          <div class="win-actions">
+            <button class="btn primary win-cta" id="btn-win-next" data-i18n="win.next">Siguiente nivel ▶</button>
+            <div class="win-actions-row">
+              <button class="btn win-sec" id="btn-win-retry" data-i18n="win.retry">↻ Repetir</button>
+              <button class="btn win-sec ghost" id="btn-win-menu" data-i18n="common.menu">Menú</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- 8. Sin vidas (Game Over + monetización) -->
+      <!-- 8. Sin vidas (Game Over premium — mismo lenguaje visual que la victoria) -->
       <section class="screen" id="screen-gameover">
-        <div class="panel center">
-          <div class="over-emoji" aria-hidden="true">🦴</div>
-          <h2 class="title small danger" data-i18n="over.title">¡Sin vidas!</h2>
-          <p class="subtitle" id="over-motivate" data-i18n="over.motivate">¡Estuviste cerca! Sigue y conquista el tablero.</p>
-          <p class="record-badge" id="over-record" data-i18n="win.record">🏅 ¡Nuevo récord!</p>
-          <p class="big-score" id="over-score">Puntos: 0</p>
-          <p class="muted" id="over-level">Nivel alcanzado: 1</p>
-          <p class="muted" id="over-high">Mejor: 0</p>
-          <div class="revive-box">
-            <p class="revive-title" data-i18n="over.reviveTitle">¿Seguir jugando?</p>
-            <button class="btn primary" id="btn-over-video" data-i18n="over.video">📺 Ver vídeo · +3 vidas</button>
-            <button class="btn amber" id="btn-over-buylives" data-i18n="over.buyLives">🛒 Comprar vidas</button>
-            <button class="btn" id="btn-over-continue" style="display:none">⏩ Continuar · banco: 0</button>
+        <div class="panel over-panel">
+          <div class="over-badge" aria-hidden="true">
+            <div class="over-monkey" id="over-monkey"></div>
           </div>
-          <button class="btn" id="btn-over-retry" data-i18n="over.retry">↻ Reintentar (3 vidas)</button>
-          <button class="btn ghost" id="btn-over-menu" data-i18n="common.menu">Menú</button>
+          <h2 class="over-title" data-i18n="over.title">¡Turno perdido!</h2>
+          <p class="over-sub" data-i18n="over.sub">Inténtalo otra vez</p>
+          <p class="over-record" id="over-record" data-i18n="win.record">🏅 ¡Nuevo récord!</p>
+          <div class="over-stats">
+            <div class="over-stat"><span class="os-ic" aria-hidden="true">🎯</span><span class="os-lbl" data-i18n="over.lblScore">Puntos</span><b class="os-val" id="over-score">0</b></div>
+            <div class="over-stat"><span class="os-ic" aria-hidden="true">🚩</span><span class="os-lbl" data-i18n="over.lblLevel">Nivel</span><b class="os-val" id="over-level">1</b></div>
+            <div class="over-stat"><span class="os-ic" aria-hidden="true">🏆</span><span class="os-lbl" data-i18n="over.lblBest">Mejor</span><b class="os-val" id="over-high">0</b></div>
+          </div>
+          <div class="over-actions">
+            <button class="btn primary over-cta" id="btn-over-retry" data-i18n="over.retry">↻ Reintentar</button>
+            <div class="over-actions-row">
+              <button class="btn over-sec" id="btn-over-continue" style="display:none">⏩ Continuar</button>
+              <button class="btn over-sec ghost" id="btn-over-menu" data-i18n="common.menu">Menú</button>
+            </div>
+          </div>
+          <!-- Cumplimiento Play Store v1: funciones SIMULADAS (vídeo recompensado / compra de
+               vidas) desactivadas y ocultas. Se mantienen en el DOM para no romper handlers;
+               reactivar solo con SDK real de anuncios/Billing y tras actualizar política/Data Safety. -->
+          <div class="over-sim" hidden aria-hidden="true">
+            <button class="btn" id="btn-over-video" data-i18n="over.video">📺 Ver vídeo · +3 vidas</button>
+            <button class="btn amber" id="btn-over-buylives" data-i18n="over.buyLives">🛒 Comprar vidas</button>
+          </div>
         </div>
       </section>
 

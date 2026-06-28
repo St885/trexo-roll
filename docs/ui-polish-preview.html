@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QA · TREXoRoll UI polish</title>
+<link rel="stylesheet" href="../styles/main.css">
+<style>
+  /* Override SOLO para previsualizar: muestra cada pantalla apilada en una página con scroll. */
+  body { background:#06140d; padding:16px; }
+  .qa-grid { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; justify-content:center; }
+  .qa-frame { position:relative; border:1px solid #2a4a36; border-radius:14px; overflow:hidden; background:radial-gradient(120% 100% at 50% 0%, #163a26, #07160e); }
+  .qa-frame .screen { position:relative !important; display:flex !important; inset:auto !important; width:100%; height:100%; opacity:1 !important; transform:none !important; }
+  .qa-label { position:absolute; top:6px; left:8px; z-index:99; font:700 11px/1 system-ui; color:#0c2; background:#0008; padding:3px 7px; border-radius:6px; }
+  .ph390 { width:390px; height:780px; }
+  .ph360 { width:360px; height:640px; }
+  .land  { width:780px; height:380px; }
+</style>
+</head>
+<body>
+<div class="qa-grid">
+
+  <!-- GAME OVER · vertical -->
+  <div class="qa-frame ph390"><span class="qa-label">Game Over · 390×780</span>
+    <section class="screen" id="screen-gameover">
+      <div class="panel over-panel">
+        <div class="over-badge"><div class="over-monkey" data-monkey></div></div>
+        <h2 class="over-title">¡Turno perdido!</h2>
+        <p class="over-sub">Inténtalo otra vez</p>
+        <p class="over-record">🏅 ¡Nuevo récord!</p>
+        <div class="over-stats">
+          <div class="over-stat"><span class="os-ic">🎯</span><span class="os-lbl">Puntos</span><b class="os-val">1 240</b></div>
+          <div class="over-stat"><span class="os-ic">🚩</span><span class="os-lbl">Nivel</span><b class="os-val">17/50</b></div>
+          <div class="over-stat"><span class="os-ic">🏆</span><span class="os-lbl">Mejor</span><b class="os-val">2 880</b></div>
+        </div>
+        <div class="over-actions">
+          <button class="btn primary over-cta">↻ Reintentar</button>
+          <div class="over-actions-row">
+            <button class="btn over-sec">⏩ Continuar (2)</button>
+            <button class="btn over-sec ghost">Menú</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- GAME OVER · landscape -->
+  <div class="qa-frame land"><span class="qa-label">Game Over · 780×380 landscape</span>
+    <section class="screen" id="screen-gameover">
+      <div class="panel over-panel">
+        <div class="over-badge"><div class="over-monkey" data-monkey></div></div>
+        <h2 class="over-title">¡Turno perdido!</h2>
+        <p class="over-sub">Inténtalo otra vez</p>
+        <div class="over-stats">
+          <div class="over-stat"><span class="os-ic">🎯</span><span class="os-lbl">Puntos</span><b class="os-val">980</b></div>
+          <div class="over-stat"><span class="os-ic">🚩</span><span class="os-lbl">Nivel</span><b class="os-val">9/50</b></div>
+          <div class="over-stat"><span class="os-ic">🏆</span><span class="os-lbl">Mejor</span><b class="os-val">2 880</b></div>
+        </div>
+        <div class="over-actions">
+          <button class="btn primary over-cta">↻ Reintentar</button>
+          <div class="over-actions-row">
+            <button class="btn over-sec ghost">Menú</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SELECTOR DE NIVELES -->
+  <div class="qa-frame ph390"><span class="qa-label">Niveles · 390×780</span>
+    <section class="screen" id="screen-levels">
+      <div class="panel">
+        <h2 class="title small">Niveles</h2>
+        <p class="muted center">10 mundos · 50 tableros. Gana ⭐ para canjear ayudas.</p>
+        <div class="levels-progress">
+          <div class="lp-bar"><div class="lp-fill" style="width:34%"></div></div>
+          <span class="lp-label">⭐ 51/150 · 🔓 18/50</span>
+        </div>
+        <div class="levels-legend">
+          <span class="lg-item"><span class="lg-ic flag-boss">👑</span><span>Jefe</span></span>
+          <span class="lg-item"><span class="lg-ic flag-ta">⏳</span><span>Contrarreloj</span></span>
+        </div>
+        <div class="levels-list">
+          <div class="world-header"><span class="world-emoji">🐊</span><span class="world-name">Mundo 2 · Pantano Raptor</span><span class="world-stars">⭐ 11/15</span></div>
+          <div class="levels-grid">
+            <button class="level-card done" data-tier="Media"><span class="level-num">9</span><span class="level-card-name">Charca</span><span class="level-stars">★★★</span></button>
+            <button class="level-card done is-ta" data-tier="Media"><span class="level-flag flag-ta">⏳</span><span class="level-num">10</span><span class="level-card-name">Limo</span><span class="level-stars">★★☆</span></button>
+            <button class="level-card is-boss" data-tier="Difícil"><span class="level-flag flag-boss">👑</span><span class="level-num">11</span><span class="level-card-name">Jefe</span><span class="level-stars">☆☆☆</span></button>
+            <button class="level-card locked" data-tier="Difícil" disabled><span class="level-num">12</span><span class="level-card-name">Niebla</span><span class="level-lock">🔒</span></button>
+            <button class="level-card locked" data-tier="Experto" disabled><span class="level-num">13</span><span class="level-card-name">Abismo</span><span class="level-lock">🔒</span></button>
+          </div>
+        </div>
+        <button class="btn ghost">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- COFRE -->
+  <div class="qa-frame ph360"><span class="qa-label">Cofre · 360×640</span>
+    <section class="screen" id="screen-chest">
+      <div class="panel center">
+        <h2 class="title small">🧰 Cofre jurásico</h2>
+        <div class="chest-stage"><div class="chest-box locked"><div class="chest-lid"></div><div class="chest-body"><span class="chest-amber">🟧</span></div></div></div>
+        <p class="chest-count">Cofres listos: 0</p>
+        <div class="chest-bar"><div class="chest-bar-fill" style="width:60%"></div></div>
+        <p class="muted">Te faltan 6 ⭐ de 15 para el próximo cofre.</p>
+        <p class="chest-reveal"></p>
+        <button class="btn primary disabled">Aún no disponible</button>
+        <button class="btn ghost">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- CANJE -->
+  <div class="qa-frame ph360"><span class="qa-label">Canje · 360×640</span>
+    <section class="screen" id="screen-shop">
+      <div class="panel">
+        <h2 class="title small">♻️ Canje de estrellas</h2>
+        <p class="muted center">Usa tus <strong>estrellas especiales</strong> para conseguir ayudas. Ganas 1 cada 2 niveles.</p>
+        <p class="shop-balance">Disponibles: ⭐ 7</p>
+        <div class="shop-list">
+          <div class="shop-card"><div class="shop-icon">🥚</div><div class="shop-info"><span class="shop-name">Vida extra</span><span class="shop-desc">Si llegas a 0 vidas, recuperas 1.</span><span class="shop-owned">Tienes: <b>1</b></span></div><button class="btn tiny shop-buy"><span class="sb-verb">Canjear</span><span class="sb-cost">⭐ 2</span></button></div>
+          <div class="shop-card"><div class="shop-icon">🪨</div><div class="shop-info"><span class="shop-name">Bloqueo de trampa</span><span class="shop-desc">Tapa la primera trampa del nivel.</span><span class="shop-owned">Tienes: <b>0</b></span></div><button class="btn tiny shop-buy"><span class="sb-verb">Canjear</span><span class="sb-cost">⭐ 3</span></button></div>
+          <div class="shop-card"><div class="shop-icon">🦅</div><div class="shop-info"><span class="shop-name">Escudo de caída</span><span class="shop-desc">Un pterosaurio te rescata si caes.</span><span class="shop-owned">Tienes: <b>0</b></span></div><button class="btn tiny shop-buy disabled"><span class="sb-verb">Canjear</span><span class="sb-cost">⭐ 4</span></button></div>
+        </div>
+        <button class="btn ghost">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- AYUDA -->
+  <div class="qa-frame ph360"><span class="qa-label">Ayuda · 360×640</span>
+    <section class="screen" id="screen-howto">
+      <div class="panel">
+        <h2 class="title small">Cómo jugar</h2>
+        <p class="muted center">Solo 5 pasos para dominar el tablero:</p>
+        <ol class="howto-steps">
+          <li class="howto-step"><span class="hs-num">1</span><span class="hs-ic">🎮</span><span class="hs-tx">Inclina el tablero para mover la bola.</span></li>
+          <li class="howto-step"><span class="hs-num">2</span><span class="hs-ic">⛔</span><span class="hs-tx">Evita los hoyos rojos y no caigas del borde.</span></li>
+          <li class="howto-step"><span class="hs-num">3</span><span class="hs-ic">🟢</span><span class="hs-tx">Llega al hoyo verde para superar el nivel.</span></li>
+          <li class="howto-step"><span class="hs-num">4</span><span class="hs-ic">🪙</span><span class="hs-tx">Recoge monedas y estrellas por el camino.</span></li>
+          <li class="howto-step"><span class="hs-num">5</span><span class="hs-ic">🦅</span><span class="hs-tx">Usa tus poderes cuando los tengas.</span></li>
+        </ol>
+        <p class="howto-controls">🎮 <strong>Controles:</strong> flechas/WASD o ratón en PC · D-pad o joystick en móvil.</p>
+        <button class="btn ghost">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- AJUSTES -->
+  <div class="qa-frame ph360"><span class="qa-label">Ajustes · 360×640</span>
+    <section class="screen" id="screen-settings">
+      <div class="panel center">
+        <h2 class="title small">⚙️ Ajustes</h2>
+        <p class="settings-group-label">Cuenta</p>
+        <div class="account-card"><p class="account-line"><span class="account-ic">👤</span><span>Invitado</span></p><p class="account-line sync-line"><span class="account-ic">🔄</span><span>Guardado local</span></p></div>
+        <p class="settings-group-label">Audio</p>
+        <button class="btn settings-toggle">🎵 Música: ON</button>
+        <button class="btn settings-toggle">🔊 Efectos: ON</button>
+        <p class="settings-group-label">Pantalla</p>
+        <button class="btn settings-toggle">⛶ Pantalla completa</button>
+        <div class="lang-mini settings-lang"><button class="lang-btn active" data-lang="es">ES</button><button class="lang-btn" data-lang="en">EN</button></div>
+        <p class="settings-group-label">Datos</p>
+        <button class="btn">🗑️ Reiniciar progreso</button>
+        <button class="btn ghost">← Volver</button>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script type="module">
+  // Dibuja el mono prehistórico REAL en cada insignia de Game Over (mismo arte que el juego).
+  import { renderMonkeyInto } from '../src/effects/tauntMonkey.js';
+  document.querySelectorAll('[data-monkey]').forEach((el) => renderMonkeyInto(el, 80));
+</script>
+</body>
+</html>

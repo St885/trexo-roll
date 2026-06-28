@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QA · Game Over (viewport real)</title>
+<link rel="stylesheet" href="../styles/main.css">
+<style> html,body{height:100%;margin:0;background:#06140d;} </style>
+</head>
+<body>
+  <section class="screen active" id="screen-gameover">
+    <div class="panel over-panel">
+      <div class="over-badge"><div class="over-monkey" data-monkey></div></div>
+      <h2 class="over-title">¡Turno perdido!</h2>
+      <p class="over-sub">Inténtalo otra vez</p>
+      <p class="over-record">🏅 ¡Nuevo récord!</p>
+      <div class="over-stats">
+        <div class="over-stat"><span class="os-ic">🎯</span><span class="os-lbl">Puntos</span><b class="os-val">1 240</b></div>
+        <div class="over-stat"><span class="os-ic">🚩</span><span class="os-lbl">Nivel</span><b class="os-val">17/50</b></div>
+        <div class="over-stat"><span class="os-ic">🏆</span><span class="os-lbl">Mejor</span><b class="os-val">2 880</b></div>
+      </div>
+      <div class="over-actions">
+        <button class="btn primary over-cta">↻ Reintentar</button>
+        <div class="over-actions-row">
+          <button class="btn over-sec">⏩ Continuar (2)</button>
+          <button class="btn over-sec ghost">Menú</button>
+        </div>
+      </div>
+    </div>
+  </section>
+<script type="module">
+  import { renderMonkeyInto } from '../src/effects/tauntMonkey.js';
+  document.querySelectorAll('[data-monkey]').forEach((el) => renderMonkeyInto(el, 80));
+</script>
+</body>
+</html>

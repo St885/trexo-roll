@@ -16,10 +16,20 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);                  // "arriba" del mu
 const V_FOV = 48;
 // Acercamiento extra SOLO en móvil horizontal (tablero más grande sin recortar). 1.0 = sin
 // cambio; >1 = más cerca. Aprovecha el margen conservador del encaje por inclinación máxima.
-const LANDSCAPE_MOBILE_ZOOM = 1.13;
+const LANDSCAPE_MOBILE_ZOOM = 1.16;
+// Ajuste fino ADICIONAL de acercamiento en móvil horizontal (tablero un poco más grande).
+// Fácil de afinar: 1.0 = sin cambio extra; >1 = más cerca. Conservador: el footprint del
+// tablero sigue ≤ 1.0 NDC al inclinar al máximo en diagonal (margen ~1.6% global; ~5% en
+// aspectos de teléfono típicos 16:9–20:9). Verificado en canvas-smoke contra los 50 niveles.
+const LANDSCAPE_MOBILE_ZOOM_FACTOR = 1.03;
 // Banda de decoración alrededor del tablero (debe coincidir con decorate() en
 // BoardBuilder). El encuadre la incluye para que la decoración no se "corte".
 const DECOR_MARGIN = 2.0;
+// En MÓVIL horizontal reservamos MENOS banda de decoración en el encaje para que el TABLERO
+// sea claramente el protagonista. La decoración exterior puede asomar levemente fuera del
+// borde SOLO al inclinar al máximo (transitorio, más inmersivo); el footprint del tablero
+// sigue garantizado dentro de pantalla (verificado en canvas-smoke contra los 50 niveles).
+const LANDSCAPE_MOBILE_DECOR = 1.5;
 // Altura del "suelo" (donde se proyecta la sombra del tablero). Ya no hay plano de
 // suelo opaco: el fondo del gameplay es la imagen jurásica (CSS) detrás del lienzo.
 const GROUND_Y = -4.2;
@@ -54,8 +64,10 @@ export function computeSphereFrame(bounds, boardCenter, fovDeg, aspect, fit = {}
 export function computeAxisFrame(bounds, boardCenter, fovDeg, aspect, fit = {}) {
   const cx = boardCenter.x, cy = boardCenter.y || 0, cz = boardCenter.z;
   const centerLen = Math.hypot(cx, cy, cz);
-  const hx = bounds.width / 2 + DECOR_MARGIN;   // semiancho (X)
-  const hz = bounds.depth / 2 + DECOR_MARGIN;    // semiprofundidad (Z)
+  // Banda de decoración reservada: menor en móvil horizontal (tablero protagonista).
+  const decorM = fit.landscapeMobile ? LANDSCAPE_MOBILE_DECOR : DECOR_MARGIN;
+  const hx = bounds.width / 2 + decorM;   // semiancho (X)
+  const hz = bounds.depth / 2 + decorM;    // semiprofundidad (Z)
   // Balanceo vertical por inclinación máxima (cota segura desde el pivote/origen).
   const tiltSwing = (centerLen + Math.hypot(hx, hz)) * Math.sin(PHYS.MAX_TILT);
   const hy = 1.7 + tiltSwing;
@@ -70,6 +82,8 @@ export function computeAxisFrame(bounds, boardCenter, fovDeg, aspect, fit = {}) 
   const tanV = Math.tan(vFov / 2), tanH = Math.tan(hFov / 2);
 
   let marginK = 0.06, raiseK = 0.02;
+  // Móvil horizontal: tablero CENTRADO (raiseK 0) para recuperar margen vertical y poder
+  // acercar un poco más sin que el borde superior se recorte al inclinar al máximo.
   if (fit.landscapeMobile) { marginK = 0.02; raiseK = 0.0; }
   const raiseZ = Math.max(hx, hz) * raiseK;
   const target = { x: cx, y: cy, z: cz + raiseZ };
@@ -87,7 +101,7 @@ export function computeAxisFrame(bounds, boardCenter, fovDeg, aspect, fit = {}) 
   // Ajuste fino MÓVIL HORIZONTAL: la cota por inclinación máxima ('hy') es conservadora y
   // dejaba ~19% de pantalla sin usar. Acercamos la cámara un punto extra para que el tablero
   // se vea más grande, sin recortar (verificado contra la geometría real en canvas-smoke).
-  if (fit.landscapeMobile) dist /= LANDSCAPE_MOBILE_ZOOM;
+  if (fit.landscapeMobile) dist /= (LANDSCAPE_MOBILE_ZOOM * LANDSCAPE_MOBILE_ZOOM_FACTOR);
 
   const pos = { x: CAM_DIR.x * dist + target.x, y: CAM_DIR.y * dist + target.y, z: CAM_DIR.z * dist + target.z };
   return { dist, target, pos };

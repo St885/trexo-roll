@@ -2,6 +2,206 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.24.8] — 2026-06-28 — Ajuste fino de encuadre horizontal (tablero un poco más grande)
+
+> Acercamiento extra **conservador** en móvil horizontal. **Solo** landscape mobile; portrait
+> y desktop intactos; sin tocar jugabilidad, controles, colisiones ni física.
+
+### Qué se ajustó
+- Nuevo factor tunable **`LANDSCAPE_MOBILE_ZOOM_FACTOR = 1.03`** (zoom efectivo 1.16 → **1.195**).
+- Tablero **centrado** en horizontal (`raiseK` 0.03 → 0.0): recupera margen vertical para poder
+  acercar sin que el borde superior se recorte al inclinar al máximo.
+
+### Cuánto más grande
+- ~**3% más de zoom** efectivo (+ el centrado aprovecha algo más de alto). Nota: el tablero ya
+  estaba **al límite de "sin recorte"** (footprint 0.963 NDC en v0.24.7); por eso el margen
+  seguro real era ~3–4%, no 8–12% (acoplamiento entre tamaño en reposo y la inclinación
+  diagonal máxima alcanzable con el D-pad). Se priorizó **no recortar** y conservar margen.
+
+### Seguridad (medido en los 50 niveles)
+- Footprint al inclinar al máximo en diagonal: **≤ 0.952 @ aspect 2.0** (margen 4.8%) y
+  **≤ 0.984** en todos los aspectos 1.6–2.33 (margen ≥1.6%). Niveles prioritarios 1/2/9/10/25:
+  0.921–0.955, todos **sin recorte**. Decoración solo asoma al inclinar (≤1.235).
+- **Portrait**: `computeSphereFrame` intacto (test "VERTICAL no se corta" sin cambios).
+- **Desktop / landscape genérico**: rama `fit={}` intacta (sin el factor ni el cambio de raise).
+- HUD compacto y controles de v0.24.7 sin cambios → no se tapan elementos clave.
+
+### Validado
+- `npm test` (225), `test:graph` (22), `test:visual` (127, guardarraíl footprint ≤ 1.0 intacto),
+  `test:ui` (22), `build`, `cap:sync`: **verde**. Sin nuevo AAB.
+
+## [0.24.7] — 2026-06-27 — Tablero protagonista en móvil horizontal (encuadre)
+
+> El tablero se ve **claramente más grande** en landscape mobile, sin recortes al inclinar y
+> **sin tocar portrait, jugabilidad, controles, colisiones ni física**.
+
+### Causa raíz
+- El encaje horizontal reservaba la banda **completa** de decoración (`DECOR_MARGIN = 2.0`)
+  alrededor del tablero y una cota de inclinación conservadora, dejando el tablero pequeño
+  (en reposo llenaba ~65–70% del ancho y ~58% del alto). El tablero **nunca** se acercaba a
+  recortarse (footprint ≈ 0.85 NDC): sobraba margen sin aprovechar.
+
+### Cambios de encuadre (SOLO móvil horizontal)
+- **Menos banda de decoración reservada** en el encaje: `LANDSCAPE_MOBILE_DECOR = 1.5` (antes
+  2.0). La decoración exterior puede **asomar levemente** fuera del borde solo al inclinar al
+  máximo (transitorio, más inmersivo); el **footprint del tablero sigue garantizado dentro**.
+- **Acercamiento fino** `LANDSCAPE_MOBILE_ZOOM` 1.13 → **1.16**.
+- **Tablero un poco más arriba** (`raiseK` 0.0 → 0.03) → más hueco abajo para los controles.
+- Resultado (medido en los 50 niveles × aspectos 1.6–2.33): tablero en reposo **~72–80% ancho
+  / ~63–64% alto**; footprint al inclinar al máximo **≤ 0.963** (sin recortes, 3.7% de margen);
+  encuadre ~20% más cercano que el landscape genérico. **Portrait idéntico** (computeSphereFrame
+  intacto; el test "VERTICAL no se corta" pasa sin cambios).
+
+### Protagonismo visual (CSS, solo landscape mobile)
+- **HUD más compacto** (franja superior más fina: menos padding, chips 0.66rem, mini-bola 26px)
+  → más espacio vertical para el tablero. HUD y controles siguen visibles.
+- **Fondo del paisaje un punto más tenue** y **viñeta más marcada** → mejor separación del
+  tablero respecto al entorno, sin ocultar el fondo. Estética premium conservada.
+
+### Validado
+- `canvas-smoke` (encuadre): guardarraíl duro **footprint ≤ 1.0** y **VERTICAL sin cambios**
+  intactos; umbrales de decoración/cercanía actualizados al nuevo diseño (con comentarios).
+- `npm test` (225), `test:graph` (22), `test:visual` (127), `test:ui` (22), `build`,
+  `cap:sync`: **verde**. Sin permisos nuevos, sin cambios de jugabilidad/física. Sin nuevo AAB.
+
+## [0.24.6] — 2026-06-27 — Pulido premium de pantallas secundarias y derrota
+
+> Mejora de calidad visual y UX de las pantallas secundarias, manteniendo el cumplimiento
+> de Play Store (sin activar anuncios/compras/login/Firebase/Analytics ni permisos nuevos).
+
+### Game Over premium (P1)
+- Rediseño con el **mismo lenguaje visual que la victoria v0.24.4**: panel compacto, fondo
+  oscurecido, **insignia con el mono prehistórico** (arte original reutilizado), título corto
+  («¡Turno perdido!» / «Inténtalo otra vez»), 3 stats en filas (Puntos/Nivel/Mejor), CTA
+  **↻ Reintentar** y fila secundaria **Continuar/Menú**. Acento verde/dorado con toque rojo.
+- **Continuar** solo aparece si hay vidas **reales** en el banco interno; sin CTA vacío.
+- Sin opciones de compra ni de vídeo: las funciones simuladas quedan en `.over-sim[hidden]`.
+- Landscape y móvil pequeño verificados con capturas (cabe entero, sin recortes).
+
+### Selector de niveles (P2)
+- **Barra de progreso general** (⭐ totales · 🔓 niveles) y **leyenda**.
+- **Distintivos** de nivel especial: 👑 **jefe** (10/20/…/50) y ⏳ **contrarreloj** (11/22/33/44),
+  con franja de color propia. Nombre corto, estrellas y estado bloqueado/desbloqueado intactos.
+  (Sin mapa de mundos: se mantiene la lista por mundos.)
+
+### Cofre jurásico (P3)
+- **Barra de estrellas** hacia el próximo cofre y **estado bloqueado elegante** (cofre atenuado).
+
+### Canje (P4)
+- Reenfocado como **canje de recursos internos**: «♻️ Canje de estrellas», subtítulo «Usa tus
+  estrellas…», botón **Canjear** (verbo + coste ⭐). Eliminado el lenguaje de compra:
+  «comprado»→«canjeado», «Comprar · ⭐»→«Canjear · ⭐»; icono 🛒→♻️ en menú/pausa/tienda.
+
+### Ayuda (P5)
+- Reescrita como **5 pasos** numerados, visuales y cortos + una línea de controles.
+
+### Ajustes (P6)
+- Añadido grupo **Pantalla**: idioma (ES/EN) y **pantalla completa**, junto a audio y datos.
+  Sin promesas de nube/cuenta; «Guardado local» (veraz).
+
+### Técnico
+- i18n ES/EN con **paridad** (nuevas claves `over.*`, `levels.progress`, `shop.redeem`,
+  `howto.s1..s5`, `set.display/fullscreen`). Mono estático vía `renderMonkeyInto()`.
+- `ui-runtime-check` ampliado (niveles, canje, revive-box). **Sin permisos nuevos.**
+- Validado: `npm test` (225), `test:graph` (22), `test:visual` (127), `test:ui` (22),
+  `npm run build`, `npm run cap:sync`: **verde**. Sin nuevo AAB.
+
+## [0.24.5] — 2026-06-27 — Auditoría de cumplimiento de Google Play + correcciones v1
+
+> Auditoría completa de políticas de Google Play antes de la prueba interna. **Sin riesgos
+> bloqueantes** legales/de política ni de seguridad. Se aplican 2 correcciones de cumplimiento.
+
+### Corregido (cumplimiento Play Store v1)
+- **Login federado oculto**: los botones Google/Apple/Samsung eran placeholders no funcionales
+  → ocultados en la app (evita "Deceptive Behavior" y uso de marcas de terceros en botones
+  inoperativos). Queda «Continuar como invitado» + perfil **local**.
+- **Monetización simulada oculta**: «📺 Ver vídeo» (anuncio recompensado simulado) y
+  «🛒 Comprar vidas» / «Paquetes de vidas» con precios en € (sin pago real) → ocultados
+  (evita apariencia de IAP fuera de Google Play Billing y de anuncios inexistentes). El cuadro
+  «¿Seguir jugando?» del game over solo aparece si hay vidas en el banco (recurso interno).
+- Reversible: bloque "Cumplimiento Play Store v1" en `styles/main.css`; reactivar al integrar
+  OAuth/IAP/anuncios reales (actualizando antes política y Data Safety).
+
+### Añadido (documentación)
+- `docs/play-store-policy-audit.md`: auditoría con tabla de cumplimiento (20 áreas), resultados
+  de búsquedas (secretos/permisos/IP), correcciones y pendientes de cuenta.
+- `playstore/data-safety-draft.md` y `playstore/content-rating-draft.md`: borradores para los
+  formularios de Play Console (todo "No recopila"; violencia cartoon leve; PEGI 3 esperado).
+
+### Verificado (sin cambios)
+- **Permisos**: manifest fusionado solo `INTERNET` (+ permiso de firma propio AndroidX). Cero
+  permisos sensibles. **Secretos**: ninguno; sin keystore/`.env`/claves en el repo; `android/`
+  y AAB ignorados. **IP**: arte 100% procedural/original (LICENSE MIT). **Privacidad/ficha**:
+  veraces, sin prometer nube/login/ads/compras.
+
+### Validado
+- `npm test` (225), `test:graph`, `test:visual` (127), `test:ui`, `npm run build`,
+  `npm run cap:sync`: **verde**. Auth (invitado/local) y game over (reintentar/menú) intactos.
+
+## [0.24.4] — 2026-06-25 — Modal de victoria compacto y premium (cabe en horizontal)
+
+> En Android horizontal el modal de victoria se salía/cortaba: apilaba ~10 líneas de texto.
+> Rediseñado como un **popup compacto de juego mobile premium** que cabe completo en
+> vertical y horizontal. **Sin desplegar.**
+
+### Corregido
+- **Causa del desborde**: demasiadas líneas (título + récord + puntos + desbloqueo + extra +
+  detalle + recompensas + tiempo + progreso). Reducidas a **4 stats + 1 línea de bonus**.
+- En **landscape** el modal **cabe completo**, con los **3 botones siempre visibles** (sin
+  scroll ni recortes), mediante `max-height` seguro y reglas compactas por orientación/alto.
+
+### Cambiado
+- **Layout**: trofeo dorado, **título corto** («¡Nivel superado!»), **estrellas grandes**
+  (ganadas doradas con glow, no ganadas apagadas), **4 filas** icono·etiqueta·valor
+  (Puntos · Recompensa · Tiempo `m:ss.s` · Progreso `★/150`) y **bonus en UNA línea** (máx 2
+  chips; el resto se guarda en silencio).
+- **Botones**: CTA principal verde grande **«Siguiente nivel»** a lo ancho + fila
+  **[Repetir] [Menú]**.
+- **Textos cortos** ES/EN (labels, bonus, «Repetir», EN «Level complete!»); eliminadas las
+  líneas largas tipo «Mejoraste a 3★/Skin desbloqueada/+100 nivel».
+- **Premium**: panel glass verde + borde dorado + glow; el **tablero/celebración se ve detrás
+  oscurecido** (el bucle sigue renderizando la escena con un flag; `#screen-win` pasa a
+  overlay translúcido en vez de fondo opaco).
+- **Responsive**: vertical centrado; horizontal compacto (a alto muy bajo, stats en 2
+  columnas); desktop elegante. Respeta `prefers-reduced-motion`.
+
+### Validado
+- `npm test` (225), `test:graph`, `test:visual` (127), `test:ui`, `npm run build`,
+  `npm run cap:sync`: **verde**. QA visual con capturas (desktop/vertical/horizontal): cabe
+  completo, sin recortes ni scroll. Flujo de victoria, estrellas, recompensas, dino y resto
+  de pantallas intactos.
+
+## [0.24.3] — 2026-06-24 — Rediseño premium de la pantalla de Skins
+
+> La colección de skins se ve ahora como una **tienda de juego mobile profesional**:
+> panel glass jurásico, tarjetas grandes con orbe de bola, rareza, estados claros y glow en
+> la equipada. Funcionalidad intacta (equipar/comprar/desbloquear). **Sin desplegar.**
+
+### Cambiado
+- **Panel premium** (`.skins-panel`): glassmorphism verde oscuro, borde dorado, glow sutil,
+  más ancho y elegante, integrado con el fondo jurásico.
+- **Header**: emblema 🦴, **título dorado grande** con sombra, subtítulo y **badge ⭐
+  «Disponibles: X»**.
+- **Tarjetas** rediseñadas: orbe con la bola (más grande), **chip de rareza** (Común/Rara/
+  Épica/Legendaria) + icono de tipo, nombre y estado; hover/tap, glint premium.
+- **Bolas** (`makeBallThumbnail`): más **volumen** (degradado + sombra esférica + aro) y
+  **brillo** (especular + punto glossy); **glow** para skins emisivas (dorada/volcánica/hielo/
+  ámbar). Mejora también el menú/preparación/HUD/selector.
+- **Equipada**: borde verde + **glow pulsante** + anillo + etiqueta «Equipada». **Bloqueadas**:
+  elegantes (no apagadas), candado claro y requisito legible; **sacudida** al intentar equipar.
+- **Botón Volver** premium (borde dorado). **Responsive**: 4 col (desktop/horizontal), 2 col
+  (móvil vertical); táctil ≥44–46px; respeta `prefers-reduced-motion`.
+
+### Corregido
+- Texto confuso de requisito (antes «72/6 ⭐ de nivel») → ahora **«🔒 Requiere ⭐ N»**, y la
+  pantalla **auto-desbloquea** las skins de estrellas ya ganadas al abrirse (no muestra como
+  bloqueada una skin que ya mereces). Añadido sistema de **rareza** por skin.
+
+### Validado
+- `npm test` (225), `test:graph`, `test:visual` (127), `test:ui`, `npm run build`,
+  `npm run cap:sync`: **verde**. QA visual con capturas reales (desktop 4×2, móvil vertical
+  2×4, móvil horizontal 4×2): premium, sin recortes ni scroll raro. Resto de pantallas intactas.
+
 ## [0.24.2] — 2026-06-24 — Ajuste fino: tablero aún más grande en móvil horizontal
 
 > Tras probar en el emulador Android, el tablero en horizontal admitía un acercamiento extra
