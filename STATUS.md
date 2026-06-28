@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | **Versión** | 0.24.8 — Ajuste fino de encuadre horizontal (zoom efectivo 1.195, tablero centrado, sin recortes); tablero protagonista v0.24.7; pulido pantallas v0.24.6 |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.24.x) · 🛠️ Local v0.24.8 — **cumple políticas Play (con pendientes de cuenta)**; listo para prueba interna tras completar Console |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.24.8) · 🛠️ Local v0.24.8 — **cumple políticas Play (con pendientes de cuenta)**; listo para prueba interna tras completar Console |
 | **Fecha** | 2026-06-28 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
@@ -11,8 +11,21 @@
 | **Niveles** | 50 (Fácil → Experto) en 10 mundos, todos validados como superables |
 | **Bolas** | 5, cada una con **especie de dino distinta** (T-Rex, Raptor, Parasaurio, Triceratops, Braquiosaurio) |
 | **Biomas** | 8 ambientaciones jurásicas |
-| **Git** | Repo `github.com/St885/trexo-roll`, rama `main` |
-| **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · v0.8.0 (2026-06-19) |
+| **Git** | Repo `github.com/St885/trexo-roll`, rama `main` · commit prod **`8bfc40a`** |
+| **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · **v0.24.8 (2026-06-28, commit 8bfc40a)** |
+
+---
+
+## 📦 Base para el próximo AAB final (Play Store)
+
+> **TREXoRoll v0.24.8** (commit **`8bfc40a`** en `main`) queda fijada como la **versión base
+> aprobada** para generar el **próximo AAB final** si se continúa con Play Store.
+> - El AAB se genera **localmente** desde esta versión: `npm run build && npm run cap:sync` y
+>   luego firmar con el keystore (fuera del repo). **No se generó AAB en este paso.**
+> - `appId` Android: `com.st885.trexoroll`. Pendientes de cuenta en Play Console: Data Safety,
+>   clasificación IARC, política de privacidad publicada, verificación de identidad
+>   (ver `docs/play-store-policy-audit.md`, `playstore/data-safety-draft.md`,
+>   `playstore/content-rating-draft.md`).
 
 ---
 
