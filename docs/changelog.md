@@ -2,6 +2,42 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.28.0] — 2026-07-06 — 🚀 Login real con Firebase y celebraciones 3D (RELEASE estable)
+
+> **Versión estable consolidada** de todo el ciclo 0.25→0.27 (detalle por entrega en las entradas
+> anteriores). Esta versión es para **GitHub/web**; la versión **Android/Play Store se preparará
+> luego con su propio AAB** (Android sigue `versionCode 4` / `versionName 0.26.0` intactos).
+
+### 🔐 Autenticación
+- **Firebase real conectado** (`hasRealConfig()=true`): **Google Sign-In funcionando en localhost**
+  (popup→redirect), **email/contraseña** conectado (crear cuenta / ingresar / recuperar), **modo
+  invitado intacto** (jugar sin cuenta, progreso local).
+- **CSP corregida** para Google Sign-In (apis.google.com/gstatic en script-src, frame-src del
+  handler, sin comodines). Dominios autorizados: localhost + defaults de Firebase (st885.github.io
+  para producción web). **Pendiente**: SHA-1/SHA-256 para Google en **Android**.
+- Sin contraseñas en localStorage; usuario proyectado sin tokens; errores genéricos.
+
+### 🎨 UI
+- **Pantalla de acceso rediseñada** (premium jurásico): botón **Google real** (blanco, logo
+  oficial) → **Crear cuenta con email** / **Ingresar** → **Continuar como invitado** (discreto) +
+  mensaje de confianza sobre el progreso + idioma ES/EN discreto.
+
+### 🦖 Dinosaurios / celebraciones (por especie, con fallback procedural)
+- **4 dinos 3D de victoria**: T-Rexo/Oliver (trex) · Triceratops bebé amarillo · Raptor bebé verde ·
+  **Parasaurio bebé rosa** — todos integrados en `CELEBRATION_MODELS`, optimizados (texturas 512;
+  raptor/parasaur −88 % de peso) y con **fallback procedural** si el GLB falla.
+- **Braquiosaurio bebé azul**: ⏳ pendiente de GLB (sigue procedural).
+- **Android performance NO carga GLB** (`celebration3D='off'` → siempre procedural).
+
+### ⚡ Rendimiento
+- **Perfiles gráficos** quality/balanced/performance (Android/emulador → performance: pixelRatio
+  1,0, sombras OFF, glows OFF, partículas 40 %). Fluidez del tablero restaurada (guarda de resize +
+  coalescer de viewport). Assets optimizados; **backups `_backup/` excluidos del build y del repo**.
+
+### 🔒 Privacidad / no incluido
+- **Analytics OFF** · **Cloud Sync OFF** · sin Ads · sin compras · **sin AAB** · **sin Play Store**
+  · sin deploy manual.
+
 ## [0.27.5+mac] — 2026-07-05 — 🧳 Repo preparado para migración a la MacBook (GitHub)
 
 > **Chore de repositorio** (sin cambios de juego): todo el trabajo local 0.24.8 → 0.27.5 queda
