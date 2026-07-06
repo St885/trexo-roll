@@ -12,6 +12,7 @@ import {
   fetchProfile, saveProfile, createProfileIfMissing,
 } from './playerProfileService.js';
 import { getFirebase } from './firebaseClient.js';
+import { ENABLE_CLOUD_SYNC } from '../config/firebaseConfig.js';
 
 export const SYNC_STATUS = {
   LOCAL: 'local',     // Guardado local
@@ -60,6 +61,9 @@ export async function loadCloudToLocal(uid) {
  * @returns {{ok, status, choice}}
  */
 export async function syncOnLogin(uid, meta = {}) {
+  // FASE 5: la sincronización de progreso está PREPARADA pero DESACTIVADA en esta versión
+  // (ENABLE_CLOUD_SYNC=false). El progreso local NO se toca; el login solo autentica.
+  if (!ENABLE_CLOUD_SYNC) return { ok: true, status: SYNC_STATUS.LOCAL, choice: 'local' };
   const fb = await getFirebase();
   if (!fb || !uid) return { ok: false, status: SYNC_STATUS.LOCAL, choice: 'local' };
 
@@ -84,6 +88,7 @@ export async function syncOnLogin(uid, meta = {}) {
 
 /** Sube el progreso local actual (uso tras ganar/comprar). Best-effort. */
 export async function pushLocal(uid, meta = {}) {
+  if (!ENABLE_CLOUD_SYNC) return { ok: true, status: SYNC_STATUS.LOCAL }; // sync desactivado en esta versión
   const fb = await getFirebase();
   if (!fb || !uid) return { ok: false, status: SYNC_STATUS.LOCAL };
   try {

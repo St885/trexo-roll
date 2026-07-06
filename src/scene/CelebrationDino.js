@@ -296,9 +296,10 @@ function buildBrachio(mats) {
   return { group, head, neck, tail, arms: [], legs };
 }
 
-/** Ráfaga de confeti de partículas. Devuelve { points, velocities }. */
-export function buildConfetti(colorHex) {
-  const N = 54;
+/** Ráfaga de confeti de partículas. `scale` (perfil gráfico) reduce el nº en móvil.
+ *  Devuelve { points, velocities }. */
+export function buildConfetti(colorHex, scale = 1) {
+  const N = Math.max(8, Math.round(54 * scale));
   const positions = new Float32Array(N * 3);
   const colors = new Float32Array(N * 3);
   const velocities = new Float32Array(N * 3);

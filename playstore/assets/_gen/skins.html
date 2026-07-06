@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../../styles/main.css">
+<link rel="stylesheet" href="frame.css"></head>
+<body class="is-portrait">
+<canvas id="bg"></canvas>
+<section class="screen active" id="screen-skins">
+  <div class="panel skins-panel">
+    <header class="skins-head">
+      <div class="skins-emblem">🦴</div>
+      <div class="skins-headtext">
+        <h2 class="skins-title">Skins de bola</h2>
+        <p class="skins-sub">Colecciona y equipa aspectos para tu bola. La especie y su habilidad no cambian.</p>
+      </div>
+      <div class="skins-stars"><span class="skins-stars-ic">⭐</span><span class="skins-stars-lbl">Disponibles</span><b>7</b></div>
+    </header>
+    <nav class="skins-grid">
+      <button class="skin-card rar-comun selected owned" data-state="equipped">
+        <span class="skin-rarity">Común</span><span class="skin-type">⚪</span><span class="skin-equip-tag">✓ Equipada</span>
+        <span class="skin-orb"><span class="skin-orb-ring"></span><canvas class="kit-thumb skin-thumb" data-size="104"></canvas></span>
+        <span class="skin-name">Clásica</span><span class="skin-status state-equipped">Equipada</span>
+      </button>
+      <button class="skin-card rar-raro owned" data-state="owned">
+        <span class="skin-rarity">Raro</span><span class="skin-type">❄️</span><span class="skin-equip-tag">✓ Equipada</span>
+        <span class="skin-orb"><span class="skin-orb-ring"></span><canvas class="kit-thumb skin-thumb" data-size="104" data-tint="#9ad4ff"></canvas></span>
+        <span class="skin-name">Hielo</span><span class="skin-status state-owned">Tocar para equipar</span>
+      </button>
+      <button class="skin-card rar-epico locked" data-state="stars">
+        <span class="skin-rarity">Épico</span><span class="skin-type">🌋</span><span class="skin-equip-tag">✓ Equipada</span>
+        <span class="skin-orb"><span class="skin-orb-ring"></span><canvas class="kit-thumb skin-thumb" data-size="104" data-tint="#ff8a4a"></canvas><span class="skin-lock">🔒</span></span>
+        <span class="skin-name">Meteorito</span><span class="skin-status state-stars">Logra 24 ⭐</span>
+      </button>
+      <button class="skin-card rar-raro locked" data-state="buy">
+        <span class="skin-rarity">Raro</span><span class="skin-type">🌿</span><span class="skin-equip-tag">✓ Equipada</span>
+        <span class="skin-orb"><span class="skin-orb-ring"></span><canvas class="kit-thumb skin-thumb" data-size="104" data-tint="#86d96f"></canvas><span class="skin-lock">🔒</span></span>
+        <span class="skin-name">Selva</span><span class="skin-status state-buy">Canjear · ⭐ 6</span>
+      </button>
+      <button class="skin-card rar-epico locked" data-state="chest">
+        <span class="skin-rarity">Épico</span><span class="skin-type">💎</span><span class="skin-equip-tag">✓ Equipada</span>
+        <span class="skin-orb"><span class="skin-orb-ring"></span><canvas class="kit-thumb skin-thumb" data-size="104" data-tint="#c9a0ff"></canvas><span class="skin-lock">🔒</span></span>
+        <span class="skin-name">Ámbar</span><span class="skin-status state-chest">Del cofre</span>
+      </button>
+      <button class="skin-card rar-legendario locked" data-state="stars">
+        <span class="skin-rarity">Legendario</span><span class="skin-type">👑</span><span class="skin-equip-tag">✓ Equipada</span>
+        <span class="skin-orb"><span class="skin-orb-ring"></span><canvas class="kit-thumb skin-thumb" data-size="104" data-tint="#ffd45a"></canvas><span class="skin-lock">🔒</span></span>
+        <span class="skin-name">Dorada</span><span class="skin-status state-stars">Logra 60 ⭐</span>
+      </button>
+    </nav>
+    <button class="btn skins-back">← Volver</button>
+  </div>
+</section>
+<script src="kit.js"></script><script src="bg.js"></script>
+</body></html>

@@ -31,9 +31,16 @@ ok(login.ok === false && login.code === 'auth/not-configured', 'signInEmail degr
 const reg = await auth.signUpEmail({ email: 'a@b.com', password: 'secret1', displayName: 'Stefano' });
 ok(reg.ok === false && reg.code === 'auth/not-configured', 'signUpEmail degrada a not-configured');
 ok((await auth.resetPassword('a@b.com')).code === 'auth/not-configured', 'resetPassword degrada a not-configured');
-ok((await auth.signInWithProvider('google')).code === 'auth/provider-not-enabled', 'proveedores externos = placeholder seguro');
+ok((await auth.signInWithGoogle()).code === 'auth/not-configured', 'signInWithGoogle degrada a not-configured (no lanza)');
+ok((await auth.signInWithProvider('google')).code === 'auth/not-configured', "signInWithProvider('google') enruta a Google (not-configured en demo)");
+ok((await auth.signInWithProvider('apple')).code === 'auth/provider-not-enabled', 'proveedores no implementados = not-enabled');
 ok((await auth.startGuest()).ok === true, 'modo invitado disponible');
+ok((await auth.continueAsGuest()).ok === true, 'continueAsGuest() disponible (alias)');
+ok((await auth.initAuth()).mode === 'demo', 'initAuth() = demo sin Firebase (no lanza)');
+ok((await auth.isGuest()) === true, 'isGuest() = true sin sesión');
+ok((await auth.getPublicPlayerProfile()) === null, 'getPublicPlayerProfile() = null sin sesión');
 ok((await auth.getCurrentUser()) === null, 'getCurrentUser() = null sin sesión');
+ok(typeof auth.registerWithEmail === 'function' && typeof auth.loginWithEmail === 'function' && typeof auth.logout === 'function' && typeof auth.onAuthStateChanged === 'function', 'API FASE 4 presente (registerWithEmail/loginWithEmail/logout/onAuthStateChanged)');
 ok(AUTH_MODES.includes('email'), "AUTH_MODES incluye 'email' (cuenta real)");
 
 console.log('\n[Validación de inputs]');

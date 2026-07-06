@@ -2,9 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | 0.24.8 — Ajuste fino de encuadre horizontal (zoom efectivo 1.195, tablero centrado, sin recortes); tablero protagonista v0.24.7; pulido pantallas v0.24.6 |
-| **Estado** | ✅ Publicado en GitHub Pages (v0.24.8) · 🛠️ Local v0.24.8 — **cumple políticas Play (con pendientes de cuenta)**; listo para prueba interna tras completar Console |
-| **Fecha** | 2026-06-28 |
+| **Versión** | 0.27.5 (local) — **🦕 Parasaurio bebé rosa 3D en la victoria** del Dino Rosa (`CELEBRATION_MODELS.parasaur`, `parasaur_baby/parasaur_baby_pink.glb` optimizado **13,53→1,67 MB**: geometría simplificada 224k→~56k tris + texturas 2048→512, backup fuera del build; `yaw 0` verificado headless; fallback procedural; performance/Android sin GLB). **Dinos 3D**: trex ✅ · triceratops ✅ · raptor ✅ · parasaur ✅ · brachio ⏳ procedural. Hitos previos: raptor 3D (0.27.4) · fix CSP Google (0.27.3) · acceso premium (0.27.2) · **Firebase Auth REAL** (0.27.1). Android sin release: `versionCode 4` / `versionName 0.26.0`, target SDK 35 |
+| **Android** | `applicationId` `com.st885.trexoroll` · **`versionCode 4`** · **`versionName 0.26.0`** · `minSdk 22` · `compileSdk 35` · `targetSdk 35` · **`screenOrientation=fullSensor`** · permiso único `INTERNET` (sin AD_ID/GET_ACCOUNTS/READ_CONTACTS/ubicación/cámara/micro; sin Ads/Analytics/compras/Play Games) |
+| **Estado** | ✅ Publicado en GitHub Pages (v0.24.8) · 📲 v0.25.3 en **prueba interna Play** · 🛠️ Local v0.27.5 — **Auth real en NUBE** (email/password vivo, Google desbloqueado por CSP, invitado intacto; Analytics/CloudSync OFF) + **4 dinos 3D de celebración** (T-Rexo 2,87 · Tricera 1,87 · Raptor 1,56 · Parasaurio 1,67 MB; todos optimizados con backup fuera del build; solo brachio procedural) + pantalla de acceso premium + modo rendimiento Android (performance: pixelRatio 1,0, sombras OFF, celebración procedural). Batería completa + build + cap:sync verdes. 🧳 **2026-07-05: repo commiteado y subido a GitHub para migrar a la MacBook** (batería verde; sin AAB/deploy/Play; Analytics/CloudSync OFF; backups de GLB e imágenes crudas quedan solo en la PC vía .gitignore). ⚠️ Pendiente: probar Google popup a mano en localhost · SHA-1/256 del keystore en Firebase (Google en Android) · confirmar fluidez en emulador/dispositivo real · (Play) Data Safety si se activa Analytics · API 35 para AAB · capturas · música `.mp3` |
+| **Fecha** | 2026-07-05 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
 | **Dependencias runtime** | 0 (Three.js en `libs/`) |
@@ -26,6 +27,34 @@
 >   clasificación IARC, política de privacidad publicada, verificación de identidad
 >   (ver `docs/play-store-policy-audit.md`, `playstore/data-safety-draft.md`,
 >   `playstore/content-rating-draft.md`).
+>
+> **🆕 Cumplimiento target SDK 35 + versionCode 2** — 2026-07-01. Play exige `targetSdk ≥ 35`
+> **y** un `versionCode` no usado (el 1 ya estaba consumido).
+> - `android/app/build.gradle`: `versionCode` **1 → 2**, `versionName` **"1.0" → "0.25.2"**
+>   (`applicationId` `com.st885.trexoroll` intacto).
+> - `android/variables.gradle`: `compileSdkVersion`/`targetSdkVersion` **34 → 35** (`minSdk 22`
+>   intacto). Verificado con Gradle `:app:properties` (target 35 / compile 35).
+> - Sin permisos, SDKs ni cambios de package nuevos. **Antes de generar el AAB**: instalar la
+>   plataforma **Android 15 (API 35)** en el SDK Manager (instaladas: API 34 y 36; **falta la 35**;
+>   Android Studio la ofrece con un clic).
+>
+> **🆕 v0.25.3 — Rotación móvil + control táctil + versionCode 3** — 2026-07-01.
+> - `android/app/build.gradle`: `versionCode` **2 → 3**, `versionName` **"0.25.2" → "0.25.3"**.
+> - `AndroidManifest.xml`: `MainActivity` con **`screenOrientation="fullSensor"`** (rota
+>   horizontal+vertical; antes seguía el auto-rotate del sistema y en teléfonos con rotación
+>   bloqueada no giraba).
+> - Nuevo **control táctil por arrastre** (`src/input/TouchTiltController.js`) como control
+>   principal en móvil; **D-pad de flechas oculto** (flag `DEBUG_SHOW_DPAD`); joystick secundario.
+> - Sin permisos/SDKs/monetización nuevos. Reflujo de viewport centralizado (`_handleViewportChange`).
+>
+> **🆕 v0.25.4 — Revisión integral + versionCode 4** — 2026-07-01.
+> - `versionCode` **3 → 4**, `versionName` **"0.25.3" → "0.25.4"** (package.json 0.25.4).
+> - **Joystick OPCIONAL** en móvil (oculto por defecto; ajuste `showJoystick` en Ajustes →
+>   Controles); arrastre táctil como control principal; D-pad sigue oculto; teclado desktop intacto.
+> - **Feedback** de arrastre (halo tenue), **halo del hoyo verde**, **hoyos rojos** con emissive
+>   (peligro), **HUD** más legible en horizontal, **-1 alloc por frame** (billboard reutiliza vector).
+> - **Sin** tocar física/dificultad/solvencia ni la sensación del táctil. Sin permisos/SDKs/
+>   monetización nuevos. Igual que antes: **instalar API 35** en el SDK Manager antes del AAB.
 
 ---
 

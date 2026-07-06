@@ -2,6 +2,7 @@
 // Conecta escena 3D, física, input, pantallas, HUD, audio, bolas y progresión.
 
 import { SceneManager } from '../scene/SceneManager.js';
+import { OliverStage } from '../scene/OliverStage.js';
 import { Ball } from '../scene/Ball.js';
 import { BallPhysics } from '../physics/BallPhysics.js';
 import { InputController } from './InputController.js';
@@ -15,10 +16,15 @@ import { getDino } from '../data/dinos.js';
 import { bossFor, weatherFor, windPushFor, timeAttackFor } from '../levels/levelEvents.js';
 import { rollChest } from '../systems/chest.js';
 import { evaluateDaily, todayStr, DAILY_REWARDS } from '../systems/daily.js';
-import { SCREENS, LIVES_START, SCORE, PHYS } from '../utils/constants.js';
+import { shouldShowTutorial, tutorialSteps, markTutorialSeen, resetTutorial, shouldShowMechanic, markMechanicSeen, resetMechanics } from '../systems/tutorial.js';
+import { dynamicKind, buildDynamicSpecs, dynamicTrapState } from '../levels/dynamicTraps.js';
+import { SCREENS, LIVES_START, SCORE, PHYS, DEBUG_SHOW_DPAD, CELEBRATION_MODELS } from '../utils/constants.js';
+import * as perf from '../utils/perf.js';
+import { getGraphicsProfile } from '../utils/device.js';
 import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
 import { music } from '../effects/music.js';
+import { haptics, setHapticsEnabled } from '../effects/haptics.js';
 import { showTaunt, renderMonkeyInto } from '../effects/tauntMonkey.js';
 import * as critters from '../effects/critters.js';
 import * as weather from '../effects/weather.js';
@@ -28,7 +34,7 @@ import { getSession, setSession, clearSession, hasSession, sanitizeName } from '
 import * as auth from '../services/authService.js';
 import * as sync from '../services/progressSyncService.js';
 import { track } from '../services/analyticsService.js';
-import { makeBallThumbnail } from '../scene/textures.js';
+import { makeBallThumbnail, makeSceneBackgroundURL } from '../scene/textures.js';
 import {
   getHighScore, setHighScore, getUnlocked, unlockLevel,
   getStars, setStars, getTotalStars, getBestTime, setBestTime,
@@ -100,19 +106,37 @@ const WEATHER_EMOJI = { rain: '🌧️', fog: '🌫️', wind: '🌬️', ash: '
 export class Game {
   constructor(container) {
     this.container = container;
+    // Fondo de escena PROCEDURAL (Canvas 2D, 100% original de SLF Games) inyectado como variable
+    // CSS. Sustituye a cualquier imagen de terceros: sin archivos binarios, sin marcas, sin
+    // licencias que verificar. Si algo fallara, el CSS conserva su degradado de reserva.
+    try {
+      document.documentElement.style.setProperty('--bg-jungle', `url(${makeSceneBackgroundURL('valle')})`);
+    } catch (_) { /* entorno sin canvas: queda el degradado de reserva del CSS */ }
     this.scene = new SceneManager(container);
+    // Perfil gráfico activo (Android/WebView → 'performance'). DEBE fijarse ANTES de cualquier uso de
+    // this.gfx (p. ej. _preloadCelebrationForBall lee this.gfx.celebration3D) para no leer de undefined.
+    // getGraphicsProfile() nunca devuelve undefined. La clase gfx-<preset> deja al CSS aligerar efectos.
+    this.gfx = getGraphicsProfile();
+    document.body.classList.add('gfx-' + this.gfx.name);
     this.selectedBall = getSelectedBall();
     this.ball = new Ball(applySkin(getBall(this.selectedBall), getActiveSkin()));
+    // Precarga (perezosa, cacheada POR ESPECIE) del modelo 3D de celebración de la bola seleccionada.
+    // Se usa al ganar; si no carga o esa especie no tiene GLB, la victoria usa el dino procedural de
+    // la MISMA especie (fallback). No bloquea. Se re-precarga al cambiar de bola (ver _selectBall).
+    this._preloadCelebrationForBall();
     this.physics = new BallPhysics();
     this.input = new InputController(
       this.scene.renderer.domElement,
       document.getElementById('joystick'),
       document.getElementById('joystick-knob'),
       document.getElementById('dpad'),
+      document.getElementById('tilt-surface'), // superficie del arrastre táctil (control principal móvil)
     );
     this.screens = new ScreenManager();
     this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     document.body.classList.toggle('is-touch', this.isTouch);
+    // D-pad de flechas: oculto en móvil por defecto; solo visible con el flag de depuración.
+    document.body.classList.toggle('debug-dpad', !!DEBUG_SHOW_DPAD);
     this._applyViewportProfile(); // clases de body + encuadre de cámara por dispositivo
 
     this.levelIndex = 0;
@@ -133,6 +157,15 @@ export class Game {
     this.sfxOn = settings.sfxOn;
     this.musicOn = settings.musicOn;
     sfx.setMuted(!this.sfxOn);
+    // Joystick OPCIONAL en móvil (por defecto OFF; el control principal es el arrastre táctil).
+    this.showJoystick = settings.showJoystick;
+    document.body.classList.toggle('show-joystick', !!this.showJoystick);
+    if (this.input && this.input.setJoystickShown) this.input.setJoystickShown(this.showJoystick);
+    // Feedback visual sutil al arrastrar el dedo (halo tenue sobre el tablero; se quita al soltar).
+    if (this.input && this.input.touchTilt) {
+      this.input.touchTilt.onDragStart = () => document.body.classList.add('is-tilting');
+      this.input.touchTilt.onDragEnd = () => document.body.classList.remove('is-tilting');
+    }
 
     // Recompensas dentro del nivel + potenciadores activados en preparación.
     this._collect = [];            // [{x,z,type,taken}] alineado con la escena
@@ -145,17 +178,37 @@ export class Game {
     this._wireUI();
     // Al cambiar de idioma: traducir el DOM estático y refrescar lo dinámico.
     onLangChange(() => this._onLangChanged());
-    const relayout = () => { this._applyViewportProfile(); this.scene.resize(); this.input.refresh(); };
-    window.addEventListener('resize', relayout);
-    // Al rotar el móvil el layout tarda un instante en estabilizarse.
-    window.addEventListener('orientationchange', () => setTimeout(relayout, 200));
-    // Barra del navegador móvil apareciendo/desapareciendo: reencuadra al cambiar el
-    // viewport visible (sin spamear: la propia llamada es barata e idempotente).
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', relayout);
+    // Reflujo central del viewport (rotación, cambio de tamaño, barra del navegador móvil):
+    // recalcula lienzo (renderer) + cámara + clases de layout + controles. Ver
+    // _handleViewportChange(). Idempotente y barato: seguro de llamar varias veces.
+    window.addEventListener('resize', () => this._coalescedViewportChange());
+    // Rotación en Android real: el WebView estabiliza el layout con retardo variable; NO hay
+    // ningún bloqueo de orientación (manifest/Java/JS) — solo hay que reflowar bien. Re-aplicamos
+    // en varios instantes (inmediato + rAF + 90/240/420 ms) para no quedar con el lienzo/cámara
+    // desfasados ni con pantalla negra tras girar.
+    window.addEventListener('orientationchange', () => this._scheduleViewportSync([90, 240, 420]));
+    // Barra del navegador móvil apareciendo/desapareciendo: reencuadra al cambiar el viewport visible.
+    if (window.visualViewport && window.visualViewport.addEventListener) {
+      window.visualViewport.addEventListener('resize', () => this._coalescedViewportChange());
+    }
+    // API moderna de orientación (cuando existe): señal adicional y fiable en WebView.
+    try {
+      if (typeof screen !== 'undefined' && screen.orientation && screen.orientation.addEventListener) {
+        screen.orientation.addEventListener('change', () => this._scheduleViewportSync([120, 320]));
+      }
+    } catch (_) { /* no soportado: nos apoyamos en resize/orientationchange */ }
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
         if (this.playing) { e.preventDefault(); this._togglePause(); }
       }
+    });
+    // Fin de sesión + tiempo de juego (analítica; no-op si Analytics OFF): al ocultar/cerrar la
+    // pestaña se cierra la sesión; al volver a primer plano se reabre. Sin PII.
+    this._sessionOpen = false; this._sessionStartMs = 0;
+    window.addEventListener('pagehide', () => this._endAnalyticsSession());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this._endAnalyticsSession();
+      else this._startAnalyticsSession();
     });
     this._loop = this._loop.bind(this);
   }
@@ -202,6 +255,51 @@ export class Game {
     }
   }
 
+  /**
+   * Reflujo CENTRAL del viewport: se llama al rotar el dispositivo, redimensionar o cuando
+   * cambia el viewport visible. Recalcula, en este orden:
+   *   1) clases de layout del <body> (is-landscape/is-portrait/is-landscape-mobile…) + encuadre
+   *      de cámara por dispositivo  →  _applyViewportProfile()
+   *   2) tamaño del renderer + aspect de cámara + reencuadre del tablero  →  scene.resize()
+   *   3) medidas de los controles (joystick)  →  input.refresh()
+   * Idempotente y barato: seguro de llamar varias veces seguidas.
+   */
+  _handleViewportChange() {
+    this._applyViewportProfile();
+    if (this.scene && this.scene.resize) this.scene.resize();
+    if (this.input && this.input.refresh) this.input.refresh();
+    if (this.oliverStage && this.oliverStage.resize) this.oliverStage.resize();
+  }
+
+  /**
+   * COALESCE los eventos frecuentes de `resize`/`visualViewport` en, como mucho, UN reflujo por
+   * frame (rAF). En Android WebView estos eventos llegan en ráfagas (barra de URL, micro-ajustes del
+   * viewport visible); sin coalescer, cada uno lanzaba un reflujo completo (renderer/cámara/DOM) y
+   * causaba tirones al mover el tablero. La guarda de tamaño de scene.resize() remata el ahorro:
+   * si el tamaño no cambió, el reflujo es casi gratis. (La rotación usa _scheduleViewportSync aparte.)
+   */
+  _coalescedViewportChange() {
+    if (this._viewportRaf) return;
+    if (typeof requestAnimationFrame !== 'function') { this._handleViewportChange(); return; }
+    this._viewportRaf = requestAnimationFrame(() => {
+      this._viewportRaf = 0;
+      this._handleViewportChange();
+    });
+  }
+
+  /**
+   * Re-aplica el reflujo del viewport en varios instantes. En Android real la rotación
+   * estabiliza el layout del WebView con un retardo variable; un único disparo puede leer
+   * dimensiones aún desfasadas (lienzo cortado / pantalla negra). Disparamos inmediato + en el
+   * siguiente frame + a los tiempos indicados.
+   */
+  _scheduleViewportSync(delaysMs = [90, 240, 420]) {
+    const run = () => this._handleViewportChange();
+    run();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    for (const d of delaysMs) { if (d > 0) setTimeout(run, d); }
+  }
+
   start() {
     applyTranslations();        // traduce el DOM al idioma guardado (ES por defecto)
     this._syncLangButtons();
@@ -210,6 +308,10 @@ export class Game {
     this._updateBallPreviews();
     this._updateGreeting();
     this._initAccount();        // detecta modo demo/nube y prepara UI de cuenta/sync
+    // Analítica de sesión (todo no-op si Analytics OFF): apertura + inicio de sesión + recurrencia.
+    track.gameOpen();
+    this._startAnalyticsSession();
+    if (hasSession()) track.returnPlayer();
     // Acceso: si ya hay sesión local válida, va directo al landing; si no, pide acceso.
     if (hasSession()) {
       this.screens.show(SCREENS.LANDING);
@@ -226,6 +328,8 @@ export class Game {
     this._cloudMode = false;                 // por defecto, demo (local)
     this._cloudUser = null;
     this._syncStatus = sync.SYNC_STATUS.LOCAL;
+    // Completa un posible login por REDIRECT pendiente (Google en WebView) — seguro en demo.
+    Promise.resolve(auth.initAuth()).catch(() => {});
     // Detección async: no bloquea el arranque. En demo, queda todo como está.
     auth.getAuthMode().then((mode) => {
       this._cloudMode = (mode === 'cloud');
@@ -308,6 +412,7 @@ export class Game {
   /** Tras cambiar de idioma: re-traduce estáticos y refresca textos dinámicos. */
   _onLangChanged() {
     applyTranslations();
+    this._applyAuthModeUI(); // re-fija el mensaje demo/nube (applyTranslations lo resetea al de demo)
     this._syncLangButtons();
     this._syncAudioLabels();
     this._updateHighScoreLabels();
@@ -343,6 +448,8 @@ export class Game {
     if (m) m.textContent = tf('set.music', this.musicOn);
     const s = document.getElementById('btn-set-sfx');
     if (s) s.textContent = tf('set.sfx', this.sfxOn);
+    const j = document.getElementById('btn-set-joystick');
+    if (j) j.textContent = tf('set.joystick', this.showJoystick);
   }
 
   // --- Cableado de la interfaz ---------------------------------------------
@@ -358,17 +465,14 @@ export class Game {
     click('btn-do-login', () => this._doLogin());
     click('btn-do-register', () => this._doRegister());
     click('btn-forgot', () => this._resetPassword());
-    click('btn-auth-google', () => this._authProvider('google'));
-    click('btn-auth-apple', () => this._authProvider('apple'));
-    click('btn-auth-samsung', () => this._authProvider('samsung'));
-    click('btn-provider-guest', () => this._authGuest());
-    click('btn-provider-back', () => this._authView('home'));
+    click('btn-auth-google', () => this._authGoogle());
     click('link-terms', () => this._showLegal('terms'));
     click('link-privacy', () => this._showLegal('privacy'));
     click('btn-legal-back', () => this._showAuthOrMenu());
     click('btn-auth-lang-es', () => setLang('es'));
     click('btn-auth-lang-en', () => setLang('en'));
     click('btn-set-logout', () => this._logout());
+    click('btn-set-delete-account', () => this._requestAccountDeletion());
 
     click('btn-enter', () => this._showMenu());
     click('btn-lang-es', () => setLang('es'));
@@ -400,6 +504,7 @@ export class Game {
     click('btn-set-lang-en', () => setLang('en'));
     click('btn-set-music', () => this._toggleMusic());
     click('btn-set-sfx', () => this._toggleSfx());
+    click('btn-set-joystick', () => this._toggleJoystick());
     click('btn-set-reset', () => this._askResetProgress());
     click('btn-reset-yes', () => this._confirmResetProgress());
     click('btn-reset-no', () => this._cancelResetProgress());
@@ -416,6 +521,7 @@ export class Game {
     click('btn-levels-back', () => this._showMenu());
 
     click('btn-pause', () => this._pause());
+    click('tutorial-coach-close', () => this._nextTutorialStep()); // ✕ descarta/avanza el coach
     click('btn-resume', () => this._resume());
     click('btn-restart', () => this._restartLevel());
     click('btn-pause-sound', () => this._toggleMasterSound());
@@ -448,7 +554,7 @@ export class Game {
 
   /** Alterna entre las vistas internas de la pantalla de acceso. */
   _authView(name) {
-    for (const id of ['auth-home', 'auth-login', 'auth-register', 'auth-provider']) {
+    for (const id of ['auth-home', 'auth-login', 'auth-register']) {
       const el = document.getElementById(id);
       if (el) el.style.display = (id === 'auth-' + name) ? 'flex' : 'none';
     }
@@ -516,10 +622,13 @@ export class Game {
 
   /** Tras un login/registro real: sesión + sincronización nube/local + analítica. */
   async _afterCloudAuth(res, email, kind) {
-    const name = (res.user && res.user.displayName) || sanitizeName(this._inputVal(kind === 'register' ? 'reg-name' : 'login-name'), email.split('@')[0]);
-    setSession({ authMode: 'email', playerName: name, acceptedTerms: true, language: getLang() });
+    const isGoogle = kind === 'google' || (res.user && res.user.provider === 'google.com');
+    const fallbackName = (email && email.includes('@')) ? email.split('@')[0] : t('player.guest');
+    const name = (res.user && res.user.displayName) || sanitizeName(this._inputVal(kind === 'register' ? 'reg-name' : 'login-name'), fallbackName);
+    setSession({ authMode: isGoogle ? 'google' : 'email', playerName: name, acceptedTerms: true, language: getLang() });
     this._cloudUser = res.user;
-    if (kind === 'register') track.signUp('password'); else track.login('password');
+    const method = isGoogle ? 'google' : 'password';
+    if (kind === 'register') track.signUp(method); else track.login(method);
     // Sincroniza progreso (elige el más avanzado entre local y nube).
     try {
       const r = await sync.syncOnLogin(res.uid, this._accountMeta(email));
@@ -544,16 +653,29 @@ export class Game {
     this._setAuthError('login-error', res.ok ? t('auth.resetSent') : this._authErrorMsg(res.code));
   }
 
-  /** Proveedor externo: placeholder seguro (aún sin integración real). */
-  _authProvider(provider) {
-    const map = { google: { name: 'Google', mode: 'google-placeholder' },
-                  apple: { name: 'Apple', mode: 'apple-placeholder' },
-                  samsung: { name: 'Samsung', mode: 'samsung-placeholder' } };
-    const p = map[provider] || map.google;
-    this._pendingProvider = p.mode;
-    const nameEl = document.getElementById('auth-provider-name');
-    if (nameEl) nameEl.textContent = p.name; // textContent (sin innerHTML): seguro
-    this._authView('provider');
+  /** Login REAL con Google (Firebase). Popup en web; en WebView cae a redirect (vuelve tras él).
+   *  No bloquea al jugador: si Firebase no está configurado, guía a correo/invitado. */
+  async _authGoogle() {
+    this._setAuthError('auth-home-error', '');
+    if (!this._cloudMode) { this._setAuthError('auth-home-error', t('auth.errNotReady')); return; }
+    const btn = document.getElementById('btn-auth-google');
+    if (btn) btn.disabled = true; // loading state: evita dobles pulsaciones
+    try {
+      const res = await auth.signInWithGoogle();
+      if (res.ok) { await this._afterCloudAuth(res, (res.user && res.user.email) || '', 'google'); return; }
+      if (res.code === 'auth/redirecting') return;                 // el navegador redirige; vuelve luego
+      if (res.code === 'auth/popup-closed-by-user' || res.code === 'auth/cancelled-popup-request') return; // cancelado por el usuario: silencioso
+      this._setAuthError('auth-home-error', this._authErrorMsg(res.code));
+    } catch (_) {
+      this._setAuthError('auth-home-error', t('auth.errGeneric'));
+    } finally { if (btn) btn.disabled = false; }
+  }
+
+  /** Abre el correo del usuario para SOLICITAR la eliminación de cuenta y datos (Play compliance). */
+  _requestAccountDeletion() {
+    const subject = encodeURIComponent('TREXoRoll — solicitud de eliminación de cuenta');
+    const body = encodeURIComponent('Solicito eliminar mi cuenta de TREXoRoll y los datos asociados.\n\n(Indica el correo con el que iniciaste sesión.)');
+    try { window.location.href = `mailto:stefano.luisf@gmail.com?subject=${subject}&body=${body}`; } catch (_) { /* sin cliente de correo */ }
   }
 
   /** Lee un input de forma segura (string acotado). */
@@ -595,8 +717,26 @@ export class Game {
     return active ? active.id : null;
   }
 
+  /** Marca inicio de sesión de analítica y guarda el instante (para play_time_seconds al cerrar).
+   *  Idempotente. No-op real si Analytics está OFF. */
+  _startAnalyticsSession() {
+    if (this._sessionOpen) return;
+    this._sessionOpen = true;
+    this._sessionStartMs = performance.now();
+    track.sessionStart();
+  }
+
+  /** Cierra la sesión de analítica enviando el tiempo de juego (segundos). Idempotente. */
+  _endAnalyticsSession() {
+    if (!this._sessionOpen) return;
+    this._sessionOpen = false;
+    const secs = this._sessionStartMs ? (performance.now() - this._sessionStartMs) / 1000 : 0;
+    track.sessionEnd(secs);
+  }
+
   /** Cierra la sesión (local y, si la hay, de la nube). NO borra el progreso del juego. */
   async _logout() {
+    track.logout();
     try { await auth.signOutUser(); } catch (_) { /* en demo es no-op */ }
     this._cloudUser = null;
     this._setSyncStatus(sync.SYNC_STATUS.LOCAL);
@@ -696,6 +836,7 @@ export class Game {
   _applyAudio() {
     sfx.setMuted(!this.sfxOn);
     music.setMuted(!this.musicOn);
+    setHapticsEnabled(this.sfxOn); // la háptica sigue el ajuste de Efectos
     if (this.musicOn && !music.isPlaying()) music.start();
     this._syncAudioLabels();
   }
@@ -710,6 +851,16 @@ export class Game {
     this.sfxOn = !this.sfxOn;
     setSetting('sfxOn', this.sfxOn);
     this._applyAudio();
+  }
+
+  /** Muestra/oculta el joystick (control OPCIONAL en móvil). El arrastre táctil sigue activo. */
+  _toggleJoystick() {
+    this.showJoystick = !this.showJoystick;
+    setSetting('showJoystick', this.showJoystick);
+    document.body.classList.toggle('show-joystick', this.showJoystick);
+    if (this.input && this.input.setJoystickShown) this.input.setJoystickShown(this.showJoystick);
+    if (this.input && this.input.refresh) this.input.refresh(); // recalcula medidas del joystick al mostrarse
+    this._syncAudioLabels();
   }
 
   /** Botón maestro (Pausa): si algo suena lo silencia todo; si todo está mudo, lo reactiva. */
@@ -752,6 +903,8 @@ export class Game {
 
   _confirmResetProgress() {
     resetProgress();
+    resetTutorial(); // el jugador vuelve a ver el tutorial de los primeros niveles
+    resetMechanics(); // y las intros de mecánicas especiales (hoyos móviles/pulsantes)
     this._cancelResetProgress();
     // Refrescar todo lo que depende del progreso/inventario.
     this._updateHighScoreLabels();
@@ -1113,9 +1266,11 @@ export class Game {
     sfx.click();
     this.selectedBall = id;
     setSelectedBall(id);
+    track.ballSelected(id);
     this.ball.setSkin(this._ballVisual(id));
     this._renderBallCards();
     this._updateBallPreviews();
+    this._preloadCelebrationForBall(); // precarga el modelo 3D de celebración de la nueva especie
   }
 
   /** Definición de bola RESUELTA con la skin activa (color/material) para los visuales. */
@@ -1139,6 +1294,26 @@ export class Game {
     setSelectedBall(next.id);
     this.ball.setSkin(this._ballVisual(next.id));
     this._updateBallPreviews();
+    this._preloadCelebrationForBall(); // precarga el modelo 3D de celebración de la nueva especie
+  }
+
+  /** Carga (idempotente, cacheada por especie) el modelo 3D de celebración de la bola seleccionada,
+   *  si su especie tiene GLB en CELEBRATION_MODELS. No recarga una especie ya cargada; si no tiene
+   *  modelo, la victoria usa el dino procedural. No lanza (la victoria nunca se rompe). */
+  _loadCelebrationModel() {
+    try {
+      const species = getBall(this.selectedBall).species;
+      const entry = species && CELEBRATION_MODELS[species];
+      if (entry) this.scene.preloadCelebrationModel(species, entry);
+    } catch (_) { /* fallback procedural */ }
+  }
+
+  /** Precarga al montar/cambiar bola SOLO en perfil 'preload' (quality/escritorio). En 'onwin'
+   *  (balanced) el GLB se carga perezoso AL GANAR; en 'off' (performance/Android) nunca se carga
+   *  (siempre dino procedural) → no se toca la GPU con GLB durante el gameplay móvil. */
+  _preloadCelebrationForBall() {
+    // Lectura defensiva: si por lo que fuera el perfil no estuviera, se asume 'off' (no precarga).
+    if ((this.gfx && this.gfx.celebration3D) === 'preload') this._loadCelebrationModel();
   }
 
   _renderLevelCards() {
@@ -1222,6 +1397,7 @@ export class Game {
 
   _showPrep() {
     this._showBoardBehind = false; // sale del modal de victoria → deja de renderizar detrás
+    this._hideOliverWin();         // detiene el visor de Oliver al salir de la victoria
     const lvl = getLevel(this.levelIndex);
     const w = worldOf(this.levelIndex);
     setText('prep-world', `${w.emoji} ${tf('prep.world', worldNum(this.levelIndex), tWorldName(worldIdx(this.levelIndex)))}`);
@@ -1230,10 +1406,12 @@ export class Game {
     const tierEl = document.getElementById('prep-tier');
     if (tierEl) tierEl.dataset.tier = lvl.tier || ''; // raw para el color por CSS
     setText('prep-lives', '🥚'.repeat(this.lives));
-    setText('prep-objective', tLevelHint(lvl));
+    setText('prep-objective', '🎯 ' + tLevelHint(lvl));
     // Recompensas disponibles en este nivel (monedas + estrella si toca).
     const { coins, star } = generateCollectibles(lvl, this.levelIndex);
     setText('prep-rewards', tf('prep.rewards', coins.length, !!star));
+    // Misiones secundarias (= las 3 condiciones de estrella), claras y sin saturar.
+    this._renderPrepMissions(lvl, coins.length);
     // Eventos especiales del nivel (jefe / clima / contrarreloj) como avisos.
     this._renderPrepEvents(this.levelIndex + 1);
     this._updateBallPreviews();
@@ -1242,6 +1420,36 @@ export class Game {
     this._pendingFallShield = false;
     this._renderPrepPowerups();
     this.screens.show(SCREENS.PREP);
+  }
+
+  /**
+   * Misiones secundarias del nivel = las 3 condiciones que dan estrellas (sin perder vida,
+   * bajo el tiempo objetivo, recoger monedas). Mostrarlas hace transparente el "por qué" de
+   * las 1/2/3★ y mejora la sensación de progreso. No es un sistema nuevo: refleja la lógica
+   * de estrellas existente en `_completeLevel`.
+   */
+  _renderPrepMissions(lvl, coinCount) {
+    const list = document.getElementById('prep-missions-list');
+    if (!list) return;
+    const chips = [
+      `<span class="pm-chip">🥚 ${t('mission.noLifeLost')}</span>`,
+      `<span class="pm-chip">⏱️ ${tf('mission.underPar', lvl.par)}</span>`,
+    ];
+    if (coinCount > 0) {
+      const goal = Math.max(1, Math.ceil(coinCount * 0.6));
+      chips.push(`<span class="pm-chip">🪙 ${tf('mission.coins', goal)}</span>`);
+    }
+    list.innerHTML = chips.join('');
+  }
+
+  /** Resultado ✓/✗ de las misiones en la victoria (explica las estrellas obtenidas). */
+  _renderWinMissions(noLifeLost, underPar, hadCoins, coinsOk) {
+    const el = document.getElementById('win-missions');
+    if (!el) return;
+    const chip = (ok, icon) => `<span class="wm-chip ${ok ? 'ok' : 'no'}">${icon} ${ok ? '✓' : '✗'}</span>`;
+    let html = chip(noLifeLost, '🥚') + chip(underPar, '⏱️');
+    if (hadCoins) html += chip(coinsOk, '🪙');
+    el.innerHTML = html;
   }
 
   /** Pinta los avisos de eventos especiales del nivel en la preparación (chips). */
@@ -1336,6 +1544,12 @@ export class Game {
     this._coinsThisLevel = 0;
     this._starGotThisLevel = false;
     this._levelHasStar = !!star;
+
+    // --- Hoyos rojos DINÁMICOS (móviles cada 4 desde N4 / pulsantes cada 4 desde N13) ---
+    // Las specs se calculan respetando meta/portales/monedas/estrella/spawn (auto-acotadas).
+    this._dynSpecs = buildDynamicSpecs(lvl, levelNum, { coins, star });
+    this._dynT = 0;
+    this._applyDynamicTraps(0); // estado inicial (t=0) en física + escena
     this._pickupR2 = PICKUP_RADIUS * PICKUP_RADIUS;
     // Atracción Alegre (bola rosa): radio de recogida de MONEDAS ampliado un poco.
     const coinR = PICKUP_RADIUS + (this._coinMagnet || 0);
@@ -1375,6 +1589,7 @@ export class Game {
     this._setTimeAttackHud();
     setThumb('hud-ball', this._ballVisual(), 34);
     setLastLevel(this.levelIndex + 1);
+    if (!this._analyticsGameStarted) { this._analyticsGameStarted = true; track.gameStart(); } // 1ª jugada de la sesión
     track.levelStart(this.levelIndex + 1);
 
     // Eventos ambientales: 2 vuelos de pterodáctilo por nivel (ida y vuelta) +
@@ -1412,6 +1627,46 @@ export class Game {
       hud.toast(tLevelHint(lvl), 1700);
     }
     hud.hint(this.isTouch ? t('hud.hintTouch') : t('hud.hintDesktop'));
+    // Tutorial jugable de los primeros niveles (1-5): coach corto, no invasivo, una vez.
+    this._startTutorial(levelNum);
+  }
+
+  // --- Tutorial jugable (niveles 1-5) ---------------------------------------
+  /** Arranca la secuencia de coach del nivel si procede (no bloquea el input). */
+  _startTutorial(levelNum) {
+    this._hideCoach();
+    const queue = [];
+    if (shouldShowTutorial(levelNum)) {
+      const steps = tutorialSteps(levelNum);
+      // En móvil, el primer mensaje enseña el control TÁCTIL por arrastre (no el D-pad).
+      if (this.isTouch) { const i = steps.indexOf('tut.l1a'); if (i >= 0) steps[i] = 'tut.l1aTouch'; }
+      queue.push(...steps); markTutorialSeen(levelNum);
+    }
+    // Intro de mecánica especial (hoyos móviles/pulsantes) la PRIMERA vez que se encuentra.
+    const kind = dynamicKind(levelNum);
+    if (kind && shouldShowMechanic(kind)) { queue.push(kind === 'move' ? 'tut.move' : 'tut.pulse'); markMechanicSeen(kind); }
+    if (!queue.length) return;
+    this._tutQueue = queue;
+    this._nextTutorialStep();
+  }
+
+  /** Muestra el siguiente mensaje del coach; al agotarse, lo oculta. */
+  _nextTutorialStep() {
+    clearTimeout(this._tutTimer);
+    const coach = document.getElementById('tutorial-coach');
+    if (!this._tutQueue || !this._tutQueue.length || !this.playing) { this._hideCoach(); return; }
+    const key = this._tutQueue.shift();
+    setText('tutorial-coach-text', t(key));
+    if (coach) { coach.hidden = false; coach.classList.remove('show'); void coach.offsetWidth; coach.classList.add('show'); }
+    this._tutTimer = setTimeout(() => this._nextTutorialStep(), 4200);
+  }
+
+  /** Oculta el coach del tutorial y detiene su temporizador. */
+  _hideCoach() {
+    clearTimeout(this._tutTimer);
+    this._tutQueue = null;
+    const coach = document.getElementById('tutorial-coach');
+    if (coach) { coach.classList.remove('show'); coach.hidden = true; }
   }
 
   /** Banner de jefe (overlay breve, no bloquea el input). */
@@ -1483,6 +1738,7 @@ export class Game {
   _pause() {
     if (!this.playing || this.paused) return;
     this.paused = true;
+    this._hideCoach(); // no dejar el coach del tutorial sobre la pausa
     this._pauseStart = performance.now();
     this.input.reset();
     this.scene.setTilt(0, 0);
@@ -1508,9 +1764,26 @@ export class Game {
   }
 
   // --- Bucle de juego -------------------------------------------------------
+  /**
+   * Avanza y aplica el estado de los hoyos rojos DINÁMICOS al modelo físico (posición/radio/
+   * active) y a la escena (malla/escala/brillo). Se llama ANTES de la física para que la
+   * colisión use el estado del frame. Solo avanza durante el juego activo (pausa lo congela).
+   */
+  _applyDynamicTraps(dt) {
+    if (!this._dynSpecs || !this._dynSpecs.length) return;
+    this._dynT += dt;
+    for (const spec of this._dynSpecs) {
+      const s = dynamicTrapState(spec, this._dynT);
+      const tr = this.physics.traps[spec.index];
+      if (tr) { tr.x = s.x; tr.z = s.z; tr.r = s.r; tr.active = s.active; }
+      this.scene.setTrapTransform(spec.index, s.x, s.z, s.r, s.active);
+    }
+  }
+
   _stepPlay(dt) {
     this.input.update(dt); // mueve también el knob del joystick (refleja la inclinación)
     this.scene.setTilt(this.input.tiltX, this.input.tiltZ);
+    this._applyDynamicTraps(dt); // hoyos dinámicos ANTES de la física (colisión por frame)
 
     const ev = this.physics.update(dt, this.input.tiltX, this.input.tiltZ);
     this.ball.setPlanePosition(this.physics.x, this.physics.z);
@@ -1611,6 +1884,7 @@ export class Game {
         this.scene.spawnBurst(c.x, 0.7, c.z, '#ffe26a'); // ráfaga dorada
         this._popPoints(c.x, c.z, '⭐ +1', 'star');
         sfx.starGet();
+        haptics.star();
         hud.flash('gold');
         hud.toast(t('msg.starGet'), 1500);
         critters.diplodocus(); // un diplodocus se asoma a celebrar (overlay lateral)
@@ -1619,6 +1893,7 @@ export class Game {
         this._coinsThisLevel += 1;
         this._popPoints(c.x, c.z, `+${COIN_POINTS}`, 'coin');
         sfx.coin();
+        haptics.coin();
         hud.setCoins(this._coinsThisLevel);
         hud.setScore(this.score);
         // A las 3 monedas del nivel: pasa la familia Triceratops (1 sola vez por nivel).
@@ -1750,6 +2025,9 @@ export class Game {
   // --- Celebración de victoria ---------------------------------------------
   _startCelebration() {
     this.ball.mesh.visible = false;
+    // Carga perezosa del GLB AL GANAR (perfil 'onwin'): no bloquea; esta victoria puede salir con el
+    // dino procedural y las siguientes ya con el modelo 3D. En 'off' (Android) no se carga nunca.
+    if ((this.gfx && this.gfx.celebration3D) === 'onwin') this._loadCelebrationModel();
     // La celebración es PURAMENTE visual: si algo fallara, no debe bloquear el
     // avance a la pantalla de victoria (estado 'celebrating' + _completeLevel).
     try {
@@ -1845,6 +2123,8 @@ export class Game {
       return;
     }
     this.lives -= 1;
+    track.levelFail(this.levelIndex + 1, kind); // analítica (no-op si OFF): intento fallido + motivo
+    haptics.hit();
     hud.setLives(this.lives);
     if (this.lives <= 0) {
       // Vida extra del inventario: se consume automáticamente y sigues en juego.
@@ -1877,6 +2157,7 @@ export class Game {
 
   _completeLevel() {
     this.playing = false;
+    this._hideCoach();
     this.input.disable();
     weather.clear();
     const lvl = getLevel(this.levelIndex);
@@ -1902,12 +2183,21 @@ export class Game {
     setStars(lvl.id, stars);
     setBestTime(lvl.id, time);
 
+    // Feedback de victoria: háptica + celebración EXTRA al lograr las 3 estrellas.
+    if (stars >= 3) { haptics.triple(); sfx.firework(); this.scene.spawnBurst(0, 1.2, 0, '#ffe26a'); }
+    else haptics.win();
+
     // Bonus de contrarreloj: completar un nivel cronometrado da estrellas de canje extra.
     let taBonus = 0;
     if (this._timeAttackLimit) { taBonus = 2; addStarTokens(taBonus); }
 
-    // Analítica + sincronización best-effort del progreso a la nube (si hay cuenta).
-    track.levelComplete(this.levelIndex + 1, stars);
+    // Analítica + sincronización best-effort del progreso a la nube (si hay cuenta). Métricas
+    // AGREGADAS por nivel (no por moneda/frame) para no inflar eventos. Todo no-op si Analytics OFF.
+    const _lvlNum = this.levelIndex + 1;
+    const _coins = this._coinsThisLevel || 0;
+    track.levelComplete(_lvlNum, stars, this._elapsed(), _coins);
+    if (_coins > 0) track.coinsCollected(_lvlNum, _coins);
+    if (stars > 0) track.starsCollected(_lvlNum, stars);
     this._pushCloudIfLogged();
 
     // Auto-desbloqueo de skins por estrellas acumuladas + aviso de cofre listo.
@@ -1930,6 +2220,8 @@ export class Game {
       for (let i = 0; i < 3; i++) html += i < stars ? '<span class="won">★</span>' : '<span class="dim">☆</span>';
       starsEl.innerHTML = html;
     }
+    // Resultado de misiones (✓/✗): explica el porqué de las estrellas.
+    this._renderWinMissions(noLifeLost, underPar, (this._coinsAvailableThisLevel || 0) > 0, enoughCoins);
     setText('win-score', `${this.score}`);
     setText('win-reward', `+${levelReward}`);
     setText('win-time', fmtTime(time));
@@ -1950,7 +2242,34 @@ export class Game {
     showEl('btn-win-next', !isLast);
     this._showBoardBehind = true; // deja ver el tablero/celebración detrás del modal (dimmed)
     this.screens.show(SCREENS.WIN);
+    this._showOliverWin(); // personaje 3D Oliver (EN PRUEBA) en la victoria; carga perezosa + fallback
   }
+
+  // --- Oliver (personaje 3D oficial, EN PRUEBA) -----------------------------
+  /** Muestra a Oliver en la pantalla de victoria. Aislado, perezoso y con fallback: si el
+   *  modelo no carga, se conserva el trofeo 🏆 y el juego sigue igual. */
+  _showOliverWin() {
+    const el = document.getElementById('oliver-win-stage');
+    const panel = el && el.closest ? el.closest('.win-panel') : null;
+    if (!el || !panel) return;
+    // Coherencia bola→personaje: el visor 3D de T-Rexo/Oliver solo acompaña la victoria de la bola
+    // T-Rex (Rex Blanco). Con otras especies se conserva el trofeo 🏆 y del hoyo sale SU dinosaurio
+    // (no forzamos el mismo personaje para todas las bolas).
+    const species = this.ball && this.ball.ballDef ? this.ball.ballDef.species : 'trex';
+    if (species !== 'trex') { panel.classList.remove('oliver-on'); this._hideOliverWin(); return; }
+    if (!this.oliverStage) {
+      this.oliverStage = new OliverStage(el, {
+        // Al cargar: el contenedor pasa de display:none a visible → recalculamos el tamaño del
+        // lienzo para que Oliver no salga estirado (el renderer se creó con el contenedor oculto).
+        onReady: () => { panel.classList.add('oliver-on'); if (this.oliverStage) this.oliverStage.resize(); },
+        onFail: () => panel.classList.remove('oliver-on'), // se mantiene el 🏆 de reserva
+      });
+    }
+    Promise.resolve(this.oliverStage.show()).catch(() => {}); // async (carga perezosa): no bloquea la UI
+  }
+
+  /** Detiene el visor de Oliver (para de renderizar; no gasta FPS fuera de la victoria). */
+  _hideOliverWin() { if (this.oliverStage) this.oliverStage.hide(); }
 
   /** Desbloquea automáticamente las skins por estrellas alcanzadas. @returns {string[]} nuevas. */
   _autoUnlockStarSkins() {
@@ -1970,6 +2289,7 @@ export class Game {
   // --- Sin vidas + monetización (vídeo recompensado / packs de vidas) -------
   _noLives() {
     this.playing = false;
+    this._hideCoach();
     this.input.disable();
     weather.clear();
     const isRecord = setHighScore(this.score);
@@ -2071,6 +2391,7 @@ export class Game {
   }
 
   _onRetry() {
+    track.levelRetry(this.levelIndex + 1);
     this.lives = LIVES_START;
     this._showPrep();
   }
@@ -2078,6 +2399,8 @@ export class Game {
   _quitToMenu() {
     this.playing = false;
     this.paused = false;
+    this._hideCoach();
+    this._hideOliverWin();
     this._showBoardBehind = false;
     this.input.disable();
     this.scene.clearBoard();
@@ -2101,12 +2424,14 @@ export class Game {
   _loop(now) {
     const dt = Math.min((now - this._last) / 1000 || 0, 0.05);
     this._last = now;
+    perf.frame(); // instrumentación (coste cero si DEBUG_PERFORMANCE=false)
     // Red de seguridad: un error en un frame NO debe matar el bucle de render
     // (antes, una excepción aquí dejaba el juego congelado). Se registra y se sigue.
     try {
       // Se renderiza también con _showBoardBehind: el modal de victoria deja ver el tablero
       // (y la celebración del dino) detrás, oscurecido, sin avanzar la física.
       if (this.playing || this._showBoardBehind) {
+        const uEnd = perf.PERF_ON ? perf.mark() : null;
         if (this.playing && !this.paused) {
           if (this.ballState === 'rolling') this._stepPlay(dt);
           else if (this.ballState === 'celebrating') this._updateCelebration(dt);
@@ -2115,7 +2440,10 @@ export class Game {
           else this._updateAnim(dt);
         }
         this.scene.update(dt);
+        if (uEnd) perf.addUpdate(uEnd());
+        const rEnd = perf.PERF_ON ? perf.mark() : null;
         this.scene.render();
+        if (rEnd) perf.addRender(rEnd());
       }
     } catch (err) {
       console.error('[TREXoRoll] Error en el bucle de juego (se continúa):', err);

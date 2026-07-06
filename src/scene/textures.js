@@ -74,7 +74,7 @@ function shade(hex, pct) {
   return `rgb(${adj(r)},${adj(g)},${adj(b)})`;
 }
 
-const DEFAULT_BALL_DEF = { body: '#f6f8fa', body2: '#dde5ea', species: 'trex', dino: '#5f9e74', dark: '#173f2a' };
+const DEFAULT_BALL_DEF = { body: '#f6f8fa', body2: '#dde5ea', species: 'trex', emblem: 'oliver', dino: '#5f9e74', dark: '#173f2a' };
 
 /** Textura de la bola (cuerpo del color elegido + emblema de la SILUETA de su dino). */
 export function makeBallTexture(ballDef) {
@@ -100,7 +100,7 @@ export function makeBallTexture(ballDef) {
     ctx.fillStyle = '#ffffff'; ctx.fill();
     ctx.beginPath(); ctx.arc(cx, cy, R - 12, 0, Math.PI * 2);
     ctx.fillStyle = shade(def.body, 26); ctx.fill();
-    drawDino(ctx, def.species, cx, cy, 1.65, def.dino, def.dark);
+    drawDino(ctx, def.emblem || def.species, cx, cy, 1.65, def.dino, def.dark);
   }
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -152,8 +152,8 @@ export function makeBallThumbnail(ballDef, size = 120) {
   ctx.fillStyle = sh; ctx.fillRect(0, 0, size, size);
   ctx.restore();
 
-  // Emblema del dino de la especie, centrado.
-  drawDino(ctx, def.species, c, c, size / 145, def.dino, def.dark);
+  // Emblema del dino (emblem override → species), centrado.
+  drawDino(ctx, def.emblem || def.species, c, c, size / 145, def.dino, def.dark);
 
   // Aro fino para definición (separa la bola del fondo de la tarjeta).
   ctx.lineWidth = Math.max(1, size * 0.02);
@@ -456,4 +456,47 @@ export function makeSkyTexture() {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
+}
+
+/**
+ * Fondo de ESCENA prehistórica PROCEDURAL (Canvas 2D) para usar como `background-image` del CSS.
+ * Cielo con degradado + sol + bruma + montañas/volcán/palmeras + copas de jungla + suelo, en la
+ * paleta del bioma. **100% original de SLF Games** (dibujado por código, sin archivos ni marcas):
+ * sustituye a cualquier imagen de terceros. Devuelve un data URL PNG.
+ */
+export function makeSceneBackgroundURL(name = 'valle', w = 1280, h = 640) {
+  const t = getTheme(name);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // Cielo
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, t.sky[0]); g.addColorStop(0.5, t.sky[1]); g.addColorStop(0.78, t.sky[2]); g.addColorStop(1, t.sky[3]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  // Sol suave
+  ctx.save(); ctx.globalAlpha = 0.85;
+  const sr = h * 0.2;
+  const sg = ctx.createRadialGradient(w * 0.72, h * 0.26, 8, w * 0.72, h * 0.26, sr);
+  sg.addColorStop(0, t.sun); sg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(w * 0.72, h * 0.26, sr, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+  // Bruma atmosférica sobre el horizonte (profundidad de jungla)
+  ctx.save(); ctx.globalAlpha = 0.3;
+  const mg = ctx.createLinearGradient(0, h * 0.46, 0, h * 0.66);
+  mg.addColorStop(0, 'rgba(255,255,255,0)'); mg.addColorStop(1, '#ffffff');
+  ctx.fillStyle = mg; ctx.fillRect(0, h * 0.44, w, h * 0.26); ctx.restore();
+
+  // Siluetas + copas de jungla + suelo (mismo dibujo que el cielo temático del juego).
+  drawScenery(ctx, t, w, h);
+
+  // Marco de follaje oscuro en la base y laterales inferiores → foco central + sensación premium.
+  ctx.save();
+  const vg = ctx.createRadialGradient(w * 0.5, h * 0.62, h * 0.22, w * 0.5, h * 0.7, h * 0.8);
+  vg.addColorStop(0, 'rgba(9,27,18,0)'); vg.addColorStop(1, 'rgba(9,27,18,0.34)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+
+  return canvas.toDataURL('image/png');
 }

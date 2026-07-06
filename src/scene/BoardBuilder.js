@@ -69,9 +69,10 @@ export function buildBoard(level) {
     group.add(wall);
   }
 
-  // --- Hoyo objetivo (meta) con anillo verde pulsante ---
+  // --- Hoyo objetivo (meta) con anillo verde pulsante + halo suave ---
   if (level.goal) {
     group.add(makeHole(level.goal, 0x10130f));
+    group.add(makeGoalHalo(level.goal)); // halo verde suave → objetivo más reconocible (no tapa)
     const ring = makeRing(level.goal, 0x2ecc71, 0.9);
     group.add(ring);
     animated.push(ring);
@@ -82,10 +83,16 @@ export function buildBoard(level) {
     group.add(banner);
   }
 
-  // --- Hoyos trampa con anillo rojo ---
+  // --- Hoyos trampa con anillo rojo (referencias para los hoyos DINÁMICOS) ---
+  const trapMeshes = [];
   for (const t of level.traps || []) {
-    group.add(makeHole(t, 0x120a0a));
-    group.add(makeRing(t, 0xe74c3c, 0.0));
+    const hole = makeHole(t, 0x120a0a);
+    // Emissive base 0.2: el anillo rojo se lee como PELIGRO aun estático (antes 0.0 → plano). Los
+    // hoyos dinámicos siguen mandando su propio brillo por frame (setTrapTransform). No entran en `animated`.
+    const ring = makeRing(t, 0xe74c3c, 0.2);
+    group.add(hole);
+    group.add(ring);
+    trapMeshes.push({ hole, ring, baseR: t.r }); // el sistema dinámico mueve/escala estos
   }
 
   // --- Portales naranjas (teletransporte) con aro emisivo + vórtice giratorio ---
@@ -102,7 +109,7 @@ export function buildBoard(level) {
   // --- Decoración jurásica ---
   decorate(group, level);
 
-  return { group, animated };
+  return { group, animated, trapMeshes };
 }
 
 function makeHole(hole, color) {
@@ -129,6 +136,21 @@ function makePortalSwirl(portal) {
   swirl.userData.pulse = true;        // late suavemente
   swirl.userData.baseEmissive = 0;    // MeshBasic: el pulse solo escala
   return swirl;
+}
+
+// Halo verde suave bajo el hoyo objetivo: disco aditivo plano sobre el suelo, baja opacidad.
+// Hace la META más reconocible sin taparla. Estático (no entra en `animated` → 0 coste por frame).
+function makeGoalHalo(goal) {
+  const halo = new THREE.Mesh(
+    new THREE.CircleGeometry((goal.r || 1) * 2.1, 32),
+    new THREE.MeshBasicMaterial({
+      map: makeGlowTexture('#2ecc71'), transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, opacity: 0.34, side: THREE.DoubleSide,
+    })
+  );
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.set(goal.x, 0.04, goal.z);
+  return halo;
 }
 
 function makeRing(hole, color, emissive) {

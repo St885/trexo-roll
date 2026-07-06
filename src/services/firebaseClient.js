@@ -11,7 +11,7 @@
 //
 // La config se importa de ../config/firebaseConfig.js (siempre existe, con placeholders).
 
-import { firebaseConfig, sdkUrls, hasRealConfig } from '../config/firebaseConfig.js';
+import { firebaseConfig, sdkUrls, hasRealConfig, ENABLE_ANALYTICS } from '../config/firebaseConfig.js';
 
 let _cache; // Promise<{app,auth,db,analytics,sdk}|null> — se resuelve una sola vez.
 
@@ -29,6 +29,19 @@ function _devWarn(msg) {
 }
 
 /**
+ * Resuelve una ruta de sdkUrls RELATIVA AL DOCUMENTO (index.html). Un `import('./libs/…')` dinámico
+ * se resolvería relativo a ESTE módulo (src/services/) → 404 silencioso y el juego quedaría en demo
+ * aunque la config fuera real. Con new URL(…, document.baseURI) funciona igual en dev (`npx serve`),
+ * en `www/`, en GitHub Pages (subruta /trexo-roll/) y en Capacitor.
+ */
+function _sdkUrl(p) {
+  try {
+    if (typeof document !== 'undefined' && document.baseURI) return new URL(p, document.baseURI).href;
+  } catch (_) { /* sin DOM (tests): se devuelve tal cual */ }
+  return p;
+}
+
+/**
  * Devuelve los handles de Firebase inicializados, o null si no está configurado /
  * no se pudo cargar. Cachea el resultado (idempotente).
  */
@@ -43,9 +56,9 @@ async function _init() {
   // Sin entorno de navegador (p. ej. tests en Node) no intentamos cargar el SDK web.
   if (typeof window === 'undefined') return null;
   try {
-    const appMod = await import(sdkUrls.app);
-    const authMod = await import(sdkUrls.auth);
-    const fsMod = await import(sdkUrls.firestore);
+    const appMod = await import(_sdkUrl(sdkUrls.app));
+    const authMod = await import(_sdkUrl(sdkUrls.auth));
+    const fsMod = await import(_sdkUrl(sdkUrls.firestore));
     if (appMod.__PLACEHOLDER__ || typeof appMod.initializeApp !== 'function') {
       // Archivos de libs/firebase/ aún son los placeholders → modo demo controlado.
       _devWarn('SDK de Firebase no vendorizado (ejecuta npm run fetch:firebase o ve libs/firebase/README.md); modo demo.');
@@ -55,9 +68,11 @@ async function _init() {
     const auth = authMod.getAuth(app);
     const db = fsMod.getFirestore(app);
     let analytics = null, analyticsMod = null;
-    if (sdkUrls.analytics) {
+    // Analytics DESACTIVADO en esta versión (ENABLE_ANALYTICS=false): no se inicializa ni se
+    // recopila analítica aunque Firebase Auth esté configurado. Coherente con Data Safety.
+    if (ENABLE_ANALYTICS && sdkUrls.analytics) {
       try {
-        analyticsMod = await import(sdkUrls.analytics);
+        analyticsMod = await import(_sdkUrl(sdkUrls.analytics));
         if (await _analyticsSupported(analyticsMod)) analytics = analyticsMod.getAnalytics(app);
       } catch (_) { /* analytics es opcional (requiere su CSP); el resto sigue */ }
     }

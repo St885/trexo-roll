@@ -7,15 +7,32 @@
 
 import { getFirebase } from './firebaseClient.js';
 
-// Eventos mínimos definidos para el juego.
+// Eventos del juego. Convención GA4: `login`/`sign_up` llevan `method` ('google'|'email') — así se
+// distingue login_google vs login_email en los informes SIN duplicar nombres de evento. `game_open`,
+// `session_start`/`session_end` y `first_open`/`user_engagement` (estos dos los emite GA4 solo) cubren
+// activos/sesiones/tiempo/retención. NUNCA se envía PII (ver BLOCKED_PARAMS + sanitizeParams).
 export const EVENTS = {
-  LOGIN: 'login',
-  SIGN_UP: 'sign_up',
-  GUEST_START: 'guest_start',
-  LEVEL_START: 'level_start',
-  LEVEL_COMPLETE: 'level_complete',
-  LEVEL_FAIL: 'level_fail',
-  SKIN_SELECTED: 'skin_selected',
+  // Autenticación
+  LOGIN: 'login',                 // { method: 'google' | 'email' }
+  SIGN_UP: 'sign_up',             // { method: 'email' }
+  LOGOUT: 'logout',
+  GUEST_START: 'guest_start',     // guest_play
+  RETURN_PLAYER: 'return_player', // hay progreso local previo al abrir
+  // Sesión / apertura
+  GAME_OPEN: 'game_open',
+  SESSION_START: 'session_start',
+  SESSION_END: 'session_end',     // { play_time_seconds }
+  // Gameplay
+  GAME_START: 'game_start',       // empieza a jugar (primer nivel de la sesión)
+  LEVEL_START: 'level_start',     // { level }
+  LEVEL_COMPLETE: 'level_complete', // { level, stars, level_time_seconds, coins }
+  LEVEL_FAIL: 'level_fail',       // { level, reason }
+  LEVEL_RETRY: 'level_retry',     // { level }
+  COINS_COLLECTED: 'coins_collected',   // { level, coins } (agregado por nivel, no por moneda)
+  STARS_COLLECTED: 'stars_collected',   // { level, stars }
+  SKIN_SELECTED: 'skin_selected',       // { skin }
+  BALL_SELECTED: 'ball_selected',       // { ball }
+  // Engagement / eventos del mundo
   CHEST_OPENED: 'chest_opened',
   DAILY_REWARD_CLAIMED: 'daily_reward_claimed',
   ROCKET_ACTIVATED: 'rocket_activated',
@@ -54,15 +71,29 @@ export async function logEvent(name, params) {
   } catch (_) { /* la analítica nunca debe afectar al gameplay */ }
 }
 
-// — Atajos legibles para los puntos del juego —
+// — Atajos legibles para los puntos del juego (todos no-op si Analytics está OFF) —
 export const track = {
-  login: (method = 'password') => logEvent(EVENTS.LOGIN, { method }),
-  signUp: (method = 'password') => logEvent(EVENTS.SIGN_UP, { method }),
+  // Auth (GA4: method distingue google/email)
+  login: (method = 'email') => logEvent(EVENTS.LOGIN, { method }),
+  signUp: (method = 'email') => logEvent(EVENTS.SIGN_UP, { method }),
+  logout: () => logEvent(EVENTS.LOGOUT, {}),
   guestStart: () => logEvent(EVENTS.GUEST_START, {}),
+  returnPlayer: (lastLevel) => logEvent(EVENTS.RETURN_PLAYER, { last_level: lastLevel }),
+  // Sesión
+  gameOpen: () => logEvent(EVENTS.GAME_OPEN, {}),
+  sessionStart: () => logEvent(EVENTS.SESSION_START, {}),
+  sessionEnd: (playTimeSeconds) => logEvent(EVENTS.SESSION_END, { play_time_seconds: Math.max(0, Math.round(playTimeSeconds || 0)) }),
+  // Gameplay
+  gameStart: () => logEvent(EVENTS.GAME_START, {}),
   levelStart: (level) => logEvent(EVENTS.LEVEL_START, { level }),
-  levelComplete: (level, stars) => logEvent(EVENTS.LEVEL_COMPLETE, { level, stars }),
+  levelComplete: (level, stars, timeSeconds, coins) => logEvent(EVENTS.LEVEL_COMPLETE, { level, stars, level_time_seconds: timeSeconds != null ? Math.round(timeSeconds) : undefined, coins }),
   levelFail: (level, reason) => logEvent(EVENTS.LEVEL_FAIL, { level, reason }),
+  levelRetry: (level) => logEvent(EVENTS.LEVEL_RETRY, { level }),
+  coinsCollected: (level, coins) => logEvent(EVENTS.COINS_COLLECTED, { level, coins }),
+  starsCollected: (level, stars) => logEvent(EVENTS.STARS_COLLECTED, { level, stars }),
   skinSelected: (skin) => logEvent(EVENTS.SKIN_SELECTED, { skin }),
+  ballSelected: (ball) => logEvent(EVENTS.BALL_SELECTED, { ball }),
+  // Engagement / mundo
   chestOpened: (reward) => logEvent(EVENTS.CHEST_OPENED, { reward }),
   dailyClaimed: (streak) => logEvent(EVENTS.DAILY_REWARD_CLAIMED, { streak }),
   rocketActivated: (kind) => logEvent(EVENTS.ROCKET_ACTIVATED, { kind }),

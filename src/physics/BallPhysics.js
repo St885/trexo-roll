@@ -57,7 +57,10 @@ export class BallPhysics {
     this.footprint = level.footprint;
     this.walls = level.walls || [];
     this.goal = level.goal;
-    this.traps = level.traps || [];
+    // CLON de las trampas: los hoyos dinámicos mutan x/z/r/active por frame; clonar evita
+    // corromper la definición del nivel (que se reutiliza en repeticiones). Las trampas
+    // estáticas simplemente no se mutan. `active` por defecto = true (puede tragar la bola).
+    this.traps = (level.traps || []).map((t) => ({ x: t.x, z: t.z, r: t.r, active: true }));
     this.portals = level.portals || [];
     this.reset(level.start);
   }
@@ -169,6 +172,7 @@ export class BallPhysics {
   _holePull() {
     const holes = this.goal ? [this.goal, ...this.traps] : this.traps;
     for (const hole of holes) {
+      if (hole.active === false) continue; // hoyo dinámico cerrado/pequeño: ni atrae ni traga
       const dx = hole.x - this.x;
       const dz = hole.z - this.z;
       const dist = Math.hypot(dx, dz);
@@ -187,6 +191,8 @@ export class BallPhysics {
       if (dg < this.goal.r * PHYS.CAPTURE_FACTOR) return 'goal';
     }
     for (const t of this.traps) {
+      if (t.active === false) continue; // hoyo dinámico inactivo (más pequeño que la bola)
+      // La colisión usa el RADIO ACTUAL (t.r), no el base: un hoyo pequeño no traga injustamente.
       const dt = Math.hypot(t.x - this.x, t.z - this.z);
       if (dt < t.r * PHYS.CAPTURE_FACTOR) return 'trap';
     }

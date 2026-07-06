@@ -1,0 +1,80 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#06140d;overflow:hidden}#c{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script src="kit.js"></script>
+<script>
+const c=document.getElementById('c');
+const W=window.innerWidth,H=window.innerHeight; c.width=W;c.height=H;
+const ctx=c.getContext('2d');
+const params=new URLSearchParams(location.search);
+const variant=params.get('v')||'normal';
+const land=W>=H;
+
+KIT.sky(ctx,W,H);
+KIT.jungle(ctx,W,H,{spores:land?40:30,tall:land?0.2:0.4});
+
+// Tablero ocupando el centro
+const bw = land ? W*0.30 : W*0.42;
+const bd = land ? H*0.52 : H*0.34;
+let holes,coins,star,ball;
+if(variant==='traps'){
+  holes=[{u:-0.6,row:0.3,kind:'trap',t:0.4},{u:0.0,row:0.5,kind:'trap',t:1.2},{u:0.55,row:0.34,kind:'trap',t:2.1},
+         {u:-0.3,row:0.74,kind:'trap',t:0.8},{u:0.8,row:0.66,kind:'goal'}];
+  coins=[{u:-0.65,row:0.6},{u:0.3,row:0.78}];
+  ball={u:-0.78,row:0.5};
+}else{
+  holes=[{u:-0.45,row:0.4,kind:'trap'},{u:0.3,row:0.66,kind:'trap'},{u:0.7,row:0.4,kind:'goal'},{u:-0.05,row:0.16,kind:'portal'}];
+  coins=[{u:-0.15,row:0.55},{u:0.05,row:0.6},{u:0.25,row:0.52}];
+  star={u:0.45,row:0.22}; ball={u:-0.6,row:0.62};
+}
+KIT.board(ctx,W,H,{cx:W*0.5,cy:H*0.52,halfW:bw,depth:bd,tiltDeg:variant==='traps'?6:-5,surface:'#5f8a52',holes,coins,star,ball});
+
+// ---- HUD superior (estilo juego) ----
+function chip(x,y,txt,bold){
+  ctx.font=(bold?'900 ':'800 ')+Math.round(H*(land?0.03:0.022))+'px system-ui,sans-serif';
+  const pad=H*0.018, tw=ctx.measureText(txt).width, w=tw+pad*2, h=H*(land?0.062:0.046);
+  ctx.fillStyle='rgba(9,27,18,0.82)'; KIT.rr(ctx,x,y,w,h,h/2); ctx.fill();
+  ctx.strokeStyle='rgba(242,193,78,0.4)'; ctx.lineWidth=2; KIT.rr(ctx,x,y,w,h,h/2); ctx.stroke();
+  ctx.fillStyle='#f6f1e3'; ctx.textBaseline='middle'; ctx.fillText(txt,x+pad,y+h/2);
+  return x+w+H*0.012;
+}
+const hy=H*0.035; let hx=W*0.03;
+hx=chip(hx,hy,'Nivel '+(variant==='traps'?'12':'7')+'/50',true);
+hx=chip(hx,hy,'🥚🥚🥚');
+hx=chip(hx,hy,'Puntos: '+(variant==='traps'?'1 980':'1 240'));
+hx=chip(hx,hy,'🪙 '+(variant==='traps'?'2':'3'));
+// botón pausa derecha
+const ps=H*0.062; ctx.fillStyle='rgba(9,27,18,0.82)'; KIT.rr(ctx,W-W*0.03-ps,hy,ps,ps,12);ctx.fill();
+ctx.strokeStyle='rgba(242,193,78,0.4)';KIT.rr(ctx,W-W*0.03-ps,hy,ps,ps,12);ctx.stroke();
+ctx.fillStyle='#f6f1e3';ctx.textAlign='center';ctx.fillText('⏸',W-W*0.03-ps/2,hy+ps/2);ctx.textAlign='left';
+
+// objetivo/toast
+if(variant!=='traps'){
+  ctx.font='900 '+Math.round(H*0.03)+'px system-ui,sans-serif';
+  const tt='🎯 Llega al hoyo verde'; const tw=ctx.measureText(tt).width+H*0.05;
+  ctx.fillStyle='rgba(9,27,18,0.86)';KIT.rr(ctx,W/2-tw/2,H*0.13,tw,H*0.07,16);ctx.fill();
+  ctx.strokeStyle='#f2c14e';ctx.lineWidth=2;KIT.rr(ctx,W/2-tw/2,H*0.13,tw,H*0.07,16);ctx.stroke();
+  ctx.fillStyle='#f6f1e3';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(tt,W/2,H*0.13+H*0.035);ctx.textAlign='left';
+}else{
+  ctx.font='900 '+Math.round(H*0.03)+'px system-ui,sans-serif';
+  const tt='⚠️ ¡Cuidado con los hoyos rojos!'; const tw=ctx.measureText(tt).width+H*0.05;
+  ctx.fillStyle='rgba(40,12,10,0.86)';KIT.rr(ctx,W/2-tw/2,H*0.13,tw,H*0.07,16);ctx.fill();
+  ctx.strokeStyle='#f0584a';ctx.lineWidth=2;KIT.rr(ctx,W/2-tw/2,H*0.13,tw,H*0.07,16);ctx.stroke();
+  ctx.fillStyle='#ffd9d2';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(tt,W/2,H*0.13+H*0.035);ctx.textAlign='left';
+}
+
+// ---- Controles táctiles (tenues) ----
+ctx.textBaseline='alphabetic';
+const cs=Math.min(W,H)*0.17, by=H-cs-H*0.05;
+// D-pad izquierda
+function dbtn(x,y,s,gl){ctx.fillStyle='rgba(9,27,18,0.5)';KIT.rr(ctx,x,y,s,s,s*0.25);ctx.fill();ctx.strokeStyle='rgba(242,193,78,0.3)';ctx.lineWidth=2;KIT.rr(ctx,x,y,s,s,s*0.25);ctx.stroke();ctx.fillStyle='rgba(246,241,227,0.7)';ctx.font='900 '+s*0.5+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(gl,x+s/2,y+s/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+const dx=W*0.05, u=cs*0.33;
+dbtn(dx+u,by,u,'▲');dbtn(dx,by+u,u,'◄');dbtn(dx+2*u,by+u,u,'►');dbtn(dx+u,by+2*u,u,'▼');
+// joystick derecha
+const jx=W-W*0.05-cs, jy=by; ctx.fillStyle='rgba(9,27,18,0.45)';ctx.beginPath();ctx.arc(jx+cs/2,jy+cs/2,cs/2,0,Math.PI*2);ctx.fill();
+ctx.strokeStyle='rgba(242,193,78,0.3)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(jx+cs/2,jy+cs/2,cs/2,0,Math.PI*2);ctx.stroke();
+ctx.fillStyle='rgba(242,193,78,0.55)';ctx.beginPath();ctx.arc(jx+cs/2+cs*0.12,jy+cs/2-cs*0.08,cs*0.2,0,Math.PI*2);ctx.fill();
+
+KIT.vignette(ctx,W,H,0.5);
+document.title='READY';
+</script></body></html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QA · TREXoRoll v0.24.9 gameplay UI</title>
+<link rel="stylesheet" href="../styles/main.css">
+<style>
+  body { background:#06140d; padding:16px; }
+  .qa-grid { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; justify-content:center; }
+  .qa-frame { position:relative; border:1px solid #2a4a36; border-radius:14px; overflow:hidden; background:radial-gradient(120% 100% at 50% 0%, #163a26, #07160e); }
+  .qa-frame .screen { position:relative !important; display:flex !important; inset:auto !important; width:100%; height:100%; opacity:1 !important; transform:none !important; }
+  .qa-frame .tutorial-coach { opacity:1 !important; transform:translateX(-50%) !important; }
+  .qa-label { position:absolute; top:6px; left:8px; z-index:99; font:700 11px/1 system-ui; color:#0c2; background:#0008; padding:3px 7px; border-radius:6px; }
+  .ph390 { width:390px; height:760px; }
+  .land  { width:760px; height:380px; }
+</style>
+</head>
+<body>
+<div class="qa-grid">
+
+  <!-- PREPARACIÓN con objetivo + misiones -->
+  <div class="qa-frame ph390"><span class="qa-label">Preparación · objetivos + misiones</span>
+    <section class="screen" id="screen-prep">
+      <div class="panel center">
+        <p class="prep-world">🐊 Mundo 2 · Pantano Raptor</p>
+        <span class="tier-chip" data-tier="Media">Media</span>
+        <h2 class="title small">Nivel 9 · Charca Tóxica</h2>
+        <p class="prep-lives">🥚🥚🥚</p>
+        <p class="prep-objective">🎯 Cruza la charca hasta el hoyo verde esquivando las trampas.</p>
+        <p class="prep-rewards">🪙 4 monedas   ·   ⭐ ¡Estrella especial aquí!</p>
+        <div class="prep-missions">
+          <span class="pm-title">Misiones · ⭐⭐⭐</span>
+          <div class="pm-list">
+            <span class="pm-chip">🥚 Sin perder vida</span>
+            <span class="pm-chip">⏱️ En menos de 50s</span>
+            <span class="pm-chip">🪙 Recoge 3 monedas</span>
+          </div>
+        </div>
+        <div class="prep-ball-row">
+          <span class="ball-preview sm" style="width:48px;height:48px;display:inline-block;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff,#d9d3bf 60%,#9a937c)"></span>
+          <span class="prep-ball-label">Tu bola: <strong>Blanca · T-Rex</strong></span>
+          <button class="btn tiny ghost">Cambiar</button>
+        </div>
+        <p class="warn">⚠️ Evita los hoyos trampa y no caigas del tablero.</p>
+        <button class="btn primary">Iniciar nivel</button>
+        <button class="btn ghost">← Menú</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- VICTORIA con misiones ✓/✗ -->
+  <div class="qa-frame ph390"><span class="qa-label">Victoria · misiones ✓/✗</span>
+    <section class="screen" id="screen-win">
+      <div class="panel win-panel">
+        <div class="win-trophy"><span class="win-trophy-ic">🏆</span></div>
+        <h2 class="win-title">¡Nivel superado!</h2>
+        <p class="win-stars"><span class="won">★</span><span class="won">★</span><span class="dim">☆</span></p>
+        <div class="win-missions">
+          <span class="wm-chip ok">🥚 ✓</span>
+          <span class="wm-chip no">⏱️ ✗</span>
+          <span class="wm-chip ok">🪙 ✓</span>
+        </div>
+        <div class="win-stats">
+          <div class="win-stat"><span class="ws-ic">🎯</span><span class="ws-lbl">Puntos</span><b class="ws-val">1 740</b></div>
+          <div class="win-stat"><span class="ws-ic">✨</span><span class="ws-lbl">Recompensa</span><b class="ws-val">+1 490</b></div>
+          <div class="win-stat"><span class="ws-ic">⏱️</span><span class="ws-lbl">Tiempo</span><b class="ws-val">0:52.3</b></div>
+          <div class="win-stat"><span class="ws-ic">⭐</span><span class="ws-lbl">Progreso</span><b class="ws-val">23/150</b></div>
+        </div>
+        <p class="win-bonus">Bonus: 🔓 ¡Nuevo nivel!</p>
+        <div class="win-actions">
+          <button class="btn primary win-cta">Siguiente nivel ▶</button>
+          <div class="win-actions-row">
+            <button class="btn win-sec">↻ Repetir</button>
+            <button class="btn win-sec ghost">Menú</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- TUTORIAL COACH (sobre el juego) · vertical -->
+  <div class="qa-frame ph390"><span class="qa-label">Coach tutorial · vertical</span>
+    <section class="screen" id="screen-game" style="display:block;background:linear-gradient(180deg,#1c3a28,#0a1c12)">
+      <div class="hud-top">
+        <span class="hud-chip">Nivel 1/50</span><span class="hud-chip">🥚🥚🥚</span>
+        <span class="hud-chip">Puntos: 0</span><span class="hud-chip">🪙 0</span>
+        <button class="btn tiny">⏸</button>
+      </div>
+      <div class="tutorial-coach show">
+        <span class="tc-ic">👋</span>
+        <span class="tc-text">Inclina el tablero y guía la bola.</span>
+        <button class="tc-close">✕</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- TUTORIAL COACH landscape -->
+  <div class="qa-frame land"><span class="qa-label">Coach tutorial · landscape (cabe entre controles)</span>
+    <section class="screen" id="screen-game" style="display:block;background:linear-gradient(180deg,#1c3a28,#0a1c12)">
+      <div class="tutorial-coach show" style="bottom:14px">
+        <span class="tc-ic">👋</span>
+        <span class="tc-text">Evita los hoyos rojos: ¡son trampas!</span>
+        <button class="tc-close">✕</button>
+      </div>
+    </section>
+  </div>
+
+</div>
+</body>
+</html>

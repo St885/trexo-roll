@@ -1,0 +1,43 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#06140d;overflow:hidden}#c{display:block}
+@font-face{font-family:sys;src:local("Segoe UI")}</style></head>
+<body><canvas id="c"></canvas>
+<script src="kit.js"></script>
+<script>
+const W=1024,H=500,c=document.getElementById('c');c.width=W;c.height=H;const ctx=c.getContext('2d');
+KIT.sky(ctx,W,H);
+KIT.jungle(ctx,W,H,{spores:34,tall:0.25});
+// Tablero hero a la derecha, inclinado
+KIT.board(ctx,W,H,{cx:W*0.66,cy:H*0.58,halfW:W*0.30,depth:H*0.42,tiltDeg:-7,surface:'#5f8a52',
+  holes:[{u:-0.55,row:0.35,kind:'trap'},{u:0.2,row:0.78,kind:'trap'},{u:0.72,row:0.5,kind:'goal'},{u:-0.1,row:0.15,kind:'portal'}],
+  coins:[{u:-0.2,row:0.55},{u:0.0,row:0.62},{u:0.2,row:0.5}],
+  star:{u:0.5,row:0.2},
+  ball:{u:-0.45,row:0.62}});
+// Wordmark propio (no es marca de terceros) a la izquierda
+ctx.save();
+ctx.textAlign='left';
+ctx.font='900 92px "Segoe UI",system-ui,sans-serif';
+ctx.lineWidth=10; ctx.strokeStyle='rgba(8,22,14,0.55)';
+ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=14; ctx.shadowOffsetY=5;
+const tx=W*0.055, ty=H*0.46;
+ctx.strokeText('TREX',tx,ty); ctx.fillStyle='#f6f1e3'; ctx.fillText('TREX',tx,ty);
+const ow=ctx.measureText('TREX').width;
+ctx.strokeText('o',tx+ow,ty); ctx.fillStyle='#34d27b'; ctx.fillText('o',tx+ow,ty);
+const ow2=ctx.measureText('o').width;
+ctx.strokeText('Roll',tx+ow+ow2,ty); ctx.fillStyle='#f2c14e'; ctx.fillText('Roll',tx+ow+ow2,ty);
+ctx.shadowBlur=0;
+// tagline
+ctx.font='700 30px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle='#e7e1cd';
+ctx.fillText('Inclina, rueda y conquista', tx+4, ty+50);
+// chips de features
+const chips=['🦕 50 niveles','⭐ Recompensas','🟠 Portales'];
+ctx.font='800 24px "Segoe UI",system-ui,sans-serif';
+let cxp=tx+4, cyp=ty+96;
+for(const ch of chips){ const tw=ctx.measureText(ch).width+34;
+  ctx.fillStyle='rgba(9,27,18,0.7)'; KIT.rr(ctx,cxp,cyp,tw,46,23); ctx.fill();
+  ctx.strokeStyle='rgba(242,193,78,0.5)'; ctx.lineWidth=2; KIT.rr(ctx,cxp,cyp,tw,46,23); ctx.stroke();
+  ctx.fillStyle='#f6f1e3'; ctx.fillText(ch,cxp+17,cyp+31); cxp+=tw+12; }
+ctx.restore();
+KIT.vignette(ctx,W,H,0.42);
+document.title='READY';
+</script></body></html>

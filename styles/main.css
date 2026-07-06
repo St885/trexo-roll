@@ -32,8 +32,11 @@
   --ring-green: 0 0 0 3px rgba(52, 210, 123, 0.4);
   --panel-bg: rgba(13, 33, 22, 0.78);
   --panel-border: rgba(242, 193, 78, 0.4);
-  /* Imagen de fondo jurásica (ruta relativa a styles/main.css). Centralizada aquí. */
-  --bg-jurassic: url('../assets/images/backgrounds/jurassic-world-bg.png');
+  /* Fondo de escena prehistórica: se GENERA de forma PROCEDURAL (Canvas 2D, original) en runtime
+     y se inyecta aquí como data URL (ver src/scene/textures.js → makeSceneBackgroundURL, fijado en
+     Game). Sin archivos binarios ni marcas de terceros. Reserva: degradado de jungla en la paleta,
+     por si el runtime aún no lo ha fijado. */
+  --bg-jungle: linear-gradient(180deg, #7ec8e3 0%, #bfe3d0 44%, #cfe0a0 78%, #4f7a3a 100%);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   font-family: var(--font);
 }
@@ -66,7 +69,7 @@ html, body {
   background-color: var(--jungle-0);
   background-image:
     linear-gradient(180deg, rgba(9, 27, 18, 0.30) 0%, rgba(9, 27, 18, 0.14) 38%, rgba(9, 27, 18, 0.5) 100%),
-    var(--bg-jurassic);
+    var(--bg-jungle);
   background-size: cover, cover;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
@@ -104,7 +107,7 @@ html, body {
   background-color: var(--jungle-0); /* fallback */
   background-image:
     linear-gradient(180deg, rgba(9, 27, 18, 0.5) 0%, rgba(9, 27, 18, 0.66) 55%, rgba(9, 27, 18, 0.84) 100%),
-    var(--bg-jurassic);
+    var(--bg-jungle);
   background-position: center, center;
   background-size: cover, cover;
   background-repeat: no-repeat, no-repeat;
@@ -116,14 +119,15 @@ html, body {
   background-color: var(--jungle-0);
   background-image:
     linear-gradient(180deg, rgba(9, 27, 18, 0.5) 0%, rgba(9, 27, 18, 0.66) 55%, rgba(9, 27, 18, 0.84) 100%),
-    var(--bg-jurassic);
+    var(--bg-jungle);
   background-position: center, center; background-size: cover, cover; background-repeat: no-repeat, no-repeat;
 }
 #screen-win.active {
+  /* Oscurecido con un degradado ESTÁTICO (sin backdrop-filter): antes brightness()+saturate() se
+     recomputaban CADA frame sobre el lienzo 3D animado de la celebración (el tablero se ve detrás)
+     → spike de rendimiento al ganar. El degradado atenúa el tablero igual, sin coste por frame. */
   background:
-    radial-gradient(120% 90% at 50% 42%, rgba(9, 27, 18, 0.35), rgba(6, 18, 11, 0.74) 80%);
-  -webkit-backdrop-filter: brightness(0.78) saturate(1.05);
-  backdrop-filter: brightness(0.78) saturate(1.05);
+    radial-gradient(120% 90% at 50% 42%, rgba(9, 27, 18, 0.46), rgba(6, 18, 11, 0.82) 80%);
 }
 
 /* Banda de "suelo/horizonte" sutil al pie de los menús */
@@ -147,6 +151,34 @@ html, body {
 #screen-game .btn,
 #screen-game #joystick,
 #screen-game .dpad-btn { pointer-events: auto; }
+
+/* Superficie del control TÁCTIL por arrastre (v0.25.3): capta el dedo sobre el tablero para
+   inclinarlo. Cubre toda la pantalla PERO por debajo del HUD/controles (que van en z-index
+   superior y capturan su propio toque), así el arrastre nunca se activa al tocar pausa/HUD/
+   joystick. Solo activa en táctil; en desktop el control es teclado/ratón. */
+#tilt-surface { position: absolute; inset: 0; z-index: 0; pointer-events: none; touch-action: none; transition: background 0.18s ease; }
+body.is-touch #tilt-surface { pointer-events: auto; }
+/* Feedback SUTIL al arrastrar (v0.25.4): un halo verde muy tenue centrado sobre el tablero
+   mientras el dedo inclina; desaparece al soltar. No invasivo (baja opacidad, sin tapar). */
+body.is-tilting #tilt-surface { background: radial-gradient(120% 82% at 50% 60%, rgba(46, 204, 113, 0.09), rgba(46, 204, 113, 0) 62%); }
+
+/* Modo RENDIMIENTO (Android/WebView/emulador): la clase gfx-performance en el <body> (ver
+   device.js) neutraliza los filtros CSS más costosos. backdrop-filter/blur obligan al WebView a
+   recomponer regiones translúcidas cada vez que algo cambia detrás → caro en gama media. Se apaga:
+   los paneles pierden el desenfoque (siguen legibles por su fondo) pero el juego va más fluido.
+   La estética completa se conserva en 'quality'/'balanced' (escritorio y móvil web). */
+body.gfx-performance,
+body.gfx-performance *,
+body.gfx-performance *::before,
+body.gfx-performance *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Utilidad: elementos SOLO en dispositivos táctiles (p. ej. el ajuste de joystick). */
+.touch-only { display: none; }
+body.is-touch .touch-only { display: block; }
+.settings-hint { margin: 2px 2px 6px; font-size: 0.78rem; opacity: 0.72; text-align: center; }
 
 /* ===================== Decoración de fondo ===================== */
 /* Capa de emojis flotantes (hojas, huesos, huevos) — solo decorativa */
@@ -604,6 +636,35 @@ html, body {
 }
 .hud-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* Coach de tutorial (niveles 1-5): banner inferior-centro, premium y NO invasivo.
+   Deja pasar el toque al tablero (pointer-events:none); solo el ✕ es pulsable. */
+.tutorial-coach {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 158px); /* por encima de los controles táctiles */
+  transform: translateX(-50%) translateY(10px);
+  display: flex; align-items: center; gap: 10px;
+  max-width: min(420px, 80vw); padding: 10px 12px 10px 14px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(18,46,30,0.94), rgba(8,22,14,0.96));
+  border: 1px solid rgba(242,193,78,0.5);
+  box-shadow: var(--shadow), 0 0 18px rgba(52,210,123,0.18);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  color: var(--cream); opacity: 0; transition: opacity 0.28s ease, transform 0.28s ease;
+  pointer-events: none; z-index: 3;
+}
+.tutorial-coach.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.tc-ic { font-size: 1.25rem; flex-shrink: 0; }
+.tc-text { font-size: 0.9rem; font-weight: 700; line-height: 1.25; text-align: left; }
+.tc-close {
+  flex-shrink: 0; pointer-events: auto; width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.08);
+  color: var(--cream); font-size: 0.85rem; font-weight: 900; cursor: pointer;
+  display: grid; place-items: center;
+}
+.tc-close:active { transform: scale(0.9); }
+/* Móvil horizontal: más compacto y pegado abajo-centro (entre los controles de las esquinas). */
+body.is-landscape-mobile .tutorial-coach { bottom: calc(env(safe-area-inset-bottom) + 8px); padding: 7px 9px 7px 11px; max-width: 58vw; }
+body.is-landscape-mobile .tc-text { font-size: 0.8rem; }
+body.is-landscape-mobile .tc-ic { font-size: 1.05rem; }
+
 /* ============================ Win / Game Over ============================ */
 .big-score { font-size: 1.7rem; font-weight: 900; color: var(--amber); margin: 12px 0 6px; }
 #screen-win .btn, #screen-gameover .btn { display: block; margin: 10px auto 0; }
@@ -662,8 +723,17 @@ html, body {
    de eventos/pointer-events; solo estética.
    ================================================================ */
 .joystick, .dpad { display: none; }
-body.is-touch .joystick { display: block; }
-body.is-touch .dpad { display: grid; }
+/* Joystick OCULTO en móvil por defecto (v0.25.4): el control PRINCIPAL es el arrastre táctil.
+   Es OPCIONAL desde Ajustes → «Joystick» (clase 'show-joystick' en el <body>, persistida). */
+body.is-touch.show-joystick .joystick { display: block; }
+/* D-pad de flechas OCULTO en móvil (v0.25.3): reactivable para depurar con 'debug-dpad'
+   (constante DEBUG_SHOW_DPAD). */
+body.is-touch .dpad { display: none; }
+body.is-touch.debug-dpad .dpad { display: grid; }
+/* Joystick (cuando se activa) como control SECUNDARIO: más pequeño y discreto para no competir
+   con el gesto directo sobre el tablero. Recupera presencia al usarse (.active). */
+body.is-touch .joystick { width: 96px; height: 96px; opacity: 0.55; }
+body.is-touch .joystick.active { opacity: 0.95; }
 
 /* D-pad digital, abajo-izquierda. CONTROL PRINCIPAL en móvil. */
 .dpad {
@@ -855,6 +925,20 @@ body.is-touch .dpad { display: grid; }
 /* Preparación: mundo + recompensas */
 .prep-world { font-size: 0.9rem; font-weight: 800; color: var(--amber); margin: 0 0 4px; letter-spacing: 0.3px; }
 .prep-rewards { font-size: 0.95rem; color: var(--bone); margin: 4px 0 10px; }
+
+/* Misiones secundarias (= condiciones de estrella) en preparación */
+.prep-missions { margin: 2px 0 10px; }
+.pm-title { display: block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.3px; color: var(--amber); opacity: 0.9; margin-bottom: 5px; text-transform: uppercase; }
+.pm-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pm-chip {
+  font-size: 0.74rem; font-weight: 700; padding: 5px 10px; border-radius: 999px;
+  color: var(--bone); border: 1px solid rgba(52,210,123,0.35); background: rgba(52,210,123,0.1);
+}
+/* Resultado ✓/✗ de misiones en la victoria (compacto, bajo las estrellas) */
+.win-missions { display: flex; gap: 6px; justify-content: center; margin: -2px 0 2px; }
+.wm-chip { font-size: 0.74rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; border: 1px solid transparent; }
+.wm-chip.ok { color: #bff4d3; background: rgba(52,210,123,0.18); border-color: rgba(52,210,123,0.5); }
+.wm-chip.no { color: rgba(246,241,227,0.55); background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.12); }
 
 /* Victoria: recap de recogido + mensaje de desbloqueo */
 .win-rewards { color: var(--amber) !important; font-weight: 700; }
@@ -1116,6 +1200,8 @@ body.is-touch .dpad { display: grid; }
 .settings-group-label:first-of-type { margin-top: 4px; }
 /* Toggles de audio: ancho coherente con el resto de botones del panel */
 .settings-toggle { min-width: min(280px, 80vw); }
+/* Copyright discreto (no invasivo) — visible en vertical y horizontal */
+.legal-copyright { margin: 14px 0 2px; font-size: 0.66rem; line-height: 1.3; color: var(--bone); opacity: 0.55; text-align: center; }
 .settings-lang { display: flex; justify-content: center; gap: 8px; margin: 8px auto 2px; }
 .settings-lang .lang-btn { min-width: 56px; }
 /* Caja de confirmación de reinicio (destructivo → borde rojo) */
@@ -1137,23 +1223,58 @@ body.is-touch .dpad { display: grid; }
 .credits-body strong { font-size: 1.2rem; color: var(--amber); }
 
 /* ===================== Acceso / registro (pantalla de auth) ===================== */
-.auth-panel { width: min(420px, 94vw); }
-.auth-emblem { width: 84px; height: 84px; font-size: 42px; margin-bottom: 4px; }
-.auth-title { margin: 2px 0 4px; }
-.auth-subtitle { font-size: 0.98rem; margin: 0 0 18px; opacity: 0.92; }
-.auth-view { display: flex; flex-direction: column; gap: 10px; }
-.auth-view .btn { width: 100%; margin: 0; }
-.auth-guest { font-size: 1.08rem; }
+/* Tarjeta de acceso PREMIUM: verde oscuro elegante con ligera transparencia, borde dorado
+   sutil y sombras suaves en capas. Equilibrada en desktop; casi full-width cómoda en móvil. */
+.auth-panel {
+  width: min(440px, calc(100vw - 28px));
+  padding: 26px 26px 18px;
+  background:
+    linear-gradient(168deg, rgba(16, 44, 29, 0.92) 0%, rgba(10, 30, 20, 0.94) 55%, rgba(7, 22, 14, 0.96) 100%);
+  border: 1px solid rgba(242, 193, 78, 0.34);
+  border-radius: 22px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 4px 18px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 0 42px rgba(46, 204, 113, 0.05);
+}
+.auth-emblem { width: 82px; height: 82px; font-size: 40px; margin-bottom: 2px; }
+.auth-title { margin: 2px 0 6px; }
+.auth-subtitle { font-size: 0.94rem; margin: 0 auto 18px; opacity: 0.9; line-height: 1.5; max-width: 34ch; }
+.auth-view { display: flex; flex-direction: column; gap: 11px; }
+.auth-view .btn { width: 100%; margin: 0; min-height: 48px; }
+/* Invitado: acción TERCIARIA (siempre disponible, pero sin robar protagonismo). */
+.btn.auth-guest {
+  font-size: 0.95rem; font-weight: 700; min-height: 46px;
+  background: rgba(255, 255, 255, 0.055); color: var(--cream);
+  border: 1px solid rgba(246, 241, 227, 0.2); box-shadow: none; opacity: 0.92;
+}
+.btn.auth-guest:hover { background: rgba(255, 255, 255, 0.1); opacity: 1; }
 .auth-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .auth-row2 .btn { width: 100%; }
+/* Secundarios (correo): con presencia propia, por debajo de Google. (.btn.auth-alt gana a .btn.ghost) */
+.btn.auth-alt {
+  background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.34);
+  font-weight: 800; opacity: 1;
+}
+.btn.auth-alt:hover { background: rgba(46, 204, 113, 0.18); border-color: rgba(46, 204, 113, 0.5); }
+/* En móvil estrecho, los botones de correo se apilan en columna (mejor zona táctil). */
+@media (max-width: 430px) {
+  .auth-panel { padding: 22px 16px 14px; }
+  .auth-row2 { grid-template-columns: 1fr; }
+}
+/* Label del botón de registro según modo: nube → «Crear cuenta con email». */
+.auth-alt .cloud-only { display: none; }
+body.cloud-auth .auth-alt .cloud-only { display: inline; }
+body.cloud-auth .auth-alt .demo-only { display: none; }
 
-/* ===== Cumplimiento Play Store v1 — OCULTAR funciones simuladas (sin romper el flujo) =====
-   Hasta integrar OAuth/IAP/anuncios REALES, ocultamos los elementos que podrían parecer
-   funcionales y no lo son (evita rechazo por "Deceptive Behavior", uso de marcas de terceros
-   en botones no operativos y apariencia de compras fuera de Google Play Billing).
-   Reactivar (quitar estas reglas) cuando se implementen de verdad. Ver docs/play-store-policy-audit.md. */
-#auth-home .auth-divider,
-#auth-home .btn.provider { display: none !important; }   /* login federado Google/Apple/Samsung (placeholder) */
+/* ===== Cumplimiento Play Store — OCULTAR funciones simuladas (sin romper el flujo) =====
+   Google Sign-In es REAL desde v0.27.1 → se muestra SOLO en modo NUBE (body.cloud-auth, es decir,
+   Firebase configurado y disponible). En modo demo sigue oculto: un botón de Google no operativo
+   sería "Deceptive Behavior". Apple/Samsung siguen placeholder → siempre ocultos.
+   Ver docs/play-store-policy-audit.md. */
+#auth-home .btn.provider { display: none !important; }   /* proveedores no operativos (Apple/Samsung/demo) */
+body.cloud-auth #auth-home .provider-google { display: flex !important; } /* Google REAL (solo nube) */
 #btn-over-video,                                         /* "Ver vídeo" (anuncio recompensado SIMULADO) */
 #btn-over-buylives { display: none !important; }         /* "Comprar vidas" (precios € sin pago real) */
 
@@ -1167,21 +1288,30 @@ body.is-touch .dpad { display: grid; }
   background: linear-gradient(90deg, transparent, rgba(246,241,227,0.28), transparent);
 }
 
-/* Botones de proveedor (placeholder seguro): franja de color a la izquierda */
+/* Botones de proveedor. GOOGLE (real): botón claro estilo oficial — fondo blanco, logo
+   multicolor, texto oscuro, contenido centrado y buena zona táctil. Es el CTA principal. */
 .btn.provider {
-  display: flex; align-items: center; gap: 12px; text-align: left;
+  display: flex; align-items: center; justify-content: center; gap: 11px;
   background: rgba(9, 27, 18, 0.72); border: 1px solid rgba(246,241,227,0.22);
-  font-weight: 700; padding-left: 14px;
+  font-weight: 700;
 }
 .btn.provider:active { transform: translateY(1px) scale(0.99); }
 .provider-ic {
-  width: 30px; height: 30px; flex: 0 0 30px; border-radius: 8px;
+  width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%;
   display: grid; place-items: center; font-weight: 900; font-size: 1.05rem; color: #0b1f14;
 }
-.provider-google .provider-ic { background: #ffffff; color: #4285f4; }
+.provider-ic svg { display: block; }
+.btn.provider.provider-google {
+  min-height: 52px; font-size: 1.02rem; font-weight: 800;
+  background: #ffffff; color: #1f2937;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28), 0 10px 22px rgba(0, 0, 0, 0.3);
+}
+.btn.provider.provider-google:hover { background: #f6f8ff; filter: none; }
+.btn.provider.provider-google:active { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.28); transform: translateY(2px) scale(0.995); }
+.btn.provider.provider-google .provider-ic { background: #ffffff; }
 .provider-apple  .provider-ic { background: #f3f1ea; color: #111; }
 .provider-samsung .provider-ic { background: #1f6fe5; color: #fff; }
-.provider-google { border-color: rgba(66,133,244,0.5); }
 .provider-apple  { border-color: rgba(240,240,235,0.4); }
 .provider-samsung { border-color: rgba(31,111,229,0.5); }
 
@@ -1200,15 +1330,17 @@ body.is-touch .dpad { display: grid; }
 .auth-check { display: flex; align-items: flex-start; gap: 9px; text-align: left; font-size: 0.9rem; color: var(--cream); line-height: 1.35; }
 .auth-check input { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 1px; accent-color: var(--green); }
 .auth-error { color: var(--red); font-size: 0.86rem; min-height: 1.1em; margin: 2px 0; font-weight: 700; }
+/* En la vista principal, el error vacío no reserva hueco (compacta Google/correo/invitado). */
+#auth-home-error:empty { display: none; }
 .auth-demo { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; line-height: 1.4; }
 
-/* — Cuenta/nube (Firebase-ready): alterna campos según modo demo vs nube — */
+/* — Cuenta/nube (Firebase-ready): alterna textos/campos según modo demo vs nube — */
+/* Mensaje de CONFIANZA bajo las acciones: línea sutil (sin caja pesada), legible y discreta. */
 .auth-mode-msg {
-  font-size: 0.82rem; font-weight: 700; color: var(--bone); margin: 0 0 12px;
-  padding: 7px 12px; border-radius: 12px; line-height: 1.35;
-  background: rgba(0,0,0,0.28); border: 1px solid rgba(242,193,78,0.28);
+  font-size: 0.8rem; font-weight: 700; color: var(--bone);
+  margin: 14px auto 0; line-height: 1.4; max-width: 36ch; opacity: 0.85;
 }
-body.cloud-auth .auth-mode-msg { color: #d6f0ff; border-color: rgba(120,200,255,0.4); background: rgba(20,50,80,0.35); }
+body.cloud-auth .auth-mode-msg { color: #cfe9d8; }
 /* Por defecto (modo demo) se ocultan los campos solo-nube; en modo nube, al revés. */
 .cloud-only { display: none; }
 body.cloud-auth .cloud-only { display: block; }
@@ -1237,8 +1369,13 @@ body.cloud-auth .demo-only { display: none; }
 .auth-provider-msg { font-size: 1rem; color: var(--cream); margin: 0 0 4px; }
 
 /* Pie legal + enlaces */
-.auth-foot { font-size: 0.78rem; color: var(--muted); margin: 16px 0 10px; line-height: 1.5; }
+.auth-foot { font-size: 0.76rem; color: var(--muted); margin: 10px 0 6px; line-height: 1.5; }
 .auth-foot a { color: var(--amber); text-decoration: underline; cursor: pointer; }
+/* Selector de idioma DISCRETO al pie de la tarjeta de acceso. */
+.auth-panel .lang-select { margin-top: 6px; opacity: 0.72; transition: opacity 0.15s ease; }
+.auth-panel .lang-select:hover, .auth-panel .lang-select:focus-within { opacity: 1; }
+.auth-panel .lang-label { font-size: 0.74rem; }
+.auth-panel .lang-btn { min-height: 34px; padding: 4px 12px; font-size: 0.82rem; }
 .legal-body { text-align: left; line-height: 1.55; font-size: 0.95rem; color: var(--cream); margin: 6px 0 16px; }
 .legal-body p { margin: 0 0 12px; }
 .legal-body strong { color: var(--amber); }
@@ -1371,7 +1508,8 @@ body.is-small-phone .tri { height: clamp(68px, 12vh, 120px); }
    Se mantiene flex-wrap (heredado) para que el botón de pausa NUNCA se recorte. */
 /* HUD compacto: franja más fina arriba → el tablero (ya más grande) gana espacio vertical. */
 body.is-landscape-mobile .hud-top { gap: 4px; padding: max(4px, env(safe-area-inset-top)) 8px 4px; }
-body.is-landscape-mobile .hud-chip { font-size: 0.66rem; padding: 3px 7px; }
+/* v0.25.4: chips un punto más legibles en horizontal (0.66 → 0.72rem) sin recortar el tablero. */
+body.is-landscape-mobile .hud-chip { font-size: 0.72rem; padding: 3px 8px; }
 body.is-landscape-mobile #hud-time { display: none; }   /* prioriza nivel/vidas/puntos/monedas */
 body.is-landscape-mobile #hud-level { max-width: 24vw; }
 body.is-landscape-mobile .hud-ball-mini canvas { width: 26px; height: 26px; }
@@ -1384,7 +1522,7 @@ body.is-landscape-mobile .tri { height: clamp(56px, 18vh, 116px); }
 body.is-landscape-mobile #game-canvas {
   background-image:
     linear-gradient(180deg, rgba(9, 27, 18, 0.44) 0%, rgba(9, 27, 18, 0.30) 38%, rgba(9, 27, 18, 0.64) 100%),
-    var(--bg-jurassic);
+    var(--bg-jungle);
 }
 body.is-landscape-mobile #vignette {
   background: radial-gradient(120% 100% at 50% 46%, transparent 46%, rgba(7, 20, 12, 0.64) 100%);
@@ -1699,6 +1837,12 @@ body.is-landscape-mobile #vignette {
   animation: ballBob 2.6s ease-in-out infinite;
 }
 .win-trophy-ic { font-size: 38px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
+/* Visor 3D de Oliver en la victoria (EN PRUEBA): compacto, sustituye al trofeo cuando el
+   modelo carga; si falla, el trofeo 🏆 sigue visible (sin 'oliver-on'). */
+.oliver-win { width: 122px; height: 132px; margin: 0 auto 2px; display: none; }
+.oliver-win canvas { display: block; width: 100%; height: 100%; }
+.win-panel.oliver-on .oliver-win { display: block; }
+.win-panel.oliver-on .win-trophy { display: none; }
 /* Título corto y fuerte */
 .win-title {
   margin: 0; font-size: clamp(1.5rem, 6vw, 2.1rem); font-weight: 900; letter-spacing: 0.4px; line-height: 1.02;

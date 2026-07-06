@@ -8,7 +8,17 @@ objetivo, esquivando hoyos trampa y caídas al vacío.
 
 ![estado](https://img.shields.io/badge/estado-v0.20.0-2ecc71) ![3D](https://img.shields.io/badge/3D-Three.js-blue) ![niveles](https://img.shields.io/badge/niveles-50-e9c46a) ![mundos](https://img.shields.io/badge/mundos-10-f4a261) ![bolas](https://img.shields.io/badge/bolas-5%20dinos-ff7bb0) ![skins](https://img.shields.io/badge/skins-8-9b5de5) ![deps](https://img.shields.io/badge/dependencias-0%20en%20runtime-success)
 
-🎮 **Jugar online:** https://st885.github.io/trexo-roll/ *(activo tras el despliegue en GitHub Pages)*
+**A mobile-first 3D casual dinosaur puzzle/skill game.** Publicado por **SLF Games**.
+
+- 🎮 **Web demo:** https://st885.github.io/trexo-roll/
+- 🛒 **Play Store:** _pendiente_
+- 📜 **Privacidad:** https://st885.github.io/trexo-roll/privacy.html
+- 📑 **Términos:** https://st885.github.io/trexo-roll/terms.html
+- ⚖️ **Legal:** https://st885.github.io/trexo-roll/legal.html
+
+> **© 2026 SLF Games. Todos los derechos reservados.**
+> Este código y sus assets **no** se ofrecen bajo licencia open source salvo indicación
+> expresa. Ver [`LICENSE`](LICENSE).
 
 ---
 
@@ -120,8 +130,10 @@ Curva de dificultad **Fácil → Experto**. Todos verificados como superables po
 - **Web Audio API** para los efectos de sonido.
 - **localStorage** para mejor puntuación y progreso.
 
-Todo el arte es **procedural y original** (Canvas 2D + geometrías) — **sin assets con
-copyright**.
+El **arte visual** (texturas Canvas 2D, geometrías Three.js) y los **efectos de sonido**
+(Web Audio) son **procedurales y originales**. La **música de fondo** y la **imagen de fondo**
+son archivos cuya licencia está **pendiente de verificar** antes de la publicación comercial —
+ver [`docs/assets-license-audit.md`](docs/assets-license-audit.md).
 
 ---
 
@@ -146,11 +158,19 @@ trexo-roll/
 │   ├── ui/ effects/ utils/
 │   └── main.js
 ├── styles/main.css
-├── assets/             # vacío: arte procedural (ver assets/README.md)
+├── assets/             # iconos + música/imagen de fondo (ver docs/assets-license-audit.md)
 ├── docs/               # gdd, mvp, technical-design, backlog, ficha-producto, changelog
 └── tools/              # physics-smoke-test.mjs
 ```
 
 ---
 
-© 2026 Stefano Luis. Personajes y arte **originales**.
+## ⚖️ Licencia y propiedad
+
+**© 2026 SLF Games. Todos los derechos reservados.** El contenido original de TREXoRoll
+(código, diseño, mecánicas, textos, interfaz, gráficos, música, sonidos, modelos, animaciones,
+personajes, nombre del juego e identidad visual) es propiedad de **SLF Games**. Queda prohibida
+su copia, redistribución, reutilización o creación de obras derivadas sin autorización previa y
+por escrito. Los componentes de terceros (p. ej. Three.js, Capacitor — MIT) permanecen sujetos a
+sus respectivas licencias. Ver [`LICENSE`](LICENSE),
+[`docs/terms.md`](docs/terms.md) y [`docs/assets-license-audit.md`](docs/assets-license-audit.md).

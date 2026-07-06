@@ -101,8 +101,38 @@ export async function resetPassword(email) {
   catch (e) { return _fail(_code(e)); }
 }
 
-/** Proveedores externos (Google/Apple/Samsung): preparado, aún no habilitado. */
-export async function signInWithProvider(/* provider */) {
+/**
+ * Google Sign-In (Firebase Auth). En WEB usa POPUP; si el popup no está soportado (típico en
+ * WebView de Capacitor) o se bloquea, cae a REDIRECT (el resultado se recoge en initAuth /
+ * onAuthChange tras recargar). NUNCA persiste tokens: los gestiona el SDK de Firebase.
+ */
+export async function signInWithGoogle() {
+  const fb = await getFirebase();
+  if (!fb) return _fail('auth/not-configured');
+  try {
+    const provider = new fb.sdk.auth.GoogleAuthProvider();
+    let cred;
+    try {
+      cred = await fb.sdk.auth.signInWithPopup(fb.auth, provider);
+    } catch (e) {
+      const code = _code(e);
+      const popupUnsupported = code === 'auth/popup-blocked'
+        || code === 'auth/operation-not-supported-in-this-environment'
+        || code === 'auth/cancelled-popup-request'
+        || code === 'auth/popup-closed-by-user';
+      if (popupUnsupported && typeof fb.sdk.auth.signInWithRedirect === 'function') {
+        await fb.sdk.auth.signInWithRedirect(fb.auth, provider); // navega fuera; vuelve tras el redirect
+        return { ok: false, code: 'auth/redirecting' };
+      }
+      throw e;
+    }
+    return { ok: true, uid: cred.user.uid, user: _safeUser(cred.user) };
+  } catch (e) { return _fail(_code(e)); }
+}
+
+/** Compat: enruta 'google' a signInWithGoogle; el resto sigue sin habilitar. */
+export async function signInWithProvider(provider) {
+  if (provider === 'google') return signInWithGoogle();
   return _fail('auth/provider-not-enabled');
 }
 
@@ -110,6 +140,38 @@ export async function signInWithProvider(/* provider */) {
 export async function startGuest() {
   return { ok: true, mode: 'guest' };
 }
+
+// --- API pública estable (FASE 4) --------------------------------------------
+
+/**
+ * Inicializa la capa de auth. Si Firebase está configurado, completa un posible login por
+ * REDIRECT pendiente (Google en WebView). Seguro en demo (no lanza). @returns {{ok, mode}}
+ */
+export async function initAuth() {
+  const fb = await getFirebase();
+  if (!fb) return { ok: true, mode: 'demo' };
+  try { if (typeof fb.sdk.auth.getRedirectResult === 'function') await fb.sdk.auth.getRedirectResult(fb.auth); } catch (_) { /* sin redirect pendiente */ }
+  return { ok: true, mode: 'cloud' };
+}
+
+/** ¿La sesión actual es invitado/local? (no hay usuario de Firebase). */
+export async function isGuest() {
+  return (await getCurrentUser()) === null;
+}
+
+/** Alias semántico de startGuest(). */
+export async function continueAsGuest() { return startGuest(); }
+
+/** Perfil PÚBLICO mínimo del jugador (sin tokens): uid/displayName/email/photoURL/provider, o null. */
+export async function getPublicPlayerProfile() {
+  return getCurrentUser(); // ya es la proyección segura (_safeUser)
+}
+
+// --- Aliases con los nombres de la FASE 4 (mantienen la API existente de Game) -----
+export const registerWithEmail = (email, password, displayName) => signUpEmail({ email, password, displayName });
+export const loginWithEmail = (email, password) => signInEmail({ email, password });
+export const logout = () => signOutUser();
+export const onAuthStateChanged = (cb) => onAuthChange(cb);
 
 // --- Internos -----------------------------------------------------------------
 
@@ -119,6 +181,7 @@ function _safeUser(u) {
     uid: u.uid,
     displayName: u.displayName || '',
     email: u.email || '',
+    photoURL: u.photoURL || '',
     emailVerified: !!u.emailVerified,
     provider: (u.providerData && u.providerData[0] && u.providerData[0].providerId) || 'password',
   };

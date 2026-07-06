@@ -12,6 +12,7 @@ const DEFAULT = {
   starTokens: 0, extraLives: 0, trapBlocks: 0, fallShields: 0,
   livesBank: 0, // reserva de vidas (compradas/ganadas por vídeo) para continuar partidas
   sfxOn: true, musicOn: true, // ajustes de audio (separados)
+  showJoystick: false, // joystick opcional en móvil (control principal = arrastre táctil)
   // — Evolución v0.20: cofre jurásico, skins y recompensa diaria —
   chestsOpened: 0,                 // cofres jurásicos ya abiertos (cada 15 ⭐ de nivel da uno)
   ownedSkins: ['classic'],         // skins de bola desbloqueadas (la clásica viene de serie)
@@ -42,6 +43,7 @@ export function load() {
       livesBank: nonNeg(data.livesBank),
       sfxOn: data.sfxOn !== false,   // por defecto ON
       musicOn: data.musicOn !== false,
+      showJoystick: data.showJoystick === true, // por defecto OFF (arrastre táctil es el principal)
       chestsOpened: nonNeg(data.chestsOpened),
       ownedSkins: sanitizeSkins(data.ownedSkins),
       activeSkin: typeof data.activeSkin === 'string' ? data.activeSkin : 'classic',
@@ -218,11 +220,12 @@ export function takeFromLivesBank(n) {
 
 export function getSettings() {
   const c = load();
-  return { sfxOn: c.sfxOn, musicOn: c.musicOn };
+  return { sfxOn: c.sfxOn, musicOn: c.musicOn, showJoystick: c.showJoystick };
 }
 
+const BOOL_SETTINGS = ['sfxOn', 'musicOn', 'showJoystick'];
 export function setSetting(key, value) {
-  if (key !== 'sfxOn' && key !== 'musicOn') return;
+  if (!BOOL_SETTINGS.includes(key)) return;
   save({ ...load(), [key]: !!value });
 }
 
@@ -326,6 +329,7 @@ export function importSave(snap) {
   if (snap.daily && typeof snap.daily === 'object') next.daily = sanitizeDaily(snap.daily);
   if (typeof snap.sfxOn === 'boolean') next.sfxOn = snap.sfxOn;
   if (typeof snap.musicOn === 'boolean') next.musicOn = snap.musicOn;
+  if (typeof snap.showJoystick === 'boolean') next.showJoystick = snap.showJoystick;
   save(next);
   return true;
 }
@@ -346,7 +350,7 @@ function sanitizeStarMap(m) {
 export function resetProgress() {
   const c = load();
   const keep = {
-    sfxOn: c.sfxOn, musicOn: c.musicOn, selectedBall: c.selectedBall,
+    sfxOn: c.sfxOn, musicOn: c.musicOn, showJoystick: c.showJoystick, selectedBall: c.selectedBall,
     ownedSkins: c.ownedSkins, activeSkin: c.activeSkin, // las skins son colección, no progreso de niveles
   };
   save({ ...DEFAULT, ...keep });

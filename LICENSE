@@ -1,21 +1,28 @@
-MIT License
+Copyright © 2026 SLF Games. Todos los derechos reservados.
+All rights reserved.
 
-Copyright (c) 2026 Stefano Luis
+Este software, incluyendo código fuente, diseño, gráficos, textos, personajes,
+modelos, animaciones, música, sonidos, interfaz, documentación y demás elementos
+originales del proyecto TREXoRoll, es propiedad de SLF Games.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+No se concede permiso para copiar, modificar, distribuir, vender, sublicenciar,
+publicar, reutilizar o crear obras derivadas de este proyecto sin autorización
+previa y por escrito de SLF Games.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Los componentes de terceros, si los hubiera, permanecen sujetos a sus respectivas
+licencias (ver docs/assets-license-audit.md).
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+--------------------------------------------------------------------------------
+
+This software — including source code, design, graphics, text, characters,
+models, animations, music, sounds, user interface, documentation and any other
+original elements of the TREXoRoll project — is the property of SLF Games.
+
+No permission is granted to copy, modify, distribute, sell, sublicense, publish,
+reuse or create derivative works of this project without the prior written
+authorization of SLF Games.
+
+Third-party components, if any, remain subject to their respective licenses
+(see docs/assets-license-audit.md).
+
+Contact: stefano.luisf@gmail.com

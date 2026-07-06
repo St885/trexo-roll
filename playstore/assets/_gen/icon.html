@@ -1,0 +1,26 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#06140d;overflow:hidden}#c{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script src="kit.js"></script>
+<script>
+const S = 512, c = document.getElementById('c'); c.width = S; c.height = S;
+const ctx = c.getContext('2d');
+// Fondo redondeado premium (sin texto)
+KIT.sky(ctx, S, S);
+// halo dorado central
+const hg = ctx.createRadialGradient(S*0.5, S*0.46, 20, S*0.5, S*0.5, S*0.6);
+hg.addColorStop(0,'rgba(255,228,160,0.35)'); hg.addColorStop(1,'rgba(255,228,160,0)');
+ctx.fillStyle = hg; ctx.fillRect(0,0,S,S);
+// frondas suaves abajo
+KIT.jungle(ctx, S, S, { spores: 14, tall: 0.1 });
+// tablero pequeño insinuado bajo la bola
+KIT.board(ctx, S, S, { cx:S*0.5, cy:S*0.72, halfW:S*0.34, depth:S*0.2, tiltDeg:-4,
+  surface:'#5f8a52', holes:[{u:-0.5,row:0.8,kind:'trap'},{u:0.62,row:0.5,kind:'goal'}], coins:[{u:0.1,row:0.85}] });
+// Bola dino protagonista, grande y centrada-arriba
+KIT.dinoBall(ctx, S*0.5, S*0.43, S*0.235);
+// viñeta + marco dorado redondeado
+KIT.vignette(ctx, S, S, 0.5);
+ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(242,193,78,0.5)';
+KIT.rr(ctx, 8, 8, S-16, S-16, 96); ctx.stroke();
+document.title = 'READY';
+</script></body></html>

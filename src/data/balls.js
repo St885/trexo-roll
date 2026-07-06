@@ -15,7 +15,9 @@
 
 export const BALLS = [
   {
-    id: 'blanca', name: 'Blanca', label: 'Rex Blanco', species: 'trex',
+    // species 'trex' (habilidad/física NO cambian); el EMBLEMA visual de la bola blanca principal
+    // es OLIVER, el T-Rex bebé azul (emblem 'oliver'), coherente con el modelo 3D oliver_master.glb.
+    id: 'blanca', name: 'Blanca', label: 'Rex Blanco', species: 'trex', emblem: 'oliver',
     blurb: 'El clásico. Equilibrado y fiable.', body: '#f6f8fa', body2: '#dde5ea', dino: '#5f9e74', dark: '#173f2a',
     ability: { id: 'rexGuard', mods: { guard: 1 } },
   },

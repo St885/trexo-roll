@@ -1,124 +1,166 @@
-# Configurar Firebase para TREXoRoll
+# Configurar Firebase para TREXoRoll (v0.26.0)
 
-El juego ya trae una **capa de cuenta preparada** (auth + Firestore + Analytics) que está
-**inerte** hasta que rellenes la configuración. Sin configurar, todo funciona en **modo
-demo** (invitado/local). Esta guía te lleva paso a paso para activar la nube.
+El juego trae una **capa de cuenta preparada** (Auth con **Google** y **correo/contraseña**,
+Firestore y Analytics). Está **inerte** hasta que rellenes la config: sin configurar, todo corre
+en **modo demo** (invitado/local) sin errores. Esta guía activa el login **real**.
 
-> ⚠️ Antes de empezar, lee la sección **CSP** al final: la política de seguridad del
-> `index.html` bloquea Firebase por defecto. Hay que ajustarla (o vendorizar el SDK).
+> **Estado de esta versión (importante):**
+> - **Autenticación real**: SÍ (Google + correo), en cuanto la config sea real.
+> - **Sincronización de progreso en la nube (Firestore)**: **DESACTIVADA** (`ENABLE_CLOUD_SYNC=false`).
+>   El login **autentica** pero **NO sube tu progreso** todavía (el progreso sigue **solo local**).
+> - **Analytics (GA4)**: **DESACTIVADO** (`ENABLE_ANALYTICS=false`). No se recopila analítica.
+> - Los pasos de **Firestore** y **Analytics** de esta guía son **preparación futura** (opcionales ahora).
+
+> ## ✅ Estado de activación (2026-07-04)
+> **Hecho automáticamente:**
+> - **SDK de Firebase vendorizado** (v10.12.2) en `libs/firebase/` (`npm run fetch:firebase`) — real, no stubs.
+> - **`google-services.json`** (Android) validado: `project_id=trexoroll`, `package=com.st885.trexoroll`, app_id + api_key presentes.
+> - **Gradle** ya aplica `com.google.gms.google-services` de forma **condicional** (solo si existe el JSON) → Capacitor-safe, sin tocar AGP.
+> - **`firebaseConfig.js`** rellenado con lo **derivable** del proyecto (no secreto): `projectId=trexoroll`, `authDomain=trexoroll.firebaseapp.com`, `storageBucket=trexoroll.firebasestorage.app`, `messagingSenderId=1022273256922`.
+> - **Catálogo de eventos de Analytics** ampliado y cableado (sigue **inactivo** por el flag).
+>
+> **PENDIENTE (tú, manual):**
+> 1. ~~Pegar `apiKey`/`appId` del app Web~~ → ✅ **HECHO (2026-07-04)**: config real conectada,
+>    `hasRealConfig()=true`, **login real ACTIVO y verificado** (email/password responde
+>    `auth/invalid-credential` real; Google popup/redirect disponible; invitado intacto).
+> 2. **SHA-1 / SHA-256** del keystore de release → pégalas en la app Android de Firebase (paso 7).
+> 3. Verificar **dominios autorizados** en Auth: `localhost`, `st885.github.io` (y ya vienen `trexoroll.firebaseapp.com` / `trexoroll.web.app`) (paso 5).
+> 4. Para activar **Analytics** más adelante: `ENABLE_ANALYTICS=true` + `measurementId` real + añadir `https://www.google-analytics.com https://region1.google-analytics.com` a `connect-src` de la CSP.
+> 5. ~~CSP para Google Sign-In~~ → ✅ **HECHO (2026-07-05, v0.27.3)**: la CSP bloqueaba
+>    `apis.google.com/js/api.js` (gapi) y faltaba `frame-src`. Añadidos dominios CONCRETOS
+>    (script-src: apis.google.com + gstatic; frame-src: accounts.google.com +
+>    trexoroll.firebaseapp.com; form-action: accounts.google.com; img-src:
+>    lh3.googleusercontent.com). Verificado: 0 violaciones CSP y el flujo llega a
+>    accounts.google.com. `frame-ancestors` quitada del meta (los navegadores la ignoran ahí).
 
 ---
 
 ## 1) Crear proyecto Firebase
-1. Entra en https://console.firebase.google.com → **Agregar proyecto**.
+1. https://console.firebase.google.com → **Agregar proyecto**.
 2. Nombre: `trexoroll` (o el que quieras). Acepta los términos.
-3. **Activa Google Analytics** cuando lo pregunte (lo usaremos para países). Crea/usa una
-   cuenta de Analytics.
+3. Google Analytics: **puedes omitirlo** (Analytics está desactivado en esta versión). Actívalo
+   solo si más adelante pones `ENABLE_ANALYTICS=true`.
 
-## 2) Agregar una app web
-1. En la consola: ⚙️ **Configuración del proyecto** → **Tus apps** → icono **</>** (Web).
-2. Apodo: `TREXoRoll Web`. (No hace falta Hosting.)
-3. Te mostrará el objeto `firebaseConfig` con tus claves.
+## 2) Registrar la app WEB
+1. ⚙️ **Configuración del proyecto** → **Tus apps** → icono **</>** (Web).
+2. Apodo: `TREXoRoll Web`. (No hace falta Firebase Hosting.)
+3. Copia el objeto `firebaseConfig` que te muestra (apiKey, authDomain, projectId, etc.).
 
 ## 3) Copiar la configuración al juego
-1. **Vendoriza el SDK** (una vez): `npm run fetch:firebase` → descarga el SDK real a
+1. **Vendoriza el SDK** (una vez): `npm run fetch:firebase` → descarga el SDK real de Firebase a
    `libs/firebase/` (sustituye los placeholders). Ver `docs/firebase-sdk-vendor.md`.
-2. Abre `src/config/firebaseConfig.js`.
-3. Sustituye cada `'REEMPLAZAR'` por el valor real (`apiKey`, `authDomain`, `projectId`,
-   `storageBucket`, `messagingSenderId`, `appId`, `measurementId`).
-4. Guarda. El juego detectará la config (`hasRealConfig()`), `isConfigured()` pasará a
-   `true` y la pantalla de acceso mostrará el modo **nube** (campos de correo + recuperar).
+2. Abre **`src/config/firebaseConfig.js`** y sustituye cada `REPLACE_WITH_...` por el valor real:
 
-> `sdkUrls` ya apunta a `./libs/firebase/` (vendorizado). La config web NO es secreta
-> (se entrega al cliente). Si aun así no quieres versionarla, mira la nota de `.gitignore`
-> (`git rm --cached src/config/firebaseConfig.js`).
+   | Campo en `firebaseConfig` | De dónde sale (consola web) |
+   |---|---|
+   | `apiKey` | `firebaseConfig.apiKey` |
+   | `authDomain` | `firebaseConfig.authDomain` (`tu-proyecto.firebaseapp.com`) |
+   | `projectId` | `firebaseConfig.projectId` |
+   | `storageBucket` | `firebaseConfig.storageBucket` (`tu-proyecto.appspot.com`) |
+   | `messagingSenderId` | `firebaseConfig.messagingSenderId` |
+   | `appId` | `firebaseConfig.appId` |
+   | `measurementId` | `firebaseConfig.measurementId` (solo Analytics; opcional ahora) |
 
-## 4) Activar Authentication
+3. Guarda. `hasRealConfig()` pasará a `true` e `isConfigured()` a `true`; la pantalla de acceso
+   mostrará el modo **nube** (correo + recuperar) y el botón **Continuar con Google** funcionará.
+
+> La config web de Firebase **NO es secreta** (se sirve al cliente; la seguridad la dan las
+> **reglas de Firestore** + la **restricción de la API key** por dominio/app en Google Cloud).
+> **Restringe la API key**: Google Cloud Console → *APIs y servicios → Credenciales → tu clave →
+> Restricciones de aplicación* (referrers HTTP para web / huella SHA para Android). Nunca pongas
+> aquí contraseñas ni claves del Admin SDK.
+
+## 4) Activar Authentication + proveedores
 1. Consola → **Compilación → Authentication → Comenzar**.
+2. **Sign-in method → Correo electrónico/contraseña → Habilitar → Guardar**.
+3. **Sign-in method → Google → Habilitar** → elige el correo de soporte del proyecto → Guardar.
 
-## 5) Activar Email/Password
-1. Authentication → **Sign-in method** → **Correo electrónico/contraseña** → **Habilitar** → Guardar.
-2. (Opcional, futuro) Google/Apple: el juego ya tiene placeholders seguros; se activarán
-   más adelante en `authService.signInWithProvider`.
+## 5) Dominios autorizados (Auth)
+Authentication → **Settings → Authorized domains** → añade:
+- **`st885.github.io`** (producción, GitHub Pages)
+- **`localhost`** (desarrollo)
 
-## 6) Activar Firestore
-1. Consola → **Compilación → Firestore Database → Crear base de datos**.
-2. Empieza en **modo producción** (reglas cerradas) y elige la región más cercana.
+(Ya vienen `*.firebaseapp.com` y `*.web.app`.) Sin esto, Google Sign-In por web da error de dominio.
 
-## 7) Configurar reglas de seguridad
-1. Firestore → **Reglas** → pega esto y **Publica**:
+## 6) Registrar la app ANDROID
+1. ⚙️ **Configuración del proyecto → Tus apps → icono Android**.
+2. **Nombre del paquete**: exactamente **`com.st885.trexoroll`**.
+3. Apodo: `TREXoRoll Android`.
+4. **Huella SHA-1** (obligatoria para Google Sign-In en Android): añádela aquí (ver paso 7).
+   Añade también la **SHA-256** (recomendado, requerido por algunas APIs).
 
+### 7) Obtener SHA-1 y SHA-256 del keystore
+Con **JDK/keytool** (viene con Android Studio):
+
+```bash
+# Debug (desarrollo) — Windows:
+keytool -list -v -alias androiddebugkey -keystore "%USERPROFILE%\.android\debug.keystore" -storepass android -keypass android
+# Debug — macOS/Linux:
+keytool -list -v -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android -keypass android
+
+# Release (keystore real de TREXoRoll — te PEDIRÁ la contraseña de forma interactiva; NO la escribas
+# en la línea de comandos ni la compartas):
+keytool -list -v -keystore "C:\Users\olgit\Documents\AndroidKeys\trexoroll-release-key.jks" -alias trexoroll
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /players/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-```
+Copia las líneas **SHA1:** y **SHA256:** y pégalas en la app Android de Firebase
+(*Configuración del proyecto → Tus apps → Android (`com.st885.trexoroll`) → Agregar huella digital*).
 
-Esto garantiza que **cada jugador solo puede leer/escribir su propio documento**
-`players/{uid}`. Detalles en `docs/auth-architecture.md`.
+> **Play App Signing**: si usas la **firma gestionada por Google Play**, añade TAMBIÉN la SHA-1 y
+> SHA-256 que Play te muestra en *Play Console → Configuración → Integridad de la app → Firma de
+> apps* (esa es la que firma el AAB en producción). Si no, Google Sign-In fallará en la versión de Play.
 
-## 8) Activar Analytics
-- Si activaste Analytics en el paso 1, ya está. Si no: ⚙️ **Integraciones → Google
-  Analytics → Habilitar**. Asegúrate de que `measurementId` esté en tu `firebaseConfig.js`.
+## 8) `google-services.json` (solo si usas el flujo NATIVO en Android)
+- **Descárgalo** desde la app Android de Firebase (*Descargar google-services.json*).
+- **Ubicación**: `android/app/google-services.json`.
+- **Decisión de seguridad de este proyecto**: **NO se versiona** (ya está en `.gitignore`, línea
+  `google-services.json`). Cada quien lo coloca localmente. No lo subas al repo.
+- **¿Cuándo hace falta?** Solo si activas el **plugin nativo** de Google Sign-In (ver §10, opción B).
+  Para el flujo **web/JS** (opción A) **no** es imprescindible.
 
-## 9) Conectar GA4
-- Firebase crea automáticamente una propiedad **GA4** enlazada. Ábrela desde
-  **Analytics → Panel → (ver en Google Analytics)**.
+## 9) (FUTURO / opcional) Firestore para sincronizar progreso
+> **No hace falta para esta versión** (Cloud Sync está OFF). Actívalo solo cuando quieras sync.
+1. Consola → **Firestore Database → Crear base de datos** → **modo producción** → región cercana.
+2. **Reglas**: pega las de **`docs/firestore-rules.md`** y **Publica** (cada usuario solo su doc).
+3. En el código, cambia **`ENABLE_CLOUD_SYNC = false` → `true`** en `src/config/firebaseConfig.js`.
+   A partir de ahí, al iniciar sesión se sincroniza el progreso (elige el más avanzado, ver
+   `docs/auth-architecture.md`). Antes de eso, el progreso **no** sube.
 
-## 10) Ver países en los reportes
-- En **Google Analytics (GA4)** → **Informes → Usuario → Datos demográficos → Detalles
-  demográficos** o **Audiencias**, filtra/segmenta por **País**.
-- El país lo deriva GA4 de la IP de forma **agregada**. El juego **no** pide GPS ni
-  ubicación, ni guarda el país manualmente.
+## 10) Google Sign-In en Android (decisión técnica)
+El WebView de Capacitor NO siempre soporta el **popup** de Google. Dos caminos:
+- **A) Firebase JS SDK (por defecto en el código)**: `signInWithPopup` en web; en móvil cae a
+  `signInWithRedirect`. **Funciona seguro en web (GitHub Pages)**; en Android WebView puede
+  requerir ajustes de OAuth/redirect y **no siempre es fiable**. Sin dependencias nuevas.
+- **B) Plugin nativo `@capacitor-firebase/authentication`** (recomendado para Android): login de
+  Google nativo y robusto. **Requiere**: `npm i @capacitor-firebase/authentication`, `npx cap sync`,
+  `google-services.json` (§8), SHA (§7) y config nativa. **Añade dependencia nativa** → hazlo como
+  paso aparte y con confirmación. *(No está añadido en esta versión.)*
 
-## 11) Probar registro real
-1. Sirve el juego por HTTP (`npm start`) **con la CSP ajustada** (ver abajo).
-2. En la pantalla de acceso (ahora en modo nube): **Crear cuenta** con un correo y
-   contraseña (≥6). Debe crear el usuario en Authentication y el documento en
-   `players/{uid}` con tu progreso local migrado.
+> Recomendación: **web con opción A**; **Android con opción B** cuando prepares el AAB de login.
 
-## 12) Probar login real
-1. Cierra sesión (Ajustes → Cerrar sesión) y vuelve a **Ingresar** con ese correo.
-2. Tu progreso debe cargarse desde la nube. En **otro dispositivo/navegador**, al iniciar
-   sesión, continúas desde tu avance (se elige el progreso más avanzado).
-
-## 13) Probar recuperación de contraseña
-1. En **Ingresar** → **¿Olvidaste tu contraseña?** → escribe el correo → revisa tu bandeja.
+## 11) (FUTURO / opcional) Analytics (GA4)
+> Desactivado en esta versión. Para activarlo: pon `ENABLE_ANALYTICS = true`, incluye
+> `measurementId`, y ajusta la **CSP** (ver `docs/csp-firebase.md`, inyecta `gtag.js`). Al activarlo,
+> **actualiza Data Safety** (analítica pasa a recopilarse).
 
 ---
 
-## CSP (ya preparada para Auth + Firestore)
+## Probar: modo DEMO vs modo REAL
+- **Modo DEMO (actual, sin config):** `hasRealConfig()` = false. Puedes **jugar como invitado**;
+  «Continuar con Google» avisa que la nube no está disponible; correo/registro degradan a
+  `auth/not-configured` sin romper. **Nada sale del dispositivo.**
+- **Modo REAL (tras esta guía):** `hasRealConfig()` = true. La pantalla de acceso muestra el modo
+  nube; **Google** y **correo/contraseña** crean/inician sesión de verdad; *Ajustes → Cuenta*
+  muestra tu sesión y **Cerrar sesión**. Con Cloud Sync OFF, tu progreso **sigue siendo local**.
 
-La **Content-Security-Policy** de `index.html` **ya está lista** para Auth + Firestore con
-el SDK **vendorizado**: mantiene `script-src 'self'` (no se confía en CDN de terceros) y
-abre `connect-src` solo a dominios concretos de Google:
-`identitytoolkit` · `securetoken` · `firestore` · `firebaseinstallations` `.googleapis.com`.
+### Checklist de validación tras configurar
+- [ ] `npm run fetch:firebase` ejecutado (SDK real en `libs/firebase/`, no placeholders).
+- [ ] `firebaseConfig.js` con valores reales (sin `REPLACE_WITH_`).
+- [ ] Authentication con **Email/Password** y **Google** habilitados.
+- [ ] Dominios autorizados: `st885.github.io` + `localhost`.
+- [ ] (Android) app registrada con `com.st885.trexoroll` + **SHA-1/SHA-256** (debug y de Play).
+- [ ] Login con Google (web) y con correo funciona; **Cerrar sesión** funciona.
+- [ ] **Modo invitado** sigue funcionando (no se bloquea el juego).
+- [ ] El progreso local **no cambia** (Cloud Sync sigue OFF).
 
-- En **modo demo** no se conecta a ninguno → no rompe nada.
-- **Analytics (GA4)** necesita una directiva extra (inyecta `gtag.js`) → **opt-in**: añade
-  la línea documentada en `docs/csp-firebase.md` cuando quieras activarlo. Mientras tanto,
-  Auth + Firestore funcionan y Analytics se omite sin errores.
-- Si prefieres el **CDN** en vez de vendorizar, hay que ampliar `script-src` (menos seguro):
-  ver la sección correspondiente en `docs/csp-firebase.md`.
-
-Detalle completo y verificación: **`docs/csp-firebase.md`** y **`docs/firebase-sdk-vendor.md`**.
-
-## Dominios autorizados de Auth
-- En Authentication → **Settings → Authorized domains**, añade `st885.github.io` (y
-  `localhost`) para que el login funcione en producción y en local.
-
----
-
-## Checklist de validación tras configurar
-- [ ] `isConfigured()` = true (la pantalla de acceso muestra correo + recuperar).
-- [ ] Registro crea usuario en Authentication y documento en `players/{uid}`.
-- [ ] El progreso local se migra a la nube al crear cuenta.
-- [ ] Login en otro dispositivo continúa el avance (gana el más avanzado).
-- [ ] Recuperación de contraseña envía correo.
-- [ ] GA4 muestra eventos y país (Audiencia → Geografía).
-- [ ] Modo invitado sigue funcionando si cierras sesión.
+Ver también: `docs/firestore-rules.md`, `docs/auth-architecture.md`, `docs/csp-firebase.md`,
+`docs/firebase-sdk-vendor.md`, `playstore/data-safety-draft.md`.

@@ -42,8 +42,13 @@ async function main() {
       if (data.length < 500 || /<html/i.test(data.slice(0, 200).toString())) {
         throw new Error('respuesta inesperada (¿no es el SDK?)');
       }
-      await writeFile(dest, data);
-      console.log(`  ✅ ${prod}.js  (${(data.length / 1024).toFixed(0)} KB)`);
+      // VENDORIZADO REAL: los bundles del CDN se importan ENTRE SÍ con URLs absolutas a gstatic
+      // (p. ej. firebase-auth.js hace `import ... from "https://www.gstatic.com/.../firebase-app.js"`).
+      // Con la CSP `script-src 'self'` eso se BLOQUEA → Firebase no inicializaría. Se reescriben a
+      // rutas locales relativas (./firebase-app.js), que es el sentido de vendorizar (mismo origen).
+      const text = data.toString('utf8').replaceAll(`${BASE}/`, './');
+      await writeFile(dest, text);
+      console.log(`  ✅ ${prod}.js  (${(text.length / 1024).toFixed(0)} KB, imports reescritos a locales)`);
       okCount++;
     } catch (e) {
       console.log(`  ❌ ${prod}.js  → ${e.message}`);

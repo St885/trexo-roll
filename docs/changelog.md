@@ -2,6 +2,999 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.27.5+mac] — 2026-07-05 — 🧳 Repo preparado para migración a la MacBook (GitHub)
+
+> **Chore de repositorio** (sin cambios de juego): todo el trabajo local 0.24.8 → 0.27.5 queda
+> commiteado y subido a GitHub para clonar desde la Mac. **No** se hizo deploy, **no** se generó
+> AAB, **no** se tocó Play Store/App Store; Analytics y Cloud Sync siguen **false**.
+- **Validado antes de commitear**: batería completa verde (`test`/`test:graph`/`test:visual`/
+  `test:ui`) + `build` + `cap:sync`; arranque local verificado (pantalla de acceso, modo nube,
+  botón de Google visible, invitado entra al juego); sin secretos rastreados (google-services.json,
+  keystores, .env → ignorados; escaneo de contenido limpio).
+- **`.gitignore` ampliado**: `assets/models/characters/*/_backup/` (~37 MB de GLB originales sin
+  optimizar — se quedan SOLO en la PC; el repo lleva los optimizados de runtime) · `imagenes/`
+  (~13 MB de materiales crudos de la ficha; las versiones curadas van en `playstore/assets/`) ·
+  genéricos (`dist/`, `coverage/`, `.cache/`, `__pycache__/`).
+- **Nuevo `iniciar-juego.bat`**: doble clic → servidor local + navegador (Windows).
+- **Clonar en la Mac**: `git clone https://github.com/St885/trexo-roll.git` → `npm install`
+  (solo trae Capacitor; Three/Firebase están vendorizados) → `npm start` → http://localhost:3000.
+  Para Android en Mac: `npm run cap:add` + colocar `android/app/google-services.json` (no
+  versionado; descargar de Firebase Console) — ver `docs/android-build.md`.
+
+## [0.27.5] — 2026-07-05 — 🦕 Parasaurio bebé rosa 3D en la victoria del Dino Rosa (LOCAL)
+
+> Cuarto dino 3D de celebración. No cambia física, niveles, controles, Firebase/login, Analytics
+> (OFF) ni Cloud Sync (OFF). **Sin** release Android: `versionCode` sigue **4**; `package.json` →
+> **0.27.5**.
+
+### 🦕 Nueva victoria 3D: Dino Rosa (species `parasaur`)
+- **`CELEBRATION_MODELS.parasaur`** nuevo: al ganar con la bola **Dino Rosa** sale del hoyo el
+  **parasaurio bebé rosa 3D** (`assets/models/characters/parasaur_baby/parasaur_baby_pink.glb`,
+  `height 2.2`, **`yaw 0`** — frente nativo a cámara, verificado en QA headless: rosa cartoon con
+  cresta magenta, ojos grandes, barriga crema; VISIBLE, sin negro, tamaño coherente con el resto).
+  Sin `fallbackPath` → si el GLB falla, **dino procedural de parasaur**. Modelo estático → usa la
+  animación procedural de celebración (emerger + saltitos + balanceo). Materiales normalizados por
+  el cargador común (metalness=0, opaco, sRGB).
+- **Perfiles gráficos** (sistema genérico, sin cambios): quality → precarga; balanced → perezoso al
+  ganar (1ª victoria procedural); **performance/Android → NUNCA carga GLB** (procedural).
+- **Optimización — 13,53 MB → 1,67 MB (−88 %)**: este GLB traía **223.798 triángulos (6,7 MB solo
+  de geometría)** + 4 JPEG 2048² (6,9 MB). Solo bajar texturas dejaba ~7 MB (> objetivo 3 MB), así
+  que además se **simplificó la geometría al 25 %** (~56k tris — sobrada al tamaño de celebración;
+  sin artefactos visibles en QA) con salida **GLB estándar** (la simplificación reduce polígonos;
+  NO es Draco/meshopt-compression, no requiere decoders) + texturas **2048→512** (JPEG original).
+  **Backup**: `parasaur_baby/_backup/parasaur_baby_pink_original.glb` (excluido del build;
+  verificado ausente en www/ y Android).
+- **Mapa de dinos 3D**: trex ✅ · triceratops ✅ · raptor ✅ · **parasaur ✅** · brachio ⏳
+  procedural (futuro `brachio_baby/brachio_baby_blue.glb`). `www/` total: **18 MB**.
+
+### ✅ Validación
+- `celebration-smoke` (parasaur CON modelo; solo brachio procedural) y `assets-check` (cap 3 MB +
+  menor que backup) actualizados. Batería completa verde + `build` + `cap:sync` (parasaur 1,67 MB
+  en www+Android, sin `_backup`). Boot: modo nube intacto, 0 errores → Firebase/login sin tocar.
+  Bola rosa intacta (species `parasaur`, emblema Canvas, habilidad `pinkAttract`).
+
+## [0.27.4] — 2026-07-05 — 🦖 Raptor bebé verde 3D en la victoria del Raptor Verde (LOCAL)
+
+> Integración de **asset** (tercer dino 3D de celebración). No cambia física, niveles, controles,
+> Firebase/login, Analytics (OFF) ni Cloud Sync (OFF). **Sin** release Android: `versionCode` sigue
+> **4**; `package.json` → **0.27.4**.
+
+### 🦖 Nueva victoria 3D: Raptor Verde (species `raptor`)
+- **`CELEBRATION_MODELS.raptor`** nuevo: al ganar con la bola **Raptor Verde** sale del hoyo el
+  **raptor bebé verde 3D** (`assets/models/characters/raptor_baby/raptor_baby_green.glb`,
+  `height 2.2`, **`yaw 0`** — frente nativo a cámara, verificado en QA headless: verde con cresta
+  naranja, ojos grandes, barriga crema; VISIBLE, sin negro, tamaño coherente con T-Rexo/Tricera).
+  Sin `fallbackPath` → si el GLB falla, **dino procedural de raptor** (como antes). El modelo es
+  estático → usa la animación procedural de celebración. Materiales normalizados por el cargador
+  común (metalness=0, opaco, sRGB).
+- **Perfiles gráficos** (sistema genérico, sin cambios): quality → precarga GLB; balanced → carga
+  perezosa al ganar (1ª victoria procedural); **performance/Android → `celebration3D='off'`,
+  NUNCA carga GLB** (procedural).
+- **Optimización** (como T-Rexo): **13,25 MB → 1,56 MB (−88 %)** — 4 texturas PNG **2048→512**
+  (baseColor/normal/metallicRoughness/emissive), geometría intacta (10.451 tris), sin
+  Draco/meshopt/KTX2. **Backup**: `raptor_baby/_backup/raptor_baby_green_original.glb` (excluido
+  del build por el filtro `_backup` existente; verificado ausente en www/ y Android).
+- **Resuelve el bloat reportado en 0.26.8**: este GLB es el ex-`Dinosaurio baby/dino 3.glb`
+  (12,6 MB sin referenciar) ya renombrado a ruta en convención, referenciado y optimizado.
+  `www/` total: 27 → **16 MB**.
+- **Mapa de dinos 3D**: trex ✅ (T-Rexo) · triceratops ✅ (bebé amarillo) · **raptor ✅ (bebé
+  verde)** · parasaur ⏳ procedural (futuro `parasaur_baby/parasaur_baby_pink.glb`) · brachio ⏳
+  procedural (futuro `brachio_baby/brachio_baby_blue.glb`).
+
+### ✅ Validación
+- `celebration-smoke` actualizado (raptor CON modelo; solo parasaur/brachio procedurales) y
+  `assets-check` generalizado (lista de modelos optimizados: cap 3 MB + menor que el backup).
+  Batería completa verde + `build` + `cap:sync` (raptor 1,56 MB en www+Android, sin `_backup`).
+  Boot verificado: modo nube intacto, T-Rexo precarga, 0 errores → Google/Firebase sin tocar.
+  Permiso único INTERNET, `versionCode 4`, Analytics/CloudSync OFF.
+
+## [0.27.3] — 2026-07-05 — Fix: la CSP bloqueaba el login con Google (LOCAL)
+
+> Corrección **mínima y sin comodines** de la Content-Security-Policy. No cambia gameplay, física,
+> niveles, permisos ni flags (`ENABLE_ANALYTICS`/`ENABLE_CLOUD_SYNC` siguen **false**). **Sin**
+> release Android: `versionCode` sigue **4**; `package.json` → **0.27.3**.
+
+### 🐞 Causa
+- `signInWithPopup` de Firebase carga **`https://apis.google.com/js/api.js`** (gapi) y nuestra CSP
+  tenía `script-src 'self' 'unsafe-inline'` → **bloqueado** ("violates the following Content
+  Security Policy directive"). Además **no había `frame-src`**, así que el iframe/handler del flujo
+  (accounts.google.com / trexoroll.firebaseapp.com) caía a `default-src 'self'` → también bloqueado.
+  localhost ya estaba autorizado en Firebase; el problema era solo la CSP.
+
+### ✅ Ajuste (dominios CONCRETOS, sin `*`)
+- `script-src` + `https://apis.google.com https://www.gstatic.com` (cadena de carga de gapi).
+  *(No se añadió `www.googleapis.com` a script-src: sirve APIs, no scripts → va en connect-src.)*
+- `connect-src` + `https://www.googleapis.com https://apis.google.com` (endpoints de cuenta/gapi).
+- `frame-src` **nueva**: `'self' https://accounts.google.com https://trexoroll.firebaseapp.com`
+  (dominio de auth CONCRETO en lugar del comodín `*.firebaseapp.com`).
+- `img-src` + `https://lh3.googleusercontent.com` (foto de perfil de Google).
+- `form-action`: `'none'` → `'self' https://accounts.google.com`.
+- `frame-ancestors` **eliminada del meta**: los navegadores la IGNORAN en `<meta>` (solo funciona
+  por cabecera HTTP) — era la fuente del warning de consola, no bloqueaba nada.
+
+### 🔎 Verificado (headless CDP, clic real en «Continuar con Google»)
+- **0 violaciones CSP** tras el clic (antes: bloqueo de apis.google.com). Los scripts de gapi cargan.
+- El flujo llegó a la página REAL de selección de cuenta **`accounts.google.com/v3/signin`** (en
+  headless el popup se bloquea → saltó al **redirect**, el fallback diseñado). El paso final
+  (elegir cuenta) requiere gesto humano → probar en `npm start`.
+- **Email/password sigue VIVO** (`auth/invalid-credential` real) e **invitado intacto**
+  (`{ok:true, mode:'guest'}`). Batería completa verde + `build` + `cap:sync`. Permiso único
+  INTERNET, `versionCode 4`, Analytics/CloudSync OFF.
+- ⏳ Pendiente para Google en **Android**: SHA-1/SHA-256 del keystore en Firebase Console.
+
+## [0.27.2] — 2026-07-04 — Rediseño premium de la pantalla de acceso (UX + visual) (LOCAL)
+
+> Rediseño **UI/UX de la pantalla de acceso** (login/registro). No cambia gameplay, física, niveles,
+> permisos ni flags (`ENABLE_ANALYTICS`/`ENABLE_CLOUD_SYNC` siguen false). **Sin** release Android:
+> `versionCode` sigue **4**; `package.json` → **0.27.2**.
+
+### 🎨 Tarjeta de acceso premium (estilo jurásico limpio)
+- **Tarjeta**: verde oscuro elegante con ligera transparencia (degradado 168°), **borde dorado
+  sutil**, sombras suaves en capas, radio 22px, padding equilibrado. Desktop centrada
+  (`min(440px, …)`); móvil casi full-width con padding lateral cómodo.
+- **Jerarquía clara (4 acciones)**: 1) **Continuar con Google** — botón BLANCO estilo oficial con
+  el logo multicolor real (SVG inline), 52px táctil, CTA principal; 2) **Crear cuenta con email** y
+  3) **Ingresar** — secundarios verdes con presencia propia (apilados en ≤430px); 4) **Continuar
+  como invitado** — terciario discreto (outline sutil), siempre disponible.
+- **Subtítulo nuevo**: «Inicia sesión o crea tu cuenta para guardar tu progreso y continuar tu
+  aventura jurásica.» (ES/EN).
+- **Mensaje de confianza** bajo las acciones (línea sutil, sin caja): nube → «🛡️ Tu progreso se
+  guardará de forma segura en la nube.»; demo → «📱 Modo local…». Sin duplicados (se quitaron las
+  notas repetidas de los formularios).
+- **Idioma ES/EN discreto** al pie (opacidad reducida, se realza al pasar/enfocar). Términos y
+  Política se mantienen. Branding intacto (badge + emblema 🦖 + título).
+
+### 🔧 Cumplimiento / funcionalidad
+- **Google visible SOLO en modo nube** (`body.cloud-auth`): la regla de cumplimiento Play Store que
+  ocultaba los proveedores placeholder ahora **muestra el de Google** (real desde v0.27.1) y sigue
+  ocultando Apple/Samsung (placeholder) y el botón en modo demo (evita "Deceptive Behavior").
+- **Label del registro por modo** (spans demo/cloud + CSS): nube → «Crear cuenta con email»; demo →
+  «Crear perfil local». Nueva clave i18n `auth.registerCloud` (ES/EN).
+- **Fix**: al cambiar de idioma, `_onLangChanged` re-aplica el mensaje demo/nube (antes
+  `applyTranslations` lo reseteaba al de demo).
+- Botones/handlers **intactos** (mismos ids): Google → `_authGoogle` (popup→redirect reales),
+  registro/login email → Firebase real, invitado → flujo local.
+
+### ✅ Verificado (headless CDP, viewport emulado 390×780 y 1100×780)
+- Google **visible, blanco y habilitado** en modo nube; formulario de **registro** con
+  nombre/email/contraseña/confirmación/términos; **login** con email/contraseña/«olvidé mi
+  contraseña»; **invitado** → llega a `screen-landing`. Batería completa verde + `build` +
+  `cap:sync`. Sin cambios en permisos/versionCode.
+
+## [0.27.1] — 2026-07-04 — 🔥 Firebase Auth REAL ACTIVO (Google + email + invitado) (LOCAL)
+
+> El login real queda **ACTIVO**. Sin release Android: `versionCode` sigue **4**; `package.json` →
+> **0.27.1**. `ENABLE_ANALYTICS=false` y `ENABLE_CLOUD_SYNC=false` **se mantienen** (sin analítica,
+> progreso solo local) → la política de privacidad/Data Safety publicadas siguen siendo exactas.
+
+### ✅ Config Web real conectada
+- `firebaseConfig.js` con los valores reales del app Web "TREXoRoll Web" (apiKey + appId; el resto ya
+  estaba derivado). **`hasRealConfig()` = true** → la capa de cuenta pasa de demo a **nube**.
+
+### 🐞 2 bugs latentes corregidos (impedían inicializar Firebase aunque la config fuera real)
+- **Imports del SDK vendorizado bloqueados por CSP**: los bundles ESM de gstatic se importan ENTRE SÍ
+  con URLs absolutas (`import … from "https://www.gstatic.com/...firebase-app.js"`) → `script-src
+  'self'` los bloqueaba. `tools/fetch-firebase.mjs` ahora **reescribe** esos imports a locales
+  (`./firebase-app.js`) al descargar (vendorizado real, mismo origen). Re-descargado y verificado:
+  **0** referencias a gstatic en `libs/firebase/`.
+- **Resolución del import dinámico**: `import('./libs/firebase/…')` se resolvía relativo a
+  `src/services/` (→ 404 silencioso → demo). `firebaseClient._sdkUrl()` resuelve ahora contra
+  `document.baseURI` → funciona en dev, `www/`, GitHub Pages (subruta) y Capacitor.
+- Ninguno de los dos se había manifestado antes porque con placeholders el import nunca se ejecutaba.
+
+### 🔎 Verificado end-to-end (headless CDP contra el proyecto real `trexoroll`)
+- Boot: `body.cloud-auth=true`, `getAuthMode()='cloud'`, sin `#boot-error`, sin warnings.
+- **Email/password VIVO**: login con cuenta inexistente → **`auth/invalid-credential`** (respuesta
+  real de identitytoolkit; prueba la conexión completa). Registro/login/logout/reset operativos.
+- **Google ACTIVO**: `GoogleAuthProvider` + popup + redirect disponibles (el gesto del popup requiere
+  humano; probar manualmente en localhost y, tras SHA-1/dominios, en Android).
+- **Invitado intacto**: `continueAsGuest()` ok; se juega sin cuenta, progreso local.
+- Batería completa verde + `build` + `cap:sync` (SDK saneado copiado a www + Android). Permisos
+  (solo INTERNET), `targetSdk 35`, `versionCode 4` intactos. Sin PII (analytics OFF, no-op).
+
+## [0.27.0] — 2026-07-04 — Base de conexión Firebase real + analítica ampliada (LOCAL)
+
+> Preparación para **Firebase real** (Auth Google/email + invitado) y **base de analítica**. NO cambia
+> gameplay, física, niveles, controles, permisos ni package name. **Sin** release Android: `versionCode`
+> **se mantiene en 4**; `package.json` → **0.27.0**. Firebase/Analytics **siguen inertes** hasta pegar
+> 2 valores → el juego sigue en **modo demo** (invitado/local) mientras tanto. Sin PII en analítica.
+
+### 🔌 Conexión Firebase (base lista; faltan 2 valores del app Web)
+- **SDK de Firebase vendorizado REAL** (v10.12.2) en `libs/firebase/` vía `npm run fetch:firebase`
+  (antes eran stubs): app 99 KB, auth 147 KB, firestore 426 KB, analytics 29 KB. Mismo origen →
+  respeta la CSP `script-src 'self'`.
+- **`firebaseConfig.js`** rellenado con lo **derivable NO secreto** del proyecto (de `google-services.json`):
+  `projectId=trexoroll`, `authDomain=trexoroll.firebaseapp.com`, `storageBucket=trexoroll.firebasestorage.app`,
+  `messagingSenderId=1022273256922`. **`apiKey` y `appId`** (del app **WEB**) quedan como placeholders →
+  `hasRealConfig()=false` → **modo demo seguro** hasta que se peguen.
+- **`google-services.json`** (Android) **validado**: `project_id=trexoroll`, `package=com.st885.trexoroll`,
+  `mobilesdk_app_id` + `api_key` presentes. (No se expusieron valores.)
+- **Gradle** ya aplicaba `com.google.gms.google-services` de forma **condicional** (solo si existe el
+  JSON) → **no se tocó** (Capacitor-safe; sin AGP/Gradle Upgrade Assistant).
+- **Capa de Auth** (Google popup→redirect para WebView, email/contraseña, invitado, logout, sesión
+  persistente) **ya estaba implementada** (v0.26.0) — se activa sola con la config real. Sin guardar
+  contraseñas; usuario proyectado sin tokens.
+
+### 📊 Analítica ampliada (GA4, sin PII, flag OFF por defecto)
+- `analyticsService.js`: catálogo de eventos ampliado — auth (`login`/`sign_up` con `method`,
+  `logout`, `guest_start`, `return_player`), sesión (`game_open`, `session_start`, `session_end` con
+  `play_time_seconds`), gameplay (`game_start`, `level_start/complete/fail/retry`, `level_time_seconds`,
+  `coins_collected`, `stars_collected`, `skin_selected`, `ball_selected`), engagement (`chest_opened`,
+  `daily_reward_claimed`, `rocket_activated`, `caveman_hit`, `boss_level_started`).
+- **Cableados** en Game.js: logout, ball_selected, level_fail (+motivo), level_retry, game_open,
+  session_start/end (con tiempo de juego vía `pagehide`/`visibilitychange`), game_start, return_player,
+  y `level_complete` enriquecido con tiempo + monedas (agregado por nivel, no por moneda → sin spam).
+- **Sin PII**: `sanitizeParams` bloquea `password/token/email/apikey/…`; `ENABLE_ANALYTICS=false`
+  (no se envía nada; todos los `track.*` son no-op seguro). Coherente con la política de privacidad.
+
+### 📄 Docs / checklists
+- `docs/firebase-setup.md`: bloque **"Estado de activación (2026-07-04)"** (hecho vs pendiente) +
+  comando **SHA-1/SHA-256** con el keystore real (`trexoroll-release-key.jks`, alias `trexoroll`;
+  la contraseña se pide interactiva, **no** en línea de comandos). Dominios autorizados y Data Safety
+  ya estaban documentados. Política de privacidad **sigue vigente** (Analytics OFF → sin datos de uso).
+
+### ✅ Validación
+- Batería verde (`test` incl. `auth-smoke` → **modo demo**, `logEvent` no-op; `graphics-profile-check`,
+  etc.) + `build` + `cap:sync`. App real **arranca sin errores** (headless CDP), demo, gameplay intacto.
+  Permisos (solo INTERNET), `targetSdk 35`, `versionCode 4` intactos.
+
+## [0.26.8] — 2026-07-04 — Fix crash Android `celebration3D` undefined + auditoría de dinos (LOCAL)
+
+> Corrección de **bug crítico** (la app no arrancaba en Android tras los perfiles gráficos) + auditoría
+> de rutas de modelos. No cambia niveles, física, controles, permisos, package name, Firebase/login.
+> **Sin** release Android: `versionCode` **se mantiene en 4**; `package.json` → **0.26.8**.
+
+### 🐞 Crash corregido: "Cannot read properties of undefined (reading 'celebration3D')"
+- **Causa exacta**: en el constructor de `Game.js`, `this._preloadCelebrationForBall()` (que lee
+  `this.gfx.celebration3D`) se ejecutaba **ANTES** de `this.gfx = getGraphicsProfile()`. Con `this.gfx`
+  aún `undefined`, leer `.celebration3D` lanzaba `TypeError`. Ocurría en el arranque (todas las
+  plataformas); Android lo mostró en el banner "No se pudo iniciar el juego" (`main.js` cachea el error).
+- **Fix**: `this.gfx = getGraphicsProfile()` (+ la clase `gfx-<preset>` del `<body>`) se asigna
+  **inmediatamente después de crear la escena**, antes de cualquier uso.
+- **Blindaje** (`getGraphicsProfile` en `device.js`): nunca devuelve `undefined` y **siempre** trae
+  `celebration3D`. Añadido un `SAFE_PROFILE` de reserva y **merge** `{ name, ...SAFE_PROFILE, ...preset }`
+  → todas las claves existen aunque un preset estuviera incompleto. Un `?gfx=`/`localStorage` inválido
+  se **normaliza** a un preset existente. Alias `resolveGraphicsProfile()`. Lecturas de `celebration3D`
+  hechas **defensivas** (`this.gfx && this.gfx.celebration3D`).
+- **Log de diagnóstico** (una vez, visible en la consola del emulador): `[GFX] preset=… pixelRatio=…
+  shadows=… heavyGlows=… celebration3D=…`. No es overlay.
+- **Verificado** (CDP headless): arranca en `quality` y en `?gfx=performance` sin `#boot-error`
+  (`window.__trexoroll` definido); en performance `[GFX] … celebration3D=off` y **no** se carga GLB
+  de celebración. Revisor **adversarial** independiente: veredicto **FIXED**, sin rutas de crash.
+
+### 🦖 Auditoría de dinosaurios (mapa completo — sin cambios de código)
+- **Bolas → emblema**: `blanca`(trex)→`drawOliver` (emblem 'oliver'), `verde`(raptor)→`drawRaptor`,
+  `rosada`(parasaur)→`drawParasaur`, `amarilla`(triceratops)→`drawBabyTriceratops`, `azul`(brachio)→
+  `drawBrachio`. (Nota: `drawTRexProfile` y `drawTriceratops` quedan como **código muerto** — ninguna
+  bola los usa; no se tocan.)
+- **Celebración por especie → preset**: `trex`→T-Rexo 3D `trexo/trexo_master.glb` (fallback
+  `trexo_character.glb` → procedural) · `triceratops`→`triceratops_baby/triceratops_baby_yellow.glb`
+  (→ procedural) · `raptor`/`parasaur`/`brachio`→**procedural siempre**. En **quality** GLB precargado;
+  **balanced** GLB perezoso al ganar (1ª victoria procedural); **performance (Android)** **siempre
+  procedural** (no carga GLB). Rutas verificadas en disco; sin referencias rotas.
+- **Assets** (`assets/models/characters/`): `trexo/` (master 2,87 MB + character 2,20 MB + `_backup/`),
+  `triceratops_baby/` (1,87 MB), y **`Dinosaurio baby/dino 3.glb` (12,6 MB, SIN referenciar)**.
+  **Sin carpetas viejas** (`oliver/`, `T-Rexo/`…). `_backup/` **NO** se copia al build (verificado).
+- ⚠️ **Bloat detectado**: `Dinosaurio baby/dino 3.glb` (12,6 MB) no lo usa el código pero **sí** se
+  copia a `www/` y al APK (`www` 14 → **27 MB**). No se toca (posible WIP); **recomendación**: excluirlo
+  del build (una línea en `tools/build-web.mjs`, como `_backup`) o integrarlo con nombre en convención.
+
+### ✅ Validación
+- `graphics-profile-check` ampliado (perfil nunca undefined, `celebration3D` en los 3 presets, alias,
+  **orden `this.gfx` antes de `_preloadCelebrationForBall`**, lecturas defensivas). Batería completa
+  verde + `build` + `cap:sync`. `DEBUG_PERFORMANCE=false`. Permisos (solo INTERNET), `targetSdk 35`,
+  `versionCode 4` intactos.
+
+## [0.26.7] — 2026-07-04 — Modo rendimiento móvil/Android (perfiles gráficos) (LOCAL)
+
+> Optimización específica para **Android WebView / emulador** (gama media). No cambia niveles,
+> física, controles, permisos, package name, Firebase/login ni modo invitado. **La versión web de
+> escritorio NO cambia** (sigue en perfil 'quality'). **Sin** release Android: `versionCode` **se
+> mantiene en 4**; `package.json` → **0.26.7**; `versionName` Android sigue **0.26.0**.
+
+### 📱 Perfil gráfico adaptativo (quality / balanced / performance)
+- **Problema**: en navegador local el juego va fluido; en **Android emulador** se pega (GPU limitada).
+- **`src/utils/device.js`** (nuevo): detección robusta `isCapacitorNative` / `getPlatform` /
+  `isAndroid` / `isAndroidWebView` / `isTouchDevice` / `isLowPowerMobile` (Capacitor + userAgent +
+  `deviceMemory`/`hardwareConcurrency`; no depende del tamaño de pantalla). `getGraphicsProfile()`
+  resuelve **una vez** el perfil activo.
+- **`GRAPHICS_PRESETS`** (en `constants.js`): tres presets con coste GPU decreciente —
+
+  | preset | pixelRatioCap | sombras | glows | partículas | celebración 3D |
+  |---|---|---|---|---|---|
+  | **quality** (escritorio) | 2,0 | ✅ | ✅ | 100 % | precarga GLB |
+  | **balanced** (móvil web/iOS) | 1,25 | ❌ | ✅ | 60 % | GLB perezoso al ganar |
+  | **performance** (Android/emulador) | 1,0 | ❌ | ❌ | 40 % | procedural (sin GLB) |
+
+- **Selección automática**: Android/WebView (incl. Capacitor nativo o emulador) → **performance**;
+  low-power → performance; otro táctil → balanced; escritorio → quality. **Override para QA**:
+  `?gfx=performance|balanced|quality` en la URL o `localStorage['trexoroll.gfx']`.
+
+### ⚙️ Qué aplica cada perfil (verificado headless)
+- **Renderer** (`SceneManager`): `pixelRatio` acotado al perfil (**1,0** en Android vs 2 en escritorio
+  → hasta ~6× menos píxeles en pantallas DPR alto) y **`shadowMap.enabled` + `sun.castShadow` = false**
+  fuera de 'quality' (no se renderiza mapa de sombras suaves: gran ahorro GPU; se conservan las
+  sombras "de contacto" que son planos con textura). QA con `?gfx=`: performance → pixelRatio 1,
+  sombras OFF; quality → pixelRatio cap 2, sombras ON.
+- **Celebración**: el **aura aditiva** solo en perfiles con `heavyGlows`; el **confeti** se escala
+  (`buildConfetti(color, particleScale)`).
+- **GLB de victoria**: `celebration3D` = `preload` (quality, como hasta ahora) | `onwin` (balanced:
+  **no** se precarga; se carga perezoso al ganar, sin bloquear; hasta que llegue usa procedural) |
+  `off` (performance/Android: **nunca** carga GLB durante el juego → dino procedural, lo más liviano).
+- **CSS**: `body.gfx-performance` **neutraliza `backdrop-filter`/blur** (costosos de recomponer en
+  WebView). La estética completa se conserva en quality/balanced.
+- **Input/física**: **sin cambios** (la sensación dependía del FPS; con el render aligerado se
+  recupera). Ajustable en `PHYS`/`TOUCH_TILT` si en dispositivo real hiciera falta.
+
+### ✅ Validación
+- Nuevo test **`graphics-profile-check.mjs`** (en `npm test`): estructura de presets, defaults por
+  dispositivo, API de `device.js`, y que el runtime aplica el perfil (sombras/glows/partículas/GLB).
+  `perf-guard-check` actualizado al pixelRatio por perfil. Batería completa verde
+  (`test`/`test:graph`/`test:visual`/`test:ui`) + `build` + `cap:sync`. App real **arranca sin
+  errores** en `?gfx=performance`. Permisos (solo INTERNET), `targetSdk 35`, `versionCode 4` intactos.
+
+## [0.26.6] — 2026-07-03 — Rendimiento: fluidez del tablero restaurada (resize/viewport) (LOCAL)
+
+> Corrección de **rendimiento y jugabilidad**. No cambia física, niveles, dificultad, controles,
+> permisos, package name, Firebase/login ni modo invitado. **Sin** release Android: `versionCode`
+> **se mantiene en 4**; `package.json` → **0.26.6** (marca local; .5 ya consumido); `versionName`
+> Android sigue **0.26.0**. Prioridad aplicada: **jugabilidad fluida > efectos visuales**.
+
+### 🐌→⚡ Causa raíz del "se pone lento/pegado al mover el tablero"
+- **Diagnóstico**: el control táctil (`TouchTiltController`) y el bucle ya estaban optimizados
+  (pointermove solo hace aritmética; `update`/`render` reutilizan vectores; sin acumular listeners).
+  La regresión venía del **manejo de rotación/viewport** (cambios recientes de `fullSensor`):
+  `scene.resize()` hacía `renderer.setSize` + reproyección de cámara + reencuadre **en cada evento**
+  de `window.resize` **y `visualViewport.resize`** (frecuentes en Android WebView), **sin comprobar
+  si el tamaño cambió**. Cada llamada **reasignaba el buffer de dibujo GL** → tirones al mover.
+
+### ✅ Correcciones
+- **Guarda de tamaño en `scene.resize()`** (`SceneManager`): cachea el último `w/h/DPR` y **sale
+  temprano si no cambió** (no reasigna el buffer GL). `setPixelRatio()` (que internamente reaplica
+  el tamaño) solo se llama si el **DPR** cambió → evita un `setSize` doble en cada redimensión.
+  **Verificado headless**: 6+4 `resize()` con el mismo tamaño → **0** reasignaciones; un cambio real
+  → exactamente **1**. (El montaje de nivel reencuadra aparte con `_frame`, así que no se rompe.)
+- **Coalescer de viewport** (`Game._coalescedViewportChange`): `window.resize` y `visualViewport.
+  resize` se agrupan en **un solo reflujo por frame** (rAF), en vez de uno por evento. La rotación
+  mantiene su sincronización multi-instante (`_scheduleViewportSync`) para Android.
+- **pixelRatio acotado en móvil**: en táctil se limita a **1,5** (antes 2); en escritorio sigue 2.
+  En pantallas de alta densidad (DPR 2,5–3) baja mucho el coste de relleno (MSAA + sombras suaves)
+  con nitidez suficiente. Constantes `MOBILE_PIXEL_RATIO_CAP` / `DESKTOP_PIXEL_RATIO_CAP`.
+- **Victoria sin `backdrop-filter`**: `#screen-win.active` usaba `backdrop-filter: brightness()+
+  saturate()` **sobre el lienzo 3D animado** de la celebración → se recomputaba cada frame (spike al
+  ganar). Sustituido por un **degradado estático** que atenúa igual, sin coste por frame.
+- **Joystick oculto no procesa**: con el joystick OFF (por defecto en móvil) ya no se escribe el
+  estilo del knob cada frame (`_renderKnob` sale si está oculto e inactivo).
+
+### 📊 Instrumentación (Fase 2, SOLO desarrollo)
+- Nuevo `src/utils/perf.js` tras **`DEBUG_PERFORMANCE = false`**: mide FPS, frame time (medio/máx),
+  tiempo de update/render, y cuenta resize + pointermove; imprime un resumen por consola. **Coste
+  cero** cuando está desactivado; **nunca overlay visible ni activo en producción**. Para perfilar en
+  **dispositivo real** (el FPS de un navegador headless no representa la GPU del móvil).
+
+### ✅ Validación
+- Nuevo test **`perf-guard-check.mjs`** (en `npm test`): guardas anti-regresión (resize con guarda,
+  pixelRatio acotado, coalescer de viewport, `DEBUG_PERFORMANCE=false` sin overlay, victoria sin
+  backdrop-filter, joystick oculto). Batería completa verde (`test`/`test:graph`/`test:visual`/
+  `test:ui`) + `build` + `cap:sync`. App real **arranca sin errores JS** (headless). `www/` 14 MB.
+  Permisos (solo INTERNET), `targetSdk 35`, `versionCode 4` intactos. Celebración por especie y
+  emblema Oliver **sin cambios**.
+
+## [0.26.5] — 2026-07-03 — Fallback T-Rexo/Oliver (`trexo_character.glb`) optimizado (−40 %) (LOCAL)
+
+> Optimización de **asset** (fallback de la celebración). No cambia gameplay, física, niveles,
+> controles ni código de runtime. **Sin** release Android: `versionCode` **se mantiene en 4**;
+> `package.json` → **0.26.5** (marca local); `versionName` Android sigue **0.26.0**. Sin permisos
+> nuevos, sin tocar Firebase/login.
+
+### 🗜️ `trexo_character.glb` (fallback) optimizado: 3,66 MB → 2,20 MB
+- **Peso**: **3.839.236 B (3,66 MiB / 3,84 MB) → 2.306.340 B (2,20 MiB / 2,31 MB)** = **~40 % menos**.
+- **Qué se optimizó (solo textura; geometría intacta)** — misma estrategia segura que el máster:
+  - **Textura**: 1 PNG (ya deduplicada, servía baseColor+emissive) de **1024×1024 (2,14 MB)** →
+    **512×512 PNG (605 KB)** con `resize` Lanczos3. (Este GLB ya venía con 1 sola textura, así que
+    `dedup` no restó extra; la ganancia es del resize.)
+  - **Geometría**: **intacta** (28.730 vértices / 30.814 triángulos) — sin `simplify`/`draco`/
+    `meshopt`/quantize. Material `alphaMode OPAQUE`. Animaciones conservadas.
+  - **Formato**: sigue **GLB con PNG embebido** (sin webp/ktx2). `prune`/`weld` limpian datos sin uso.
+- **Backup**: original en **`assets/models/characters/trexo/_backup/trexo_character_original.glb`**
+  (3,66 MiB). El build ya **excluye `_backup/`** → no infla `www/` ni el APK; `cap:sync` copia solo
+  el optimizado.
+- **Runtime sin cambios**: mismo nombre `trexo_character.glb`, `TREXO_FALLBACK_MODEL_PATH`. Se usa
+  solo si el máster falla; misma normalización de materiales (metalness=0 + opaco + sRGB).
+- **QA visual (headless, GLTFLoader + SwiftShader)**: el fallback carga y se ve **VISIBLE ✓ azulado ✓**
+  (lum media 118, RGB medio (96,124,133)), texturizado, sin negro ni pixelado perceptible. El máster
+  **sigue funcionando** (2,87 MB) y sale del hoyo con Rex Blanco; triceratops/procedurales sin tocar.
+- **Test**: `assets-check` ahora verifica **ambos** GLB (máster < 4 MB, fallback < 3 MB) y que cada
+  uno pese menos que su original respaldado. Batería completa verde + `build` + `cap:sync`.
+
+## [0.26.4] — 2026-07-03 — T-Rexo/Oliver 3D optimizado para móvil (−55 %) (LOCAL)
+
+> Optimización de **asset** (no cambia gameplay, física, niveles, controles ni código de runtime).
+> **Sin** release Android: `versionCode` **se mantiene en 4**; `package.json` → **0.26.4** (marca
+> local); `versionName` Android sigue **0.26.0**. Sin permisos nuevos, sin tocar Firebase/login.
+
+### 🗜️ `trexo_master.glb` optimizado con gltf-transform: 6,37 MB → 2,87 MB
+- **Peso**: **6.681.288 B (6,37 MiB / 6,68 MB) → 3.010.384 B (2,87 MiB / 3,01 MB)** = **~55 % menos**.
+- **Qué se optimizó (solo texturas; geometría intacta)**:
+  - **Texturas**: el GLB traía **2 PNG idénticas de 1024×1024 (2,14 MB c/u = 4,28 MB)** — la misma
+    imagen para `baseColorTexture` y `emissiveTexture`. `dedup` las **fusiona en 1** (−2,14 MB) y
+    `resize` la baja a **512×512 PNG (605 KB)** con Lanczos3. Total texturas **4,28 MB → 0,59 MB**.
+  - **Geometría**: **intacta** (28.801 vértices / 30.814 triángulos) — sin `simplify`, sin `draco`/
+    `meshopt`/quantize (evita depender de decoders y no arriesga la malla ni la calidad).
+  - **Formato**: sigue **GLB con PNG embebido** (no se cambió a webp/ktx2 → cero riesgo de textura
+    no soportada). `prune`/`weld`/`resample` limpian nodos/datos sin uso. Animaciones conservadas.
+- **Backup**: original guardado en **`assets/models/characters/trexo/_backup/trexo_master_original.glb`**
+  (6,37 MiB). El build **excluye `_backup/`** (`tools/build-web.mjs` filtra `_backup`) → no infla
+  `www/` ni el APK (peso de `www/` **18,5 MB → 15,0 MB**).
+- **Runtime sin cambios**: mismo nombre `assets/models/characters/trexo/trexo_master.glb`,
+  `TREXO_MODEL_PATH`, `CELEBRATION_MODELS.trex`. Materiales normalizados igual (metalness=0 + opaco +
+  sRGB). CSP ya permite `blob:`.
+- **QA visual (headless, GLTFLoader + SwiftShader)**: T-Rexo/Oliver carga y se ve **VISIBLE ✓
+  azulado ✓** (lum media 119, RGB medio (98,125,134), b>g>r), texturizado, sin negro ni pixelado
+  perceptible al tamaño del hoyo. Sigue **saliendo del hoyo al ganar con Rex Blanco**; triceratops
+  bebé amarillo y los dinos procedurales (raptor/parasaurio/braquiosaurio) **no se tocan**.
+- **Test**: `assets-check` ahora verifica `trexo_master.glb` **< 4 MB** y **< original respaldado**.
+  Batería completa verde (`test` / `test:graph` / `test:visual` / `test:ui`), `build` + `cap:sync`.
+
+## [0.26.3] — 2026-07-03 — Celebración de victoria POR ESPECIE + T-Rexo/Oliver 3D + ruta normalizada (LOCAL)
+
+> Cambio **visual + arquitectura de celebración**. **No** cambia física, niveles, dificultad,
+> controles, permisos, package name, Firebase/login ni modo invitado. **Sin** release Android:
+> `versionCode` **se mantiene en 4**; `package.json` → **0.26.3** (marca local; se usó .3 porque
+> .2 ya quedó consumido por el emblema de la sesión previa); `versionName` Android sigue **0.26.0**.
+
+### 🦖 Cada bola saca SU dinosaurio del hoyo al ganar (antes: siempre el triceratops)
+- **Bug de raíz corregido**: `spawnCelebration` usaba SIEMPRE el único modelo precargado
+  (triceratops), ignorando la especie de la bola → todas las victorias sacaban el triceratops.
+- **Nuevo mapa `CELEBRATION_MODELS`** (en `constants.js`), **por especie**:
+  - `trex` (Rex Blanco) → **T-Rexo/Oliver 3D** (`trexo_master.glb`, fallback `trexo_character.glb`), `yaw 0`.
+  - `triceratops` (Tricera Amarillo) → **triceratops bebé amarillo 3D** (sin cambios), `yaw Math.PI`.
+  - `raptor`, `parasaur`, `brachio` → **dino PROCEDURAL** de su especie (`CelebrationDino.buildDino`).
+- **SceneManager** ahora **cachea un modelo 3D por especie** (`_celebModels` Map): `preloadCelebrationModel(species, entry)`
+  carga (una vez, con ruta de reserva) y `spawnCelebration` elige `_celebModels.get(ballDef.species)`;
+  si esa especie no tiene GLB (o falla), usa el procedural de la MISMA especie. Sin recargas ni fugas
+  (los modelos se reutilizan; el procedural y el confeti/aura sí se liberan).
+- **Game.js** precarga el modelo de la **bola seleccionada** (`_preloadCelebrationForBall`) al iniciar
+  y **al cambiar de bola** (selector / ciclo de preparación). No bloquea; la victoria nunca se rompe.
+- **Coherencia en el modal de victoria**: el visor 3D de T-Rexo/Oliver (`OliverStage`) solo acompaña
+  la victoria de la bola **T-Rex**; con otras bolas se conserva el **trofeo 🏆** (no se fuerza el mismo
+  personaje para todas). Del hoyo, en todos los casos, sale el dinosaurio de la especie.
+- **Logs de desarrollo** (solo localhost): `CELEBRATION_SPECIES`, `CELEBRATION_MODEL_PATH`,
+  `CELEBRATION_MODEL_LOADED`, `CELEBRATION_MODEL_USED`, `CELEBRATION_MODEL_FALLBACK_USED`.
+
+### 📁 Ruta del modelo T-Rexo/Oliver normalizada (segura en web/Android)
+- Stefano renombró la carpeta a `T-Rexo/` (mayúsculas + guion) → **rompía** en servidores/Android
+  WebView **case-sensitive** (y dejaba rotas las referencias a la antigua `oliver/`).
+- **Normalizada a minúsculas**: `assets/models/characters/**trexo/trexo_master.glb**` y
+  `trexo_character.glb` (movidos, sin duplicados). `constants.js`: `OLIVER_MODEL_PATH` →
+  **`TREXO_MODEL_PATH`** (+ `TREXO_FALLBACK_MODEL_PATH`). `OliverStage` actualizado.
+- **Materiales del GLB normalizados** al cargar (igual que el triceratops): `metalness = 0` (evita
+  negro sin env map), `emissiveIntensity = 0.2`, mapas en **sRGB**, y **opaco** si no es translúcido
+  (evita el bug de invisibilidad de exports Mixamo marcados BLEND). CSP ya permite `blob:` (texturas
+  embebidas). **Verificado en QA headless**: el GLB carga desde la ruta nueva y se ve **VISIBLE**
+  (T-Rex azul, ojos verdes, boca roja, barriga crema, pañuelo, manchas), no negro.
+
+### 🎨 Emblema de la bola blanca (Oliver) ajustado para dejar margen interno
+- El emblema **Oliver** (Canvas 2D `drawOliver`, T-Rex bebé azul) ya era la cara de la bola blanca
+  (species `trex` intacto). Ahora se dibuja algo **más compacto** (`OLIVER_FIT = 0.76`) para dejar
+  **margen interno claro**: footprint **W68% / H49%** del diámetro (dentro del objetivo 58-68%, máx
+  72%), **centrado** (offset ~(1,2) px), **sin tocar el borde**. Verificado en QA headless.
+
+### ✅ Validación
+- Nuevo test **`celebration-smoke.mjs`** (en `npm test`): valida `CELEBRATION_MODELS` (trex→T-Rexo,
+  triceratops→amarillo, resto sin GLB), que los GLB existen, que cada especie de bola es renderizable,
+  y **guardas anti-regresión** (selección por especie; ya no hay un único modelo global).
+- `assets-check` verifica la ruta nueva `trexo/`. Batería completa verde: `test` / `test:graph` /
+  `test:visual` / `test:ui`, `build` + `cap:sync`. Permisos, `targetSdk 35`, `versionCode 4` intactos.
+
+## [0.26.2] — 2026-07-03 — Oliver (T-Rex bebé azul) dentro de la bola blanca (LOCAL)
+
+> Cambio **visual local** (emblema Canvas 2D). **No** cambia gameplay, física, niveles ni
+> controles. La **especie/habilidad** de la bola blanca **sigue siendo `trex`** (`rexGuard`);
+> solo cambia el **emblema visual**. **Sin** release Android: `versionCode` **se mantiene en 4**;
+> `package.json` → **0.26.2** como marca local; `versionName` Android sigue **0.26.0**. Sin
+> permisos nuevos, sin tocar Firebase/login/monetización.
+
+### 🦕 La bola blanca ahora muestra a **Oliver**, no el T-Rex verde antiguo ni un triceratops
+- **Emblema nuevo `oliver`**: la bola blanca principal (`blanca`) pasa de `emblem: 'babytri'`
+  (bebé triceratops amarillo) a **`emblem: 'oliver'`**. Se mantiene `species: 'trex'`, así que
+  **la habilidad `rexGuard` y la física no cambian** — solo la cara visual.
+- **`drawOliver(ctx)`** (nuevo, en `src/scene/dinoArt.js`): dibujo **Canvas 2D procedural** de
+  Oliver, **fiel al modelo 3D** `assets/models/characters/oliver/oliver_master.glb` (inspeccionado
+  extrayendo su textura base): **T-Rex bebé azul** (cuerpo `#49a3e6` con **manchas** azul oscuro),
+  **ojo grande verde** (iris + pupila + brillo), **barriga amarilla**, **espinas naranja**
+  (cabeza→lomo→cola), **boca sonriente** con interior rojo + dientes, **bracito** con garra,
+  **piernas cortas** con **dedos amarillos**, **cola gruesa**. Cabeza grande / cuerpo pequeño
+  (proporción de bebé). Paleta AZUL **propia** (ignora `color/dark`; sin marcas de terceros).
+- **Dispatcher** `drawDino`: nuevo `case 'oliver'`. Se conserva `case 'triceratops' | 'babytri'`
+  para la **bola amarilla** y la **celebración** (bebé triceratops amarillo) — **sin cambios**.
+- **Aparece en TODAS las pantallas** que usan la bola blanca: menú/avatar, selector de bolas,
+  skins, HUD y la **bola 3D en gameplay** (`makeBallTexture` / `makeBallThumbnail` ya resolvían
+  `def.emblem || def.species`). El T-Rex verde antiguo **ya no aparece** en la bola principal.
+- **QA visual (headless)**: Oliver renderiza **centrado** (offset ~(1,3) px), **completo**, **sin
+  tocar el borde**, footprint **W89% / H64%** del diámetro interno — **coherente con el resto de
+  emblemas** del set (raptor 89%, triceratops 90%, bronto 81%). En la bola 3D (escala 1.65) ocupa
+  ~**65%** del diámetro. Legible en móvil, buena separación del blanco.
+- **NO se toca** la celebración de victoria (sigue el bebé triceratops 3D con su fallback), ni
+  `species`, ni permisos, ni `versionCode`, ni el modelo 3D de Oliver de la pantalla de victoria
+  (`OliverStage`, que sigue usando el GLB real).
+- Test: `canvas-smoke` verifica que la bola `blanca` use `emblem: 'oliver'` **manteniendo**
+  `species: 'trex'`. Batería completa verde (`test` / `test:graph` / `test:visual` / `test:ui`),
+  `build` + `cap:sync` OK.
+
+## [0.26.1] — 2026-07-03 — Triceratops bebé amarillo (modelo 3D) en la victoria (LOCAL)
+
+> Cambio **visual local** (integración de asset). **No** cambia gameplay, niveles, física ni
+> controles. **Sin** release Android: `versionCode` **se mantiene en 4** (no se genera AAB);
+> `package.json` → **0.26.1** como marca local. `versionName` Android sigue **0.26.0**.
+
+### 🐞 Corrección: el triceratops salía OSCURO / sin color (raíz: CSP)
+- **Causa raíz**: la **Content-Security-Policy** de `index.html` tenía `img-src 'self' data:`
+  **sin `blob:`**. GLTFLoader carga las texturas embebidas del GLB como URLs **`blob:`** → la CSP
+  las **bloqueaba** → fallaban TODAS las texturas. Al no cargar el `metallicRoughness` map, la
+  metalness caía al **default = 1** (material **metálico**) → **sin environment map = NEGRO**. Por
+  eso se veía «oscuro» (no era el fallback: los logs confirman `CELEBRATION_MODEL_USED`).
+- **Fix 1 (raíz)**: CSP → **`img-src 'self' data: blob:`** (+ `blob:` en `connect-src`). Ahora las
+  texturas del GLB **cargan**. *(Beneficia también a Oliver, mismo problema.)*
+- **Fix 2 (robustez)**: al cargar el modelo se **normaliza el material** — `metalness = 0` (nunca
+  metálico‑negro aunque un mapa fallara), `emissiveIntensity = 0.2` (venía `[1,1,1]` → apagaba el
+  amarillo), color base en **sRGB**. Verificado: el triceratops sale **amarillo bebé** (cuerpo con
+  manchas, frill, cuernos) sobre la meta.
+- **Logs de desarrollo** (solo en localhost, no en producción): `CELEBRATION_MODEL_PATH`,
+  `CELEBRATION_MODEL_LOADED`, `CELEBRATION_MODEL_CHILDREN`, `CELEBRATION_MODEL_MATERIALS`,
+  `CELEBRATION_MODEL_USED`, `CELEBRATION_MODEL_FALLBACK_USED`. Confirmado por smoke headless: el
+  GLB **se usa siempre** (independiente de la bola); fallback solo si falla la carga.
+- Test: `assets-check` ahora verifica que la CSP `img-src` incluya `blob:`. Escala/orientación por
+  `CELEB_MODEL_HEIGHT` (2,2) / `CELEB_MODEL_YAW` (Math.PI) — afinables; el frill queda visible.
+
+### Modelo 3D de celebración (victoria)
+- **Nuevo asset**: `assets/models/characters/triceratops_baby/triceratops_baby_yellow.glb` —
+  **optimizado de 15,9 MB → 1,96 MB** con gltf-transform (4 texturas PNG **4K → 512**; geometría
+  10,4k tris intacta). Original pesado movido **fuera del repo**. Ruta relativa (dev/www/Capacitor).
+- **Reemplaza el dino procedural de victoria**: al ganar, sale del hoyo el **triceratops bebé
+  amarillo** (GLB). Es un **modelo estático (sin animaciones)** → se anima **proceduralmente** con
+  la MISMA coreografía existente (emerge del hoyo + salto + giro + balanceo + escala de aparición
+  + aura + confeti). Cargado vía `SceneManager.preloadCelebrationModel()` (perezoso, **cacheado**,
+  reutilizado sin re-clonar ni re-liberar). **Fallback**: si el GLB no carga, se usa el dino
+  procedural anterior (la victoria nunca se rompe; sin pantalla negra).
+- Loader reutilizado: `src/scene/gltf.js` (`loadGLB`/`fitModel`) + `GLTFLoader` vendorizado
+  (import perezoso; sin dependencias npm nuevas). Constante `TRIKE_CELEB_MODEL_PATH`.
+- Escala/orientación por constantes `CELEB_MODEL_HEIGHT` (2,2 u) y `CELEB_MODEL_YAW` (afinables).
+- **Verificado en Edge headless**: el modelo carga, se usa (`isModel:true`), se posiciona sobre la
+  meta, escala y anima. *(Las texturas no se ven en headless — SwiftShader; se confirman en
+  navegador/dispositivo real, PNG universal.)*
+
+### Bola blanca principal: nuevo emblema bebé triceratops amarillo (Canvas 2D)
+- La **bola BLANCA principal** mostraba dentro un **T-Rex verde** (`drawTRexProfile`, species
+  'trex'). Ahora muestra el **bebé triceratops amarillo** — nuevo dibujo **Canvas 2D**
+  `drawBabyTriceratops` en `src/scene/dinoArt.js`: **vista frontal cartoon**, cabeza grande de
+  bebé, **frill redondo** con bultos, cuernos pequeños, **ojos grandes**, sonrisa, cuerpecito
+  chubby y manchas suaves marrón/naranja. **Paleta amarilla fija** (coherente con
+  `triceratops_baby_yellow.glb`). Original, sin marcas, sin imágenes externas ni render del GLB.
+- Enrutado por un campo **`emblem`** en la definición de bola (`balls.js`: `blanca` →
+  `emblem: 'babytri'`; y `DEFAULT_BALL_DEF`), **sin cambiar** la especie 'trex' ni su habilidad/
+  física. `makeBallTexture`/`makeBallThumbnail` usan `emblem || species`. `applySkin` conserva el
+  emblema → funciona en **menú, avatar principal, selector de bolas, skins, HUD y la esfera 3D**.
+- La bola **«Amarilla / Tricera Amarillo»** (species triceratops) usa el **mismo** diseño nuevo
+  (coherente). Las demás bolas (Raptor, Parasaurio, Braquiosaurio) **no se tocan**.
+- Tamaño ajustado al círculo (~62–72% del diámetro interno, centrado, con margen; frill/cuernos/
+  ojos visibles). Verificado en headless (menú + selector + skins). `canvas-smoke` comprueba que la
+  bola blanca use `emblem 'babytri'` y conserve species 'trex'. **Rendimiento**: Canvas 2D cacheado
+  (no se renderiza el GLB en el icono; sin objetos por frame).
+
+### Rendimiento / compatibilidad
+- El GLB se carga **una sola vez** (cache), se reutiliza (no se clona ni crea por frame), y se
+  excluye de la liberación del tablero. `build` copia el GLB a `www/` y `cap:sync` a Android.
+  **Sin** permisos nuevos (solo `INTERNET`), **sin** tocar Firebase/login/Analytics/Ads/compras.
+
+## [0.26.0] — 2026-07-02 — Inicio de sesión REAL (Firebase Auth: Google + correo) + invitado
+
+> Se activa **autenticación real** (opcional): el juego **sigue siendo 100% jugable como
+> invitado** (no se fuerza registro, no se bloquea el juego). Esto **cambia la ficha de Play**:
+> ver «Play Console» abajo. **No** se activa Analytics ni sincronización de progreso en esta versión.
+
+### Autenticación (FASE 2-4)
+- **`signInWithGoogle()`** real (`GoogleAuthProvider`): **popup** en web; si el popup no está
+  soportado (WebView) o se bloquea, cae a **redirect** (se completa en `initAuth()` al volver).
+- **Correo/contraseña** (ya existía), **logout**, **recuperar contraseña**, **invitado**.
+- API FASE 4 en `authService.js`: `initAuth`, `getCurrentUser`, `onAuthStateChanged`,
+  `signInWithGoogle`, `registerWithEmail`, `loginWithEmail`, `logout`, `continueAsGuest`,
+  `isGuest`, `getPublicPlayerProfile`. Usuario seguro incluye `photoURL`. **Nunca** se guardan
+  contraseñas ni tokens (los gestiona el SDK de Firebase; la contraseña viaja cifrada y se descarta).
+- **Decisión técnica**: **Firebase JS SDK vendorizado** (import dinámico; sin dependencia npm nueva,
+  sin SDK de ads). En Android WebView, si el popup/redirect JS no bastara, el paso recomendado es un
+  **plugin nativo** (`@capacitor-firebase/authentication`) — **documentado como pendiente**, no añadido.
+- **Config**: `firebaseConfig.js` con placeholders `REPLACE_WITH_...` + flags **`ENABLE_CLOUD_SYNC=false`**
+  y **`ENABLE_ANALYTICS=false`**. Sin config real → **modo invitado** (nada se rompe). SDK vendorizado
+  pendiente de `npm run fetch:firebase` (hoy placeholders → demo).
+
+### Perfil y progreso (FASE 5)
+- El **progreso local no se toca**. La **sincronización en la nube está PREPARADA pero DESACTIVADA**
+  (`ENABLE_CLOUD_SYNC=false` gatea `syncOnLogin`/`pushLocal`). Se muestra el estado de sesión
+  (Invitado / Google / correo).
+
+### UI/UX (FASE 6)
+- Pantalla inicial: **Continuar con Google** (destacado), **Crear cuenta**, **Ingresar** y
+  **Jugar como invitado** (siempre visible). Errores traducidos + *loading state* en el botón
+  Google (evita dobles pulsaciones). **Eliminados los botones no funcionales de Apple/Samsung** y
+  la vista placeholder de proveedor (riesgo de Play). Textos ES/EN.
+- **Ajustes → Cuenta**: estado de sesión, cerrar sesión y **«Solicitar eliminación de cuenta»** (FASE 9).
+
+### Privacidad / Play (FASE 8-9)
+- Actualizados `privacy.html`, `docs/privacy-policy.md` y `playstore/data-safety-draft.md`:
+  invitado = sin datos; con login se tratan **correo, nombre, foto (opcional) y UID**, compartidos
+  con **Google/Firebase** para **gestión de cuentas**; cifrado en tránsito; **eliminación de cuenta**
+  por `mailto:stefano.luisf@gmail.com`. **Sin** ventas de datos, ads, compras, analítica ni ubicación.
+
+### Android / versión (FASE 7)
+- `versionName` **0.25.4 → 0.26.0** (`versionCode` **4**, no subido aún a Play — se mantiene).
+  `applicationId`, `minSdk 22`, `compileSdk/targetSdk 35`, `screenOrientation=fullSensor` intactos.
+  **Permiso único `INTERNET`** (verificado: sin `GET_ACCOUNTS`/`READ_CONTACTS`/`AD_ID`/ubicación/
+  cámara/micrófono). Sin dependencias npm nuevas. `google-services.json` ya en `.gitignore`.
+
+### Preparación de Firebase (solo documentación; sin activar nada)
+- **`docs/firebase-setup.md`** reescrito para v0.26.0: crear proyecto, app **web** y **Android**
+  (`com.st885.trexoroll`), activar **Email/Password** y **Google**, **dominios autorizados**
+  (`st885.github.io` + `localhost`), **SHA-1/SHA-256** (comandos keytool), `google-services.json`
+  (solo flujo nativo; gitignored), dónde copiar cada valor, `npm run fetch:firebase`, y **demo vs real**.
+- **`docs/firestore-rules.md`** (nuevo): reglas **borrador** (owner-only `players/{uid}`; nadie
+  accede al doc de otro) + validación básica opcional + estructura real del documento + mapeo a
+  `displayName/email/provider/level/stars/coins/selectedSkin/unlockedSkins/updatedAt`.
+  **No se publican ni activan automáticamente.** `ENABLE_CLOUD_SYNC` sigue **false** (Firestore sin uso en runtime).
+
+### Tests
+- `tools/auth-smoke.mjs` ampliado (signInWithGoogle/initAuth/isGuest/continueAsGuest/
+  getPublicPlayerProfile degradan sin Firebase; API FASE 4 presente; nunca password/token en local).
+  `android-manifest-check` verifica versión 0.26.0 + ausencia de permisos sensibles. `npm test`,
+  `test:graph`, `test:visual`, `test:ui`, `build`, `cap:sync`: **verde**.
+
+## [0.25.4] — 2026-07-01 — Revisión integral: joystick opcional, feedback y pulido mobile
+
+> Revisión integral tras validar v0.25.3 en teléfonos reales (prueba interna en Play). Mejoras
+> **pequeñas y de bajo riesgo**: NO se tocó la física, la sensación del control táctil (validada
+> «perfecta» en real), la curva de dificultad ni la solvencia de niveles. **Sin** permisos,
+> SDKs, anuncios, compras, Firebase, Analytics, login ni Play Games nuevos.
+
+### Personaje 3D «Oliver / T-REXo Aventurero» — asset oficial EN PRUEBA (2026-07-02)
+- **Primer modelo glTF del juego** (hasta ahora todo el arte era procedural). Integrado de forma
+  **segura, aislada y progresiva**: NO sustituye la lógica del juego, controles, rotación ni
+  niveles. Aparece como personaje 3D en la **pantalla de victoria** (sustituye al 🏆; si el
+  modelo no carga, el 🏆 permanece).
+- **Assets**: `assets/models/characters/oliver/oliver_master.glb` (11 animaciones) y
+  `oliver_character.glb` (fallback). **Optimizados de 43,6/22,3 MB → 6,4/3,7 MB** con
+  gltf-transform (texturas 4K PNG sin comprimir → **1K PNG**; geometría/rig/animaciones intactos).
+  Los originales pesados y un `.zip` de 67 MB se movieron **fuera del repo**.
+- **GLTFLoader vendorizado**: addon MIT de Three.js **r160** (`GLTFLoader` + `BufferGeometryUtils`)
+  en `libs/addons/`, vía `import('three/addons/...')` **perezoso** (no se descarga hasta usar
+  Oliver; no entra en el grafo de tests). Importmap `three/addons/` → `./libs/addons/`.
+- **Loader reutilizable** `src/scene/gltf.js`: `loadGLB`, `fitModel` (escala/centra; mide por
+  **huesos** en mallas skinned — Mixamo tiene la geometría en escala minúscula y el esqueleto
+  aplica el tamaño real; medir la geometría daría ×160), `clipNames`, `pickClip`.
+- **Visor aislado** `src/scene/OliverStage.js`: mini-renderer propio, **carga perezosa** (solo
+  al ganar), fallback máster→character, materiales forzados **opacos** (algunos exports Mixamo
+  marcan BLEND por error → invisibles), giro suave, elige animación de celebración (idle/baile),
+  **lista las 11 animaciones en consola una vez**, y **detiene su bucle** al salir (0 FPS fuera
+  de la victoria). Constantes `OLIVER_MODEL_PATH` / `OLIVER_FALLBACK_MODEL_PATH` en `constants.js`.
+- **Verificado en Edge headless**: el modelo carga, se listan 11 animaciones, escala/encuadre
+  correctos y renderiza. ⚠️ *Las texturas no se ven en headless (SwiftShader no decodifica
+  texturas blob) — se confirman en navegador/dispositivo real (PNG es formato universal).*
+- `www/` pasa de ~6,6 a ~17 MB por los dos GLB (10 MB). Opción de reducir para producción: 512px
+  o WEBP (verificar en dispositivo), o no enviar el fallback. Sin permisos/SDKs/monetización nuevos.
+
+### Propiedad intelectual — fondo de terceros eliminado (2026-07-02)
+- **Riesgo de marca eliminado**: se retiró el archivo `assets/images/backgrounds/jurassic-world-bg.png`
+  (nombre que aludía a la marca «Jurassic World» + licencia de origen desconocida) y **todas** sus
+  referencias. El PNG (~2,2 MB) se movió a cuarentena fuera del repo.
+- **Fondo ahora PROCEDURAL y propio**: `src/scene/textures.js` → **`makeSceneBackgroundURL`** dibuja
+  la escena prehistórica (cielo + sol + bruma + montañas/volcán/palmeras + copas de jungla + suelo,
+  Canvas 2D) y se inyecta como data URL en la variable CSS **`--bg-jungle`** (antes `--bg-jurassic`),
+  fijada en el arranque de `Game`. Reserva: degradado de jungla en el CSS. **Sin archivos binarios,
+  sin marcas, sin licencias que verificar** (coherente con «todo el arte es procedural/original»).
+- `legal.html` actualizado (el fondo ya no figura como asset pendiente de licencia). `www/` bajó
+  ~2,2 MB. El texto genérico «jurásico/Jurassic» (periodo geológico, **no** es marca) se conserva.
+- ⚠️ **Pendiente**: **regenerar las capturas de Play Store** (`playstore/assets/*-real.png`), que aún
+  muestran el fondo antiguo, antes de subir. (Versión sin cambios: **versionCode 4 / 0.25.4**.)
+
+### Controles — joystick OPCIONAL en móvil
+- El **joystick queda oculto por defecto en móvil**: el control principal es el **arrastre táctil**.
+  Nuevo ajuste **Ajustes → Controles → «🕹️ Joystick: ON/OFF»** (persistido en `localStorage`,
+  clave `showJoystick`, por defecto **false**). Al activarlo aparece; al desactivarlo desaparece.
+  El arrastre táctil **siempre** sigue activo; el D-pad sigue oculto; el teclado desktop intacto.
+- `src/utils/storage.js`: nuevo ajuste booleano `showJoystick` (en `getSettings`/`setSetting`,
+  conservado por `resetProgress` e `importSave`). `styles/main.css`: joystick visible solo con
+  `body.show-joystick`. `index.html`: botón + hint «El control principal es arrastrar el dedo…»
+  (solo táctil). i18n `set.controls`/`set.joystick`/`set.joystickHint` (ES/EN).
+
+### Jugabilidad — feedback
+- **Feedback al arrastrar**: un halo verde MUY tenue aparece sobre el tablero mientras el dedo
+  inclina y se desvanece al soltar (`body.is-tilting`; callbacks `onDragStart`/`onDragEnd` del
+  `TouchTiltController`). No invasivo.
+- **Sensibilidad táctil**: sin cambios (validada «perfecta» en dispositivo real).
+
+### Visual
+- **Hoyo verde (objetivo) más reconocible**: halo verde aditivo suave bajo la meta (estático,
+  0 coste por frame). El anillo verde mantiene su pulso.
+- **Hoyos rojos estáticos más peligrosos**: el anillo rojo pasa de emissive `0.0` (plano) a `0.2`
+  → se lee como peligro. Los hoyos dinámicos (móviles/pulsantes) conservan su animación por frame.
+- **HUD en horizontal más legible**: chips `0.66rem → 0.72rem` sin recortar el tablero.
+
+### Rendimiento
+- **Eliminada una asignación por frame**: el billboard de la meta reutiliza un `THREE.Vector3`
+  (`SceneManager.update`) en vez de crear uno cada frame. Auditado: no hay más `new THREE.*` en
+  bucles por frame; `BallPhysics` no asigna; `disposeTree` libera bien al cambiar de nivel; los
+  materiales de paredes/lados siguen compartidos entre niveles.
+
+### Tests
+- Nuevo `tools/settings-smoke.mjs` (joystick por defecto OFF, alterna/persiste, `resetProgress`
+  lo conserva, claves desconocidas ignoradas). Guard Android actualizado a **versionCode 4 /
+  versionName 0.25.4**. `npm test`, `test:graph`, `test:visual`, `test:ui`, `build`, `cap:sync`:
+  **verde**.
+
+### Android release
+- `versionCode` **3 → 4**, `versionName` **"0.25.3" → "0.25.4"**; `package.json` **0.25.4**.
+  `applicationId` `com.st885.trexoroll`, `minSdk 22`, `compileSdk 35`, `targetSdk 35`,
+  `screenOrientation=fullSensor`, permiso único `INTERNET`: **sin cambios**. **No** AAB/push/deploy.
+
+## [0.25.3] — 2026-07-01 — Rotación móvil + control táctil por arrastre
+
+> Correcciones de jugabilidad móvil tras probar en teléfonos Android reales (prueba interna en
+> Play). **Sin** tocar la física de solvencia, la progresión, los datos ni la monetización.
+> Sin permisos nuevos, sin AD_ID, sin Firebase/Analytics/Ads/compras/login/Play Games.
+
+### Orientación / rotación en Android real
+- **Causa raíz**: no existía ningún bloqueo de orientación (ni `AndroidManifest`, ni
+  `MainActivity.java`, ni JS). Con `screenOrientation` por defecto (`unspecified`), la app
+  **seguía el ajuste de auto-rotación del sistema**; en teléfonos con la auto-rotación bloqueada
+  el WebView se quedaba en vertical y «no rotaba».
+- **`AndroidManifest.xml`**: la `MainActivity` ahora declara
+  **`android:screenOrientation="fullSensor"`** → soporta y rota **horizontal y vertical** por
+  sensor, con independencia del bloqueo de auto-rotación. No se fuerza landscape (ambas valen).
+  `configChanges` se mantiene (rota sin recrear la Activity → sin parpadeo/pantalla negra).
+- **`src/core/Game.js`**: el reflujo de viewport se centraliza en **`_handleViewportChange()`**
+  (recalcula renderer + `camera.aspect`/reencuadre + clases `is-landscape`/`is-portrait`/
+  `is-landscape-mobile` + medidas de controles) y **`_scheduleViewportSync()`** lo re-aplica en
+  varios instantes tras `orientationchange`/`screen.orientation` (el WebView estabiliza el layout
+  con retardo variable → evita lienzo cortado, cámara desfasada o pantalla negra). Se añade el
+  listener de `screen.orientation` además de `resize`/`orientationchange`/`visualViewport`.
+
+### Control táctil profesional por arrastre (nuevo control PRINCIPAL en móvil)
+- **`src/input/TouchTiltController.js`** (nuevo): el jugador **arrastra el dedo sobre el
+  tablero** para inclinarlo; al soltar, vuelve suavemente al centro. Pointer Events
+  (`pointerdown/move/up/cancel`), **suavizado** (lerp), **zona muerta**, **límite = `PHYS.MAX_TILT`**,
+  **retorno al centro**, **multitouch seguro** (solo el primer pointer) y **`touch-action:none`**
+  en el área de juego. Ignora los botones de UI (pausa/HUD/joystick) porque el lienzo queda bajo
+  `#screen-game { pointer-events:none }` y solo los botones capturan el toque.
+- **`src/core/InputController.js`**: integra el arrastre táctil como fuente de inclinación en
+  móvil. Prioridad: **joystick > D-pad/teclado > arrastre táctil > arrastre de ratón**. El
+  desktop (ratón + teclado) queda intacto.
+- Parámetros en `src/utils/constants.js` (`TOUCH_TILT`): `SENSITIVITY 1.0`, `DEADZONE 0.04`,
+  `RETURN_SPEED 8`, `SMOOTHING 0.18`, `FULL_PX 78`.
+
+### D-pad de flechas oculto en móvil
+- Las **flechas grandes del D-pad se ocultan en móvil por defecto** (control obsoleto): CSS
+  `body.is-touch .dpad { display:none }`, reactivable solo con la clase `debug-dpad`
+  (constante **`DEBUG_SHOW_DPAD = false`** en `constants.js`). El D-pad sigue cableado para
+  depuración y para el teclado en desktop.
+- El **joystick** se conserva como control **secundario** (más pequeño y discreto: menor opacidad
+  y tamaño; recupera presencia al usarse).
+
+### UX del nuevo control
+- Ayuda breve la primera vez: el coach del nivel 1 muestra en móvil **«Arrastra el dedo para
+  inclinar el tablero.»** (`tut.l1aTouch`, ES/EN) y la pista de HUD pasa a **«Arrastra el dedo
+  sobre el tablero para inclinarlo»** (`hud.hintTouch`, se elimina el texto obsoleto del D-pad).
+
+### Tests
+- Nuevos: `tools/touch-tilt-smoke.mjs` (arrastre→inclinación, mapeo, zona muerta, retorno,
+  multitouch, sin ReferenceError), `tools/viewport-smoke.mjs` (rotación → `scene.resize`/cámara +
+  clases de layout + `input.refresh`; D-pad oculto por defecto), `tools/android-manifest-check.mjs`
+  (permiso único INTERNET, sin AD_ID, `screenOrientation=fullSensor`, versionCode 3, targetSdk 35).
+  `input-smoke` (existente) sigue verde. `npm test`, `test:graph`, `test:visual`, `test:ui`,
+  `build`, `cap:sync`: **verde**.
+
+### Android release
+- **`android/app/build.gradle`**: `versionCode` **2 → 3**, `versionName` **"0.25.2" → "0.25.3"**.
+  `package.json` **0.25.2 → 0.25.3**. `applicationId` `com.st885.trexoroll`, `minSdk 22`,
+  `compileSdk 35`, `targetSdk 35`: **sin cambios**. **No** se generó AAB ni se hizo push/deploy.
+
+## [0.25.2] — 2026-06-30 — Hardening legal / compliance + copyright SLF Games
+
+> Protección, documentación y evidencias de autoría antes de continuar con Google Play.
+> **Solo documentos, páginas estáticas y un copyright discreto** — sin tocar gameplay, cámara,
+> física ni controles. Sin activar anuncios/compras/login/Firebase/Analytics ni permisos.
+
+### Android / cumplimiento Google Play — target SDK 35 + versionCode 2 — 2026-07-01
+- **Motivo (1)**: Play Console rechazó por «orientada al nivel 34 de la API, pero debe
+  orientarse, al menos, al nivel 35». Actualizado el target SDK para cumplir.
+- **Motivo (2)**: Play Console rechazó por «el código de versión 1 ya se ha usado». Subido el
+  `versionCode`.
+- **`android/app/build.gradle`**: `versionCode` **1 → 2** y `versionName` **"1.0" → "0.25.2"**
+  (alineado con `package.json`). `applicationId` **sin cambios** (`com.st885.trexoroll`).
+- **`android/variables.gradle`**: `compileSdkVersion` **34 → 35** y `targetSdkVersion` **34 → 35**
+  (única fuente; `app/build.gradle` y los plugins las heredan vía `rootProject.ext`).
+  `minSdkVersion` **sin cambios (22)**.
+- **`android/gradle.properties`**: añadido `android.suppressUnsupportedCompileSdk=35` para
+  compilar contra Android 15 con AGP 8.2.1 sin warning bloqueante.
+- **Sin** cambios de `applicationId` (`com.st885.trexoroll`), **sin** permisos nuevos
+  (el manifest mantiene solo `INTERNET`, **sin `AD_ID`** ni permisos sensibles), **sin**
+  anuncios/compras/Firebase/Analytics/login/Play Games SDK.
+- **Verificado con Gradle** (`:app:properties`): `targetSdkVersion: 35`, `compileSdkVersion: 35`,
+  `minSdkVersion: 22`. `npm test`, `test:graph`, `test:visual`, `test:ui`, `build`, `cap:sync`: **verde**.
+- ⚠️ **Para generar el AAB**: instalar la plataforma **Android 15 (API 35)** en el SDK Manager
+  (el equipo tiene API 34 y 36 instaladas, **falta la 35**). Android Studio la ofrece con un clic.
+  *(No se generó AAB en este paso.)*
+
+### Propiedad / licencia
+- **`LICENSE`**: reemplazado **MIT → propietario «todos los derechos reservados»** de
+  **SLF Games** (ES/EN). El proyecto **no** es open source (coherente con `package.json`
+  `UNLICENSED`).
+- Copyright **`© 2026 SLF Games. Todos los derechos reservados.`** añadido en: LICENSE,
+  privacy/terms/legal (web y docs), README, créditos del juego y pie de **Ajustes**.
+
+### Documentos legales (web + Android)
+- **`privacy.html`** y **`docs/privacy-policy.md`**: responsable **SLF Games**, URL del juego,
+  fecha 2026-06-30, nota de funciones futuras, ©. Estado real confirmado (sin login/Firebase/
+  Analytics/anuncios/compras/datos personales; progreso local; permisos mínimos).
+- **`terms.html`** (nuevo) y **`docs/terms.md`**: uso permitido, prohibiciones (copia/clonación/
+  ingeniería inversa), **propiedad intelectual completa** (código, diseño, mecánicas, textos,
+  interfaz, gráficos, música, sonidos, modelos, animaciones, personajes, nombre, identidad),
+  componentes de terceros con sus licencias, limitación de responsabilidad, ©.
+  **Corregido** el claim inexacto «arte 100% sin terceros» (hay assets de terceros pendientes).
+- **`legal.html`** (nuevo): TREXoRoll · SLF Games · enlaces a privacidad/términos · contacto ·
+  tecnologías (Three.js/Capacitor MIT, JS/HTML/CSS/Web Audio) · sección **«Pendiente de
+  verificación de licencias»**.
+- `tools/build-web.mjs`: ahora también publica `legal.html` en `www/`/Android.
+
+### Evidencias y readiness (nuevos)
+- **`docs/ownership-evidence.md`**: identidad, línea de tiempo (con commits), evidencias,
+  nota de protección (copyright vs marca vs privacidad).
+- **`docs/assets-license-audit.md`**: auditoría real. ⚠️ **2 riesgos**: música de fondo `.mp3`
+  (tercero, licencia **pendiente**) e imagen `jurassic-world-bg.png` (licencia desconocida +
+  **nombre con marca** → renombrar). Resto de arte: procedural/original.
+- **`docs/play-store-readiness.md`**: checklist (gratis · sin compras/anuncios/login · no
+  recopila datos · progreso local · privacy/terms/legal · AAB pendiente · pruebas pendientes).
+
+### Seguridad del repositorio
+- `.gitignore` reforzado: añadidos `*.aab`, `*.apk`, `local.properties` (raíz). Ya cubría
+  `*.keystore/.jks/.p12/.pem`, `key.properties`, `.env*`, `serviceAccount*`, `google-services.json`,
+  `android/`, `www/`. **Sin secretos versionados.**
+
+### Validado
+- `npm test` (incl. paridad i18n ES/EN), `test:graph`, `test:visual`, `test:ui`, `build`,
+  `cap:sync`: **verde**. Sin nuevo AAB.
+
+## [0.25.1] — 2026-06-28 — Corrección de hoyos rojos dinámicos (todos animan)
+
+> Arregla los errores visuales detectados en Android: en niveles móviles se movía **un solo
+> hoyo**, y los pulsantes **no animaban de forma apreciable**. La corrección se concentra en
+> `src/levels/dynamicTraps.js` y los tests (el render y el bucle por frame ya eran correctos).
+
+### Causa raíz
+- **Solo un hoyo móvil**: `buildDynamicSpecs('move')` devolvía **una sola spec** (la trampa con
+  más holgura) → el bucle `_applyDynamicTraps` solo tenía un hoyo que animar.
+- **Pulsantes apenas perceptibles**: se generaban **menos specs que trampas** (alguna quedaba
+  estática) y el crecimiento era muy pequeño (≈ base+0.24). El radio sí cambiaba en lógica y
+  malla, pero el efecto era demasiado sutil para verse.
+
+### Solución — TODOS los hoyos animan
+- **Móviles**: ahora **cada** trampa del nivel se mueve con su **propio patrón**
+  (horizontal / vertical / circular / diagonal) y **desfase** propio, de forma suave. Amplitud
+  **acotada por la distancia entre trampas** (`pairAmpCap`) + **pasada de resolución de
+  solapamientos** → nunca se chocan ni se superponen. Velocidad baja en N4, sube gradual.
+- **Pulsantes**: **todas** las trampas cambian de tamaño, **alternando** crecer/encoger (≥1 de
+  cada). Crecimiento **notorio** (hasta ≈ base·1.7, acotado por obstáculos y vecinas). El que
+  encoge llega a **casi desaparecer** y queda **inactivo** (no traga) hasta volver a su tamaño.
+- Margen de coleccionables ajustado a «no solapar» (el centro de la moneda/estrella queda lejos
+  de la zona de captura del hoyo) → permite que **todos** los hoyos puedan animar sin pisar nada.
+
+### Sincronía visual / lógica / collider (verificada)
+- `setTrapTransform` actualiza por frame: posición, **escala = radio actual / base** (hoyo negro
+  y anillo rojo), brillo (rojo intenso activo / apagado-translúcido inactivo). La colisión usa el
+  **radio actual** (no el base). Nuevos tests lo prueban sobre mallas THREE reales y sobre el
+  bucle `_applyDynamicTraps`.
+
+### Tests añadidos/actualizados
+- `dynamic-traps-smoke`: ahora exige **TODOS los hoyos animan** (specs = nº de trampas),
+  **no se superponen** entre sí en ninguna fase, el que crece **vuelve a su tamaño** y el que
+  encoge **se desactiva**; sigue garantizando solvencia (BFS, 65 fases), exclusividad de
+  mecánicas y colisión por tamaño.
+- `canvas-smoke` (test:visual): **sincronía de render** — `setTrapTransform` mueve/escala/colorea
+  mallas THREE reales (grande-activo vs pequeño-inactivo; `scale = r/base`).
+- `ui-runtime-check`: `_applyDynamicTraps` **anima por frame** (radio varía, llega a inactivo) y
+  **collider == malla**; el móvil desplaza la posición.
+
+### Validado
+- `npm test` (**351**), `test:graph` (22), `test:visual` (**130**, **cámara v0.24.8 intacta**),
+  `test:ui` (27), `build`, `cap:sync`: **verde**. Sin permisos nuevos, sin tocar cámara/física
+  base/controles/pantallas. Sin nuevo AAB.
+
+## [0.25.0] — 2026-06-28 — Hoyos rojos dinámicos (móviles y pulsantes)
+
+> Nueva mecánica de dificultad progresiva. **Sin tocar la cámara v0.24.8, el encuadre, la
+> física base de la bola, los controles ni las pantallas principales.** Sin
+> anuncios/compras/login/Firebase/Analytics/permisos nuevos.
+
+### Mecánica 1 · Hoyos rojos MÓVILES — niveles 4, 8, 12, …, 48
+- Una trampa se desplaza en patrón simple y **predecible** (horizontal / vertical / circular),
+  determinista (sin azar). Señal de peligro: anillo rojo intenso con leve pulso.
+- Progresión: N4 lento y corto → más rápido/amplio gradualmente (cap por seguridad).
+
+### Mecánica 2 · Hoyos rojos PULSANTES — niveles 13, 17, 21, …, 49
+- **Dos** trampas con comportamiento OPUESTO: una **CRECE↔normal** (más peligrosa cuando es
+  grande) y otra **ENCOGE↔normal** hasta casi desaparecer. Animación senoidal suave.
+- **Las dos mecánicas NUNCA coinciden** (clases mod 4 disjuntas: móvil ≡0, pulsante ≡1).
+
+### Colisión justa por TAMAÑO ACTUAL
+- La física ya lee `x/z/r` del hoyo por frame: el sistema dinámico muta esos valores → la
+  colisión usa el **radio actual**. Nuevo flag `active`: si el hoyo es menor que la bola
+  (`r < ~0.55`) queda **inactivo** y NO la traga (anillo apagado/translúcido). Hoyo grande y
+  activo sobre la bola → la traga. (`BallPhysics.loadLevel` clona las trampas para no corromper
+  el nivel; `_holeHit`/`_holePull` saltan las inactivas.)
+
+### Seguridad y justicia (auto-acotado + verificado)
+- `src/levels/dynamicTraps.js` calcula recorridos/tamaños **auto-acotados**: ningún hoyo
+  dinámico se sale de la huella ni pisa **meta / portales / monedas / estrella / spawn** (margen
+  cómodo para lo crítico; «no solapar» para monedas, que son esquivables).
+- `tools/dynamic-traps-smoke.mjs` muestrea el **ciclo completo (65 fases)** de cada nivel
+  dinámico y, con el **mismo BFS** que el validador, garantiza que **ningún nivel se vuelve
+  imposible** en ninguna fase. No afecta meta/portales/monedas/estrellas.
+- Reinicio/pausa/cambio de nivel: el tiempo dinámico se reinicia/congela correctamente.
+
+### Tutorial
+- Intro corta la 1ª vez que aparece cada mecánica (independiente del tutorial 1-5, también vía
+  selector): N4 «Cuidado: algunos hoyos rojos se mueven.» · N13 «Los hoyos rojos pueden abrirse
+  y cerrarse.» (ES/EN). Reutiliza el coach de v0.24.9.
+
+### Validado
+- `npm test` (**287**, +62 de hoyos dinámicos; solvencia de los 50 niveles y paridad i18n
+  intactas), `test:graph` (22), `test:visual` (127, **cámara intacta**), `test:ui` (26),
+  `build`, `cap:sync`: **verde**. Sin nuevo AAB.
+
+## [0.24.9] — 2026-06-28 — Gameplay polish (tutorial, objetivos, misiones, feedback)
+
+> Más claro, más divertido y más adictivo desde los primeros niveles. **Sin tocar la cámara
+> v0.24.8 ni la esencia/física integrada** (solvencia de los 50 niveles intacta). Sin
+> anuncios/compras/login/Firebase/Analytics/permisos nuevos.
+
+### P1 · Tutorial jugable (niveles 1-5)
+- Nuevo «coach» inferior, corto y NO invasivo: explica inclinar/guiar la bola y el hoyo verde
+  (N1), monedas (N2), trampas rojas (N3), estrellas (N4) y primer peligro (N5). Se auto-cierra
+  (~4s), es descartable con ✕ y **no bloquea el input** (`pointer-events:none` salvo el ✕). Se
+  recuerda en `localStorage` (no molesta en repeticiones); «Reiniciar progreso» lo reactiva.
+  Bilingüe ES/EN. Nuevo módulo `src/systems/tutorial.js`.
+
+### P2 · Sensación de control
+- `TILT_LERP` 6.5 → **7.6**: respuesta de inclinación (D-pad/joystick/arrastre) más ágil y
+  precisa, sin volverse brusca. **Solo** afecta el suavizado de input (`InputController`); la
+  física integrada (gravedad/fricción/velocidad) y la solvencia **no cambian** (validador y
+  physics-smoke aplican `MAX_TILT` directo). La cámara v0.24.8 no usa este valor.
+
+### P3 · Objetivos claros por nivel
+- La preparación muestra el objetivo con marcador 🎯 y, debajo, las **misiones** del nivel.
+
+### P4 · Misiones secundarias
+- Se exponen las **3 condiciones de estrella** como misiones claras en preparación
+  (🥚 sin perder vida · ⏱️ bajo el par · 🪙 recoge monedas) y su resultado **✓/✗** en la
+  pantalla de victoria, bajo las estrellas (explica el porqué de las 1/2/3★). No es un sistema
+  nuevo: refleja la lógica de estrellas ya existente (sin backend, login, compras ni anuncios).
+
+### P5 · Recompensas y feedback
+- **Vibración háptica** opcional y segura (Web Vibration API, **sin permisos**; degrada en
+  silencio donde no esté disponible y sigue el ajuste de Efectos): moneda, estrella, golpe,
+  victoria y celebración de 3★. Nuevo módulo `src/effects/haptics.js`.
+- **Celebración extra al lograr 3★** (firework + ráfaga dorada). Resto del feedback (popups,
+  flash, shake, taunt, sfx) intacto. **No** se añadió el permiso `VIBRATE` (no romper «sin
+  permisos nuevos»).
+
+### P6 · Dificultad progresiva
+- `par` más amable en los niveles de aprendizaje (1→36, 2→40, 3→40) para que el principiante
+  logre 3★ mientras aprende. **Sin tocar geometría** (cero riesgo de solvencia). La estructura
+  de tiers (1-5 aprendizaje, 6-10 primeras trampas, …) se mantiene.
+
+### Validado
+- `npm test` (225, incl. **solvencia de los 50 niveles** y **paridad i18n ES/EN**),
+  `test:graph` (22), `test:visual` (127, **cámara v0.24.8 intacta**), `test:ui` (25, +3 nuevos),
+  `build`, `cap:sync`: **verde**. Sin nuevo AAB.
+
 ## [0.24.8] — 2026-06-28 — Ajuste fino de encuadre horizontal (tablero un poco más grande)
 
 > Acercamiento extra **conservador** en móvil horizontal. **Solo** landscape mobile; portrait

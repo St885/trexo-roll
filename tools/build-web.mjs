@@ -22,6 +22,7 @@ const INCLUDE = [
   'manifest.webmanifest',
   'privacy.html',   // política pública (si existe)
   'terms.html',     // términos públicos (si existe)
+  'legal.html',     // legal/créditos públicos (si existe)
   'assets',
   'libs',
   'src',
@@ -29,6 +30,10 @@ const INCLUDE = [
 ];
 
 async function exists(p) { try { await stat(p); return true; } catch { return false; } }
+
+// Excluye del build las carpetas `_backup/` (originales de assets guardados como respaldo). No son
+// de runtime: si se copiaran, inflarían www/ y el APK de Android con archivos que el juego no usa.
+const buildFilter = (src) => !/[\\/]_backup([\\/]|$)/.test(src);
 
 async function dirSize(p) {
   let total = 0;
@@ -49,7 +54,7 @@ async function main() {
   for (const item of INCLUDE) {
     const srcPath = path.join(root, item);
     if (!(await exists(srcPath))) { console.log(`  ·  (omitido, no existe) ${item}`); continue; }
-    await cp(srcPath, path.join(out, item), { recursive: true });
+    await cp(srcPath, path.join(out, item), { recursive: true, filter: buildFilter });
     console.log(`  ✅ ${item}`);
     copied++;
   }

@@ -34,6 +34,12 @@ const { BALLS } = await import('../src/data/balls.js');
 const cel = await import('../src/scene/CelebrationDino.js');
 
 console.log('\n[Texturas procedurales]');
+// La bola blanca principal muestra a OLIVER, el T-Rex bebé azul (emblem 'oliver'), no el T-Rex viejo.
+await run("bola 'blanca' usa emblem 'oliver' (T-Rex bebé Oliver)", () => {
+  const w = BALLS.find((b) => b.id === 'blanca');
+  if (!w || w.emblem !== 'oliver') throw new Error("la bola blanca debe tener emblem 'oliver'");
+  if (w.species !== 'trex') throw new Error('la especie/ability de la bola blanca NO debe cambiar (trex)');
+});
 for (const b of BALLS) {
   await run('makeBallTexture(' + b.id + ')', () => tex.makeBallTexture(b));
   await run('makeBallThumbnail(' + b.id + ')', () => tex.makeBallThumbnail(b, 96));
@@ -156,6 +162,38 @@ console.log('\n[Encuadre de cámara: horizontal más grande + sin recortar al in
       const cov = boardNdc(landM, b, 2.0); if (cov < 0.82) throw new Error('infrautiliza (cobertura ' + cov.toFixed(3) + ')');
     });
   }
+}
+
+// ── Sincronía de RENDER de hoyos dinámicos: setTrapTransform actualiza la malla ──────────
+// Bloquea el bug "el hoyo no anima visualmente": comprueba sobre mallas THREE reales que
+// posición, escala (= radio actual / base), brillo y opacidad cambian por llamada.
+{
+  const THREE = await import('three');
+  const { SceneManager } = await import('../src/scene/SceneManager.js');
+  const baseR = 1.0;
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(baseR, baseR * 0.7, 0.6, 12), new THREE.MeshStandardMaterial());
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(baseR, 0.08, 8, 12), new THREE.MeshStandardMaterial({ emissive: 0xe74c3c, emissiveIntensity: 0 }));
+  const ctx = { _trapMeshes: [{ hole, ring, baseR }], _t: 1.0 };
+  const apply = (x, z, r, active) => SceneManager.prototype.setTrapTransform.call(ctx, 0, x, z, r, active);
+
+  await run('setTrapTransform: hoyo GRANDE/activo → mueve, agranda y enrojece la malla', () => {
+    apply(2, 3, 1.5, true);
+    if (Math.abs(hole.position.x - 2) > 1e-6 || Math.abs(hole.position.z - 3) > 1e-6) throw new Error('posición no actualizada');
+    if (Math.abs(hole.scale.x - 1.5) > 1e-6) throw new Error('escala del hoyo ≠ r/baseR');
+    if (Math.abs(ring.scale.x - 1.5) > 1e-6) throw new Error('escala del anillo ≠ r/baseR');
+    if (ring.material.emissiveIntensity < 0.3) throw new Error('activo debería brillar (rojo intenso)');
+    if (ring.material.opacity < 1) throw new Error('activo debería ser opaco');
+  });
+  await run('setTrapTransform: hoyo PEQUEÑO/inactivo → encoge y se apaga/translúcido', () => {
+    apply(0, 0, 0.2, false);
+    if (hole.scale.x > 0.5) throw new Error('el hoyo no encogió visualmente');
+    if (ring.material.emissiveIntensity > 0.2) throw new Error('inactivo debería verse apagado');
+    if (ring.material.opacity >= 1) throw new Error('inactivo debería ser translúcido');
+  });
+  await run('radio VISUAL sincronizado con el radio LÓGICO (scale = r/baseR)', () => {
+    apply(0, 0, 0.85, true);
+    if (Math.abs(hole.scale.x - 0.85 / baseR) > 1e-6) throw new Error('desincronía visual/lógica');
+  });
 }
 
 console.log(`\n${failures === 0 ? '✅ Código de dibujo/3D sin errores de runtime' : '❌ ' + failures + ' fallo(s)'}\n`);

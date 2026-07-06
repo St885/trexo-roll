@@ -8,8 +8,22 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Temporales
+# Temporales / outputs de herramientas (defensa genérica; este proyecto no usa bundler)
 *.tmp
+dist/
+coverage/
+.cache/
+.vite/
+__pycache__/
+*.pyc
+
+# Backups locales de modelos 3D ORIGINALES sin optimizar (~37 MB): se quedan SOLO en esta PC.
+# El repo versiona los .glb optimizados de runtime; los originales no hacen falta para clonar/jugar.
+assets/models/characters/*/_backup/
+
+# Materiales de trabajo para la ficha de Play Store (imágenes crudas, ~13 MB): no son runtime.
+# Las versiones curadas viven en playstore/assets/.
+imagenes/
 
 # Firebase: la config web NO es secreta (se sirve al cliente; la seguridad la dan las
 # reglas de Firestore + Auth). El repo trae src/config/firebaseConfig.js con placeholders.
@@ -44,13 +58,16 @@ google-services.json
 GoogleService-Info.plist
 android/keystores/
 
-# --- Firma / secretos (NUNCA al repo) ---
+# --- Firma / secretos / binarios firmados (NUNCA al repo) ---
 *.keystore
 *.jks
 *.p12
 *.pem
+*.aab
+*.apk
 keystore.properties
 key.properties
+local.properties
 serviceAccount*.json
 *firebase-adminsdk*.json
 secrets/

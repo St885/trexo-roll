@@ -18,7 +18,7 @@ export const LEVELS = [
     traps: [{ x: -2, z: 4, r: 1.0 }],
     walls: [{ x: 0, z: -5.6, w: 16, d: 0.5 }, { x: 0, z: 5.6, w: 16, d: 0.5 }],
     footDecals: [{ x: -3, z: -2 }, { x: 2.5, z: 2.5, rot: 0.6 }],
-    par: 30,
+    par: 36, // v0.24.9: aprendizaje más amable (margen para 3★ mientras se aprende)
   },
   // 2 ─────────────────────────────────────────────────────────────────────
   {
@@ -30,7 +30,7 @@ export const LEVELS = [
     traps: [{ x: 0, z: 1.5, r: 0.95 }],
     walls: [{ x: 0, z: -3.6, w: 22, d: 0.5 }, { x: 0, z: 3.6, w: 22, d: 0.5 }, { x: 1, z: -2, w: 0.5, d: 3 }],
     footDecals: [{ x: -4, z: 2 }, { x: 5, z: -2.5 }],
-    par: 35,
+    par: 40, // v0.24.9: aprendizaje más amable
   },
   // 3 ─────────────────────────────────────────────────────────────────────
   {
@@ -42,7 +42,7 @@ export const LEVELS = [
     traps: [{ x: -3, z: 0, r: 0.9 }, { x: 3, z: 1, r: 0.9 }],
     walls: [],
     footDecals: [{ x: 0, z: 3 }],
-    par: 35,
+    par: 40, // v0.24.9: aprendizaje más amable
   },
   // 4 ─────────────────────────────────────────────────────────────────────
   {

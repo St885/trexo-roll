@@ -4,38 +4,55 @@
 > **https://st885.github.io/trexo-roll/privacy.html**
 > (se sirve automáticamente desde GitHub Pages; ver `privacy.html` en la raíz del repo.)
 
-Última actualización: 2026-06-23 · Contacto: stefano.luisf@gmail.com
+Última actualización: 2026-06-30 · Juego: **TREXoRoll** · Responsable/publicador: **SLF Games** ·
+Contacto: stefano.luisf@gmail.com · Web: https://st885.github.io/trexo-roll/
 
-TREXoRoll funciona **100% en tu dispositivo**. Esta política refleja **exactamente** lo que
-hace la app en su versión actual de Play Store.
+**TREXoRoll** (publicado por **SLF Games**) funciona **100% en tu dispositivo**. Esta política
+refleja **exactamente** lo que hace la app en su versión actual de Play Store y **no recopila
+datos personales**.
 
 ## Qué guardamos
 - **Progreso local** (niveles, estrellas, monedas, skins, cofres, ajustes y un perfil local
   con tu nombre visible) en el **almacenamiento local** del dispositivo.
 - Idioma elegido y aceptación de términos.
 
-## Qué NO hacemos (esta versión)
-- **No** recopilamos contraseñas (acceso = perfil local; una contraseña tecleada **no se
-  guarda**).
-- **No** hay analítica ni medición activa (ni país, ni seguimiento).
-- **No** hay anuncios reales.
-- **No** hay compras reales.
-- **No** pedimos ubicación/GPS, cámara, micrófono ni contactos.
-- **No** enviamos datos a servidores propios ni a terceros.
+## Inicio de sesión y cuenta (opcional, desde v0.26.0)
+Se puede **jugar como invitado** sin cuenta → **no se recopila ningún dato** (todo local). Si el
+usuario **inicia sesión** con **Google** o **correo/contraseña**, se usa **Firebase
+Authentication** y se pueden tratar, según el método: **correo**, **nombre de perfil**, **foto de
+perfil** (si Google la entrega) e **identificador de usuario** (Firebase UID). **Finalidad**:
+crear la cuenta, identificar al jugador, mantener la sesión y permitir futura sincronización.
+Procesado por **Google/Firebase** (proveedor de autenticación), cifrado (HTTPS).
 
-## Nube (preparada, no activa)
-La app trae arquitectura **preparada** para cuentas en la nube (Firebase) pero **desactivada**
-mientras no haya claves reales. Si se activa en el futuro, **se actualizará esta política
-antes** y se avisará en la app.
+## Qué NO hacemos
+- **No** guardamos la contraseña (viaja cifrada a Firebase; no se almacena local ni en registros).
+- **No** vendemos datos ni los usamos para publicidad.
+- **No** hay analítica activa (Analytics desactivado en esta versión).
+- **No** hay anuncios ni compras reales.
+- **No** pedimos ubicación/GPS, cámara, micrófono ni contactos.
+- El **progreso** se guarda **solo en el dispositivo** (sincronización en la nube desactivada).
 
 ## Permisos
-Sin permisos sensibles. El único técnico habitual es `INTERNET` (para la futura
-sincronización opcional); no se usa para rastrear.
+Sin permisos sensibles. El único técnico es `INTERNET` (necesario para el login con Firebase por
+HTTPS). Sin `GET_ACCOUNTS`, `READ_CONTACTS`, `AD_ID`, ubicación, cámara ni micrófono.
 
-## Borrado de datos
-Desde **Ajustes → Reiniciar progreso** en el juego, o borrando los datos de la app en Android.
+## Eliminar cuenta y datos
+Desde **Ajustes → Solicitar eliminación de cuenta** (abre el correo), o escribiendo a
+**stefano.luisf@gmail.com** con el correo de acceso. También se puede borrar el **progreso local**
+desde **Ajustes → Reiniciar progreso** o borrando los datos de la app en Android.
 
 ## Coincidencia con Data Safety (Play Console)
-- Recopilación de datos: **ninguna** se envía fuera del dispositivo.
-- Datos almacenados solo localmente: progreso y nombre de perfil local.
-- Sin compartición con terceros · sin publicidad · sin analítica · sin ubicación.
+- **Invitado**: no se recopila nada. **Con login**: se recopilan correo, nombre, foto (opcional) e
+  ID de usuario, **compartidos con Google/Firebase** (autenticación), para **gestión de cuentas /
+  funcionalidad**. Recopilación **opcional** (solo si el usuario inicia sesión).
+- Cifrado en tránsito: **sí**. Solicitud de eliminación: **sí**. Sin publicidad · sin analítica ·
+  sin ubicación. Ver `playstore/data-safety-draft.md`.
+
+## Funciones futuras (no activas todavía)
+**Sincronización de progreso en la nube (Firestore)** y **analítica (GA4)** están **preparadas
+pero DESACTIVADAS** (`ENABLE_CLOUD_SYNC` / `ENABLE_ANALYTICS` = false). Si se activan, se
+actualizará esta política y el **Data Safety** **antes** de publicar esa versión.
+
+---
+
+© 2026 SLF Games. Todos los derechos reservados.

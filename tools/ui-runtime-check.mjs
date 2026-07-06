@@ -78,6 +78,30 @@ run('_renderBallCards()', () => g._renderBallCards());
 run('_renderLevelCards() [badges jefe/contrarreloj + progreso]', () => g._renderLevelCards());
 run('_renderShop() [canje]', () => g._renderShop());
 run('_renderReviveBox() [game over]', () => g._renderReviveBox());
+run('_renderPrepMissions() [misiones prep]', () => g._renderPrepMissions({ par: 30 }, 3));
+run('_renderWinMissions() [misiones victoria]', () => g._renderWinMissions(true, false, true, true));
+run('_startTutorial(1) + _hideCoach()', () => { g.playing = true; g._startTutorial(1); g._hideCoach(); g.playing = false; });
+run('_applyDynamicTraps() [pulse anima el radio por frame + sincroniza collider y malla]', () => {
+  g.physics = { traps: [{ x: 0, z: 0, r: 1, active: true }] };
+  let last = null;
+  g.scene.setTrapTransform = (i, x, z, r, a) => { last = { i, x, z, r, a }; };
+  g._dynSpecs = [{ index: 0, mode: 'shrink', cx: 0, cz: 0, baseR: 1, maxR: 1, minR: 0.12, speed: 1.0, phase: 0 }];
+  g._dynT = 0;
+  const rs = [];
+  for (let f = 0; f < 200; f++) { g._applyDynamicTraps(0.05); rs.push(g.physics.traps[0].r); }
+  if (Math.max(...rs) - Math.min(...rs) < 0.3) throw new Error('el radio no varía con el tiempo (no anima)');
+  if (g.physics.traps[0].r !== last.r) throw new Error('collider y malla desincronizados');
+  if (!rs.some((r) => r < 0.55)) throw new Error('el shrink no llega a desactivarse');
+});
+run('_applyDynamicTraps() [move desplaza la posición por frame]', () => {
+  g.physics = { traps: [{ x: 0, z: 0, r: 1, active: true }] };
+  g.scene.setTrapTransform = () => {};
+  g._dynSpecs = [{ index: 0, mode: 'move', pattern: 'h', cx: 0, cz: 0, baseR: 1, amp: 1.5, speed: 1.0, phase: 0 }];
+  g._dynT = 0;
+  const xs = [];
+  for (let f = 0; f < 120; f++) { g._applyDynamicTraps(0.05); xs.push(g.physics.traps[0].x); }
+  if (Math.max(...xs) - Math.min(...xs) < 1.0) throw new Error('la posición no varía (no se mueve)');
+});
 run('_renderPrepEvents(10) [jefe]', () => g._renderPrepEvents(10));
 run('_renderPrepEvents(11) [contrarreloj]', () => g._renderPrepEvents(11));
 run('_renderPrepEvents(6) [clima]', () => g._renderPrepEvents(6));

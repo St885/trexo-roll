@@ -9,7 +9,22 @@ import { buildCaveman, buildThrownSpear } from './Caveman.js';
 import { makeRocket, makeRocketFlame, makeGlow, makeFireworkBurst } from './RocketArt.js';
 import { makeCoin, makeStarToken, makeTrapCover, makePtero } from './collectibleArt.js';
 import { footprintBounds, isInsideFootprint } from '../physics/footprint.js';
+import { loadGLB, fitModel } from './gltf.js';
 import { PHYS } from '../utils/constants.js';
+import { countResize } from '../utils/perf.js';
+import { getGraphicsProfile } from '../utils/device.js';
+
+// Altura/giro POR DEFECTO de los modelos 3D de celebración (cada entrada de CELEBRATION_MODELS
+// puede sobreescribir `height`/`yaw`). La altura mantiene la proporción con los dinos procedurales;
+// el yaw orienta el frente del GLB hacia la cámara (+Z). Ajustables.
+const CELEB_MODEL_HEIGHT = 2.2;
+const CELEB_MODEL_YAW = Math.PI;
+
+/** ¿Entorno de desarrollo? (localhost). Los logs de celebración NO salen en producción. */
+function _celebDev() {
+  try { const h = (typeof location !== 'undefined' && location.hostname) || ''; return h === 'localhost' || h === '127.0.0.1' || h === '' || h === '0.0.0.0'; }
+  catch (_) { return false; }
+}
 
 const CAM_DIR = new THREE.Vector3(0, 0.92, 1.0).normalize(); // dirección fija de la cámara
 const WORLD_UP = new THREE.Vector3(0, 1, 0);                  // "arriba" del mundo (base de cámara)
@@ -111,10 +126,21 @@ export class SceneManager {
   constructor(container) {
     this.container = container;
     // alpha: lienzo TRANSPARENTE → se ve la imagen jurásica (fondo CSS) detrás del tablero.
+    // PERFIL GRÁFICO activo (quality/balanced/performance) según el dispositivo (Android/WebView →
+    // performance). Ajusta pixelRatio, sombras, halos y partículas SIN tocar la jugabilidad.
+    this.gfx = getGraphicsProfile();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Techo del devicePixelRatio del perfil: en Android/emulador se limita (1,0/1,25) para no disparar
+    // el coste de relleno; en escritorio se permite 2. Menos píxeles = mucho más fluido en móvil.
+    this._dprCap = this.gfx.pixelRatioCap;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this._dprCap));
+    // Caché del último tamaño aplicado: resize() ignora llamadas sin cambio real (evita reasignar
+    // el buffer GL en cada evento espurio de visualViewport/resize → causa de tirones al mover).
+    this._lastW = 0; this._lastH = 0; this._lastDpr = 0;
     this.renderer.setClearColor(0x000000, 0); // sin color de fondo (transparente)
-    this.renderer.shadowMap.enabled = true;
+    // Sombras dinámicas SOLO en 'quality': el mapa de sombras suaves (PCF) es caro en móvil. Con
+    // shadows=false no se renderiza mapa de sombras (las sombras "de contacto" son planos con textura).
+    this.renderer.shadowMap.enabled = this.gfx.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // Tone mapping cinematográfico para un acabado más profesional.
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -145,6 +171,11 @@ export class SceneManager {
     this._shake = 0;
     this._fit = {};          // perfil de viewport (afina el encuadre por dispositivo)
     this._celebration = null;
+    // Celebración por ESPECIE: modelos 3D cacheados (species → pivot) + promesas y rutas en curso.
+    // Cada bola saca SU dinosaurio del hoyo; una especie sin GLB cae al procedural (buildDino).
+    this._celebModels = new Map();        // species → THREE.Group (modelo cargado, reutilizado)
+    this._celebModelPromises = new Map(); // species → Promise (carga en curso/hecha; no re-carga)
+    this._celebModelPaths = new Map();    // species → ruta usada (para logs de desarrollo)
     this._collectibles = []; // {mesh, x, z, type, taken}
     this._pickFx = [];       // efectos "pop" al recoger
     this._ptero = null;      // estado del ptero-rescate
@@ -181,16 +212,20 @@ export class SceneManager {
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.22));
     const sun = new THREE.DirectionalLight(0xfff1c9, 1.25);
     sun.position.set(10, 20, 8);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    // Volumen de sombra amplio: cubre el tablero + decoración incluso inclinado,
-    // así nada pierde su sombra al girar.
-    const s = 34;
-    sun.shadow.camera.left = -s; sun.shadow.camera.right = s;
-    sun.shadow.camera.top = s; sun.shadow.camera.bottom = -s;
-    sun.shadow.camera.near = 1; sun.shadow.camera.far = 100;
-    sun.shadow.bias = -0.0004;
-    sun.shadow.normalBias = 0.02;
+    // Sombras dinámicas SOLO en perfil 'quality'. En móvil/Android se apagan (gran ahorro GPU): la
+    // iluminación se mantiene, solo desaparece la sombra proyectada en tiempo real.
+    if (this.gfx.shadows) {
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      // Volumen de sombra amplio: cubre el tablero + decoración incluso inclinado, así nada pierde
+      // su sombra al girar.
+      const s = 34;
+      sun.shadow.camera.left = -s; sun.shadow.camera.right = s;
+      sun.shadow.camera.top = s; sun.shadow.camera.bottom = -s;
+      sun.shadow.camera.near = 1; sun.shadow.camera.far = 100;
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.02;
+    }
     this.scene.add(sun);
     this.scene.add(sun.target); // necesario para que el objetivo de la sombra se actualice
     this.sun = sun;
@@ -211,10 +246,11 @@ export class SceneManager {
   mountLevel(level, ballMesh) {
     this.clearBoard();
     this.applyTheme(level.theme);
-    const { group, animated } = buildBoard(level);
+    const { group, animated, trapMeshes } = buildBoard(level);
     group.add(ballMesh);
     group.add(this._contactShadow);
     this._ballMesh = ballMesh;
+    this._trapMeshes = trapMeshes || []; // mallas de trampa (para hoyos dinámicos)
     // El tablero gira (rotation.x/z): desactivar el frustum culling de TODO lo que
     // cuelga de él evita que objetos/esquinas "desaparezcan" por una esfera de
     // recorte mal calculada al inclinar. La escena es pequeña: coste despreciable.
@@ -245,6 +281,11 @@ export class SceneManager {
     }
     if (this._contactShadow.parent === this.boardGroup) {
       this.boardGroup.remove(this._contactShadow);
+    }
+    // Los MODELOS 3D de celebración (uno por especie) se REUTILIZAN: sacarlos antes de liberar el
+    // tablero para no disponer su geometría/texturas (si alguno quedó colgando tras la celebración).
+    for (const model of this._celebModels.values()) {
+      if (model && model.parent) model.parent.remove(model);
     }
     this.scene.remove(this.boardGroup);
     disposeTree(this.boardGroup);
@@ -325,6 +366,30 @@ export class SceneManager {
     this.spawnBurst(x, 0.35, z, colorHex);
   }
 
+  /**
+   * Mueve/escala/colorea un hoyo trampa DINÁMICO (lo llama el sistema de hoyos dinámicos).
+   * @param {number} index  índice de la trampa en el nivel
+   * @param {number} x @param {number} z  posición actual (unidades del tablero)
+   * @param {number} r  radio actual @param {boolean} active  ¿puede tragar la bola?
+   */
+  setTrapTransform(index, x, z, r, active) {
+    const tm = this._trapMeshes && this._trapMeshes[index];
+    if (!tm) return;
+    const s = Math.max(0.04, r / (tm.baseR || 1));
+    tm.hole.position.x = x; tm.hole.position.z = z;
+    tm.ring.position.x = x; tm.ring.position.z = z;
+    tm.hole.scale.set(s, 1, s);   // el cilindro mantiene su altura (Y), cambia su radio (X/Z)
+    tm.ring.scale.set(s, s, s);
+    // Señal de peligro: rojo INTENSO + leve pulso cuando puede tragar; apagado/translúcido si no.
+    const glow = active ? (0.6 + 0.25 * Math.sin(this._t * 6)) : 0.06;
+    if (tm.ring.material) {
+      tm.ring.material.emissiveIntensity = glow;
+      tm.ring.material.transparent = true;
+      tm.ring.material.opacity = active ? 1 : 0.4;
+    }
+    if (tm.hole.material) { tm.hole.material.transparent = true; tm.hole.material.opacity = active ? 1 : 0.5; }
+  }
+
   /** Tapa una trampa bloqueada con una piedra gris (se ve "apagada"). */
   coverTrap(trap) {
     if (!this.boardGroup || !trap) return;
@@ -389,34 +454,117 @@ export class SceneManager {
     }
   }
 
-  /** Lanza la celebración: el dino de la bola sale del hoyo y baila + confeti. */
+  /**
+   * Precarga (una vez, CACHEADA POR ESPECIE) el MODELO 3D de celebración de una especie. Al ganar
+   * con esa bola, si el modelo está listo sustituye al dino procedural; si no cargó, se usa el
+   * procedural (fallback). El modelo se envuelve en un PIVOTE (malla centrada, base a y=0) para que
+   * la animación de celebración lo mueva igual que a los dinos procedurales. NO lanza si falla.
+   * @param {string} species  clave de especie ('trex', 'triceratops', …)
+   * @param {{path:string, fallbackPath?:string, height?:number, yaw?:number}} entry  ver CELEBRATION_MODELS
+   */
+  preloadCelebrationModel(species, entry) {
+    if (!species || !entry || !entry.path) return Promise.resolve(null);
+    if (this._celebModelPromises.has(species)) return this._celebModelPromises.get(species);
+    const height = entry.height || CELEB_MODEL_HEIGHT;
+    const yaw = entry.yaw == null ? CELEB_MODEL_YAW : entry.yaw;
+    if (_celebDev()) console.log('CELEBRATION_MODEL_PATH', species, entry.path);
+    const promise = (async () => {
+      // Intenta la ruta principal y, si falla, la de reserva. Devuelve el pivote o null (procedural).
+      const urls = [entry.path, entry.fallbackPath].filter(Boolean);
+      for (const url of urls) {
+        try {
+          const { scene } = await loadGLB(url);
+          fitModel(scene, { targetHeight: height, faceYaw: yaw, shadows: true });
+          // Normaliza materiales para que el modelo se vea BIEN en cualquier GPU: NO metálico (si el
+          // metallicRoughness map no cargara, el default metalness=1 dejaría el modelo NEGRO sin env
+          // map), emissive SUTIL, sRGB en los mapas de color, y OPACO (algunos exports Mixamo marcan
+          // BLEND por error → el personaje saldría invisible). Materiales 'shared' (se reutiliza).
+          let meshes = 0; const matNames = [];
+          scene.traverse((o) => {
+            if (!o.isMesh || !o.material) return;
+            meshes++;
+            const mats = Array.isArray(o.material) ? o.material : [o.material];
+            for (const m of mats) {
+              matNames.push(m.name || m.type);
+              if ('metalness' in m) m.metalness = 0;
+              if (m.emissive) m.emissiveIntensity = 0.2;
+              if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+              if (m.emissiveMap) m.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+              if (m.opacity == null || m.opacity >= 1) { m.transparent = false; m.depthWrite = true; m.alphaTest = 0; }
+              m.userData = m.userData || {}; m.userData.shared = true;
+              m.needsUpdate = true;
+            }
+          });
+          const pivot = new THREE.Group();
+          pivot.add(scene);
+          pivot.traverse((o) => { o.frustumCulled = false; });
+          this._celebModels.set(species, pivot);
+          this._celebModelPaths.set(species, url);
+          if (_celebDev()) { console.log('CELEBRATION_MODEL_LOADED', species, true, url); console.log('CELEBRATION_MODEL_CHILDREN', species, meshes); console.log('CELEBRATION_MODEL_MATERIALS', species, matNames.join(', ')); }
+          return pivot;
+        } catch (e) {
+          if (_celebDev()) console.warn('CELEBRATION_MODEL_LOAD_FAIL', species, url, (e && e.message) || e);
+        }
+      }
+      this._celebModels.set(species, null); // todas las rutas fallaron → dino procedural
+      if (_celebDev()) console.warn('CELEBRATION_MODEL_LOADED', species, false);
+      return null;
+    })();
+    this._celebModelPromises.set(species, promise);
+    return promise;
+  }
+
+  /** Lanza la celebración: el dino de la bola (o su modelo 3D POR ESPECIE) sale del hoyo y baila
+   *  + confeti. El modelo se elige por `ballDef.species` (cada bola SU dinosaurio); si esa especie
+   *  no tiene GLB cargado, se usa el dino PROCEDURAL de la MISMA especie (buildDino). */
   spawnCelebration(x, z, ballDef) {
     if (!this.boardGroup) return;
     this.clearCelebration();
-    const dino = buildDino(ballDef);
+    const species = (ballDef && ballDef.species) || 'trex';
+    if (_celebDev()) console.log('CELEBRATION_SPECIES', species);
+    // Prioridad: modelo 3D de ESTA especie si está cargado; si no, procedural (misma especie).
+    const speciesModel = this._celebModels.get(species) || null;
+    const useModel = !!speciesModel;
+    let dino;
+    if (useModel) {
+      dino = speciesModel;
+      dino.position.set(0, 0, 0); dino.rotation.set(0, 0, 0); dino.scale.set(1, 1, 1); // reset (reutilizado)
+      if (_celebDev()) console.log('CELEBRATION_MODEL_USED', species, this._celebModelPaths.get(species) || true);
+    } else {
+      dino = buildDino(ballDef);
+      // No hay GLB para esta especie (o no cargó) → dino procedural de la especie. Aviso en desarrollo.
+      if (_celebDev()) console.warn('CELEBRATION_MODEL_FALLBACK_USED', species, 'procedural buildDino');
+    }
     dino.position.set(x, -1.4, z);
-    const { points, velocities } = buildConfetti(ballDef.dino);
+    // Partículas escaladas por el perfil (menos confeti en móvil).
+    const { points, velocities } = buildConfetti(ballDef.dino, this.gfx.particleScale);
     points.position.set(x, 0.6, z);
-    // Aura de victoria: halo brillante bajo el dino (refuerza la presencia).
-    const aura = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.4, 3.4),
-      new THREE.MeshBasicMaterial({
-        map: makeGlowTexture('#ffe7a0'), transparent: true, depthWrite: false,
-        blending: THREE.AdditiveBlending, opacity: 0,
-      })
-    );
-    aura.rotation.x = -Math.PI / 2; aura.position.set(x, 0.04, z);
+    // Aura de victoria: halo aditivo bajo el dino. Solo con heavyGlows (perfil quality/balanced);
+    // en 'performance' se omite (ahorra un plano aditivo grande cada frame de la celebración).
+    let aura = null;
+    if (this.gfx.heavyGlows) {
+      aura = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.4, 3.4),
+        new THREE.MeshBasicMaterial({
+          map: makeGlowTexture('#ffe7a0'), transparent: true, depthWrite: false,
+          blending: THREE.AdditiveBlending, opacity: 0,
+        })
+      );
+      aura.rotation.x = -Math.PI / 2; aura.position.set(x, 0.04, z);
+      aura.frustumCulled = false;
+      this.boardGroup.add(aura);
+    }
     // Se añaden después del traverse de mountLevel: desactivar su culling aquí.
     dino.traverse((o) => { o.frustumCulled = false; });
-    points.frustumCulled = false; aura.frustumCulled = false;
+    points.frustumCulled = false;
     this.boardGroup.add(dino);
     this.boardGroup.add(points);
-    this.boardGroup.add(aura);
     // Polvo al emerger del hoyo (impacto visual).
     this.spawnBurst(x, 0.15, z, '#d8c39a');
     this._celebration = {
       dino, points, velocities, aura, t: 0, baseY: 0.0, baseX: x, baseZ: z,
-      anim: dino.userData.anim, head: dino.userData.head, neck: dino.userData.neck,
+      isModel: useModel,
+      anim: useModel ? 'model' : dino.userData.anim, head: dino.userData.head, neck: dino.userData.neck,
       tail: dino.userData.tail, arms: dino.userData.arms || [],
       jaw: dino.userData.jaw || null, crest: dino.userData.crest || null, legs: dino.userData.legs || [],
     };
@@ -424,9 +572,16 @@ export class SceneManager {
 
   clearCelebration() {
     if (!this._celebration || !this.boardGroup) { this._celebration = null; return; }
-    for (const obj of [this._celebration.dino, this._celebration.points, this._celebration.aura]) {
+    const c = this._celebration;
+    // El MODELO 3D cacheado se REUTILIZA: solo se quita del tablero, NO se libera. El dino
+    // procedural y el confeti/aura sí se liberan.
+    if (c.dino) {
+      if (c.dino.parent) c.dino.parent.remove(c.dino);
+      if (!c.isModel) disposeTree(c.dino);
+    }
+    for (const obj of [c.points, c.aura]) {
       if (!obj) continue;
-      this.boardGroup.remove(obj);
+      if (obj.parent) obj.parent.remove(obj);
       disposeTree(obj);
     }
     this._celebration = null;
@@ -466,6 +621,9 @@ export class SceneManager {
     if (t > 0.4) {
       const u = t - 0.4;
       switch (c.anim) {
+        case 'model': // Triceratops bebé (GLB estático): animación PROCEDURAL — balanceo suave + giro alegre
+          d.rotation.z = Math.sin(u * 6) * 0.10;
+          d.rotation.y += dt * 1.6; break;
         case 'spin': // Raptor: giro veloz + coletazo rígido
           d.rotation.y += dt * 5; if (c.tail) c.tail.rotation.z = Math.sin(u * 12) * 0.3; break;
         case 'dance': // Parasaurio: balanceo + cabeceo de la cresta
@@ -954,9 +1112,8 @@ export class SceneManager {
         obj.rotation.z += dt * obj.userData.spin; // vórtice de portal girando
       }
       if (obj.userData.billboard) {
-        const wp = new THREE.Vector3();
-        obj.getWorldPosition(wp);
-        obj.lookAt(this.camera.position.x, wp.y, this.camera.position.z);
+        obj.getWorldPosition(_tmpWp); // vector reutilizado: sin asignar memoria por frame
+        obj.lookAt(this.camera.position.x, _tmpWp.y, this.camera.position.z);
       }
     }
     if (this._celebration) this._animateCelebration(dt);
@@ -1057,13 +1214,23 @@ export class SceneManager {
     }
   }
 
-  resize() {
+  resize(force = false) {
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, this._dprCap);
+    // GUARDA: si el tamaño real y el DPR no cambiaron, NO hacer nada. renderer.setSize reasigna el
+    // buffer de dibujo GL (caro) y provoca tirones si se llama en cada evento espurio de resize/
+    // visualViewport (frecuentes en Android WebView). `force` lo salta (p. ej. al montar un nivel).
+    if (!force && w === this._lastW && h === this._lastH && dpr === this._lastDpr) return;
+    // setPixelRatio() reaplica el tamaño internamente (otro setSize): llamarlo SOLO si el DPR
+    // cambió de verdad (rotación/monitor), no en cada cambio de ancho/alto. Evita un setSize doble.
+    if (dpr !== this._lastDpr) this.renderer.setPixelRatio(dpr);
+    this._lastW = w; this._lastH = h; this._lastDpr = dpr;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (this._bounds) this._frame(this._bounds); // reencuadrar al rotar/redimensionar
+    countResize(); // instrumentación: cuenta SOLO resizes reales aplicados
   }
 
   /** Proyecta un punto del PLANO del tablero (local) a píxeles de pantalla. */
@@ -1080,6 +1247,7 @@ export class SceneManager {
 }
 
 const _tmpVec = new THREE.Vector3();
+const _tmpWp = new THREE.Vector3(); // reutilizado en update() para billboards (sin allocs por frame)
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);

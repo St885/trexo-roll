@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../../styles/main.css">
+<link rel="stylesheet" href="frame.css"></head>
+<body class="is-portrait">
+<canvas id="bg"></canvas>
+<section class="screen active" id="screen-levels">
+  <div class="panel">
+    <h2 class="title small">Niveles</h2>
+    <p class="muted center">10 mundos · 50 tableros. Gana ⭐ para canjear ayudas.</p>
+    <div class="levels-progress">
+      <div class="lp-bar"><div class="lp-fill" style="width:36%"></div></div>
+      <span class="lp-label">⭐ 54/150 · 🔓 18/50</span>
+    </div>
+    <div class="levels-legend">
+      <span class="lg-item"><span class="lg-ic flag-boss">👑</span><span>Jefe</span></span>
+      <span class="lg-item"><span class="lg-ic flag-ta">⏳</span><span>Contrarreloj</span></span>
+    </div>
+    <div class="levels-list">
+      <div class="world-header"><span class="world-emoji">🐊</span><span class="world-name">Mundo 2 · Pantano Raptor</span><span class="world-stars">⭐ 13/15</span></div>
+      <div class="levels-grid">
+        <button class="level-card done" data-tier="Media"><span class="level-num">6</span><span class="level-card-name">Doble Recodo</span><span class="level-stars">★★★</span></button>
+        <button class="level-card done" data-tier="Media"><span class="level-num">7</span><span class="level-card-name">Puente</span><span class="level-stars">★★★</span></button>
+        <button class="level-card done is-ta" data-tier="Difícil"><span class="level-flag flag-ta">⏳</span><span class="level-num">8</span><span class="level-card-name">Cruce</span><span class="level-stars">★★☆</span></button>
+        <button class="level-card done" data-tier="Difícil"><span class="level-num">9</span><span class="level-card-name">Serpiente</span><span class="level-stars">★★★</span></button>
+        <button class="level-card is-boss" data-tier="Experto"><span class="level-flag flag-boss">👑</span><span class="level-num">10</span><span class="level-card-name">Jefe</span><span class="level-stars">★☆☆</span></button>
+      </div>
+      <div class="world-header"><span class="world-emoji">🌋</span><span class="world-name">Mundo 3 · Cráter Volcánico</span><span class="world-stars">⭐ 8/15</span></div>
+      <div class="levels-grid">
+        <button class="level-card done" data-tier="Difícil"><span class="level-num">11</span><span class="level-card-name">Anillo</span><span class="level-stars">★★☆</span></button>
+        <button class="level-card done is-ta" data-tier="Difícil"><span class="level-flag flag-ta">⏳</span><span class="level-num">12</span><span class="level-card-name">Diamante</span><span class="level-stars">★★★</span></button>
+        <button class="level-card" data-tier="Experto"><span class="level-num">13</span><span class="level-card-name">Embudo</span><span class="level-stars">☆☆☆</span></button>
+        <button class="level-card locked" data-tier="Experto" disabled><span class="level-num">14</span><span class="level-card-name">Laberinto</span><span class="level-lock">🔒</span></button>
+        <button class="level-card locked" data-tier="Experto" disabled><span class="level-num">15</span><span class="level-card-name">Cima</span><span class="level-lock">🔒</span></button>
+      </div>
+    </div>
+    <button class="btn ghost">← Volver</button>
+  </div>
+</section>
+<script src="kit.js"></script><script src="bg.js"></script>
+</body></html>

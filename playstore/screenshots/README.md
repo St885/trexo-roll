@@ -1,5 +1,9 @@
 # Capturas de pantalla (Play Store)
 
+> ✅ **Las capturas REALES y listas para subir ya están en [`../assets/`](../assets/)**
+> (`phone-*-real.png`, `tablet7-*-real.png`, `tablet10-*-real.png`), tomadas del juego en
+> ejecución. Sube esas. Esta página solo documenta cómo regenerarlas/capturarlas a mano.
+
 Google Play pide **mínimo 2** capturas de teléfono (lado entre 320 y 3840 px; recomendado
 1080×1920 vertical). Sugeridas para TREXoRoll:
 

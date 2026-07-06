@@ -1,41 +1,51 @@
 // InputController.js — Inclinación del tablero desde varias fuentes que conviven:
-//   1) D-pad de 4 botones (control móvil PRINCIPAL, robusto y siempre visible),
-//   2) Joystick táctil analógico (control móvil secundario / diagonales suaves),
+//   1) Arrastre TÁCTIL del dedo sobre el tablero (control PRINCIPAL en móvil, v0.25.3;
+//      TouchTiltController: suavizado, zona muerta, retorno al centro, multitouch seguro),
+//   2) Joystick táctil analógico (control móvil SECUNDARIO / diagonales suaves),
 //   3) Arrastre con puntero sobre el lienzo (SOLO ratón en desktop),
-//   4) Teclado (flechas / WASD en desktop).
+//   4) Teclado (flechas / WASD en desktop),
+//   5) D-pad de 4 botones: OCULTO en móvil por defecto (solo con DEBUG_SHOW_DPAD); sigue
+//      cableado para depuración y para el teclado en desktop.
 //
-// Patrón robusto (como legendary-adventures): cada control escucha SUS PROPIOS
-// eventos de puntero con setPointerCapture + { passive:false } + preventDefault,
-// de modo que el navegador no convierte el gesto en scroll/zoom. En dispositivos
-// táctiles el arrastre del lienzo se DESACTIVA: era la causa de que el D-pad
-// "dejara de responder" cuando el dedo rozaba el tablero.
+// Patrón robusto: cada control escucha SUS PROPIOS eventos de puntero con setPointerCapture +
+// { passive:false } + preventDefault, de modo que el navegador no convierte el gesto en
+// scroll/zoom. Los botones de UI (pausa/HUD/joystick) tienen pointer-events:auto y el lienzo
+// queda debajo (#screen-game pointer-events:none), así el arrastre táctil NO se activa al
+// tocar la interfaz.
 //
-// Prioridad: joystick > D-pad/teclas > arrastre. El D-pad pulsado SIEMPRE manda
-// sobre un arrastre accidental. El knob del joystick refleja la inclinación actual.
+// Prioridad: joystick > D-pad/teclas > arrastre táctil > arrastre de ratón. El knob del
+// joystick refleja la inclinación actual.
 //
 // Mapeo (coherente con BallPhysics):
 //   Derecha → +x → tiltZ negativo   ·   Izquierda → -x → tiltZ positivo
 //   Arriba (lejos, -z) → tiltX negativo   ·   Abajo (cerca, +z) → tiltX positivo
 
 import { PHYS } from '../utils/constants.js';
+import { TouchTiltController } from '../input/TouchTiltController.js';
 
 const OPT = { passive: false };
 const DIRS = ['up', 'down', 'left', 'right'];
 
 export class InputController {
-  constructor(canvasEl, joystickEl, knobEl, dpadEl) {
+  constructor(canvasEl, joystickEl, knobEl, dpadEl, tiltSurfaceEl) {
     this.canvasEl = canvasEl;
     this.joystickEl = joystickEl || null;
     this.knobEl = knobEl || null;
     this.dpadEl = dpadEl || null;
+    // Superficie del arrastre táctil: una capa dentro de #screen-game (pointer-events correcto).
+    // El lienzo va bajo #ui (z-index 1) y no recibiría el toque; por eso NO se usa el lienzo.
+    this.tiltSurfaceEl = tiltSurfaceEl || canvasEl;
 
     this.tiltX = 0;
     this.tiltZ = 0;
     this.keys = { up: false, down: false, left: false, right: false };
 
-    // ¿Es un dispositivo táctil? Si lo es, NO escuchamos arrastre sobre el lienzo
-    // (el D-pad y el joystick son los controles); así nada secuestra el toque.
+    // ¿Es un dispositivo táctil? En táctil el control PRINCIPAL es el arrastre del dedo sobre el
+    // tablero (TouchTiltController); el arrastre "de ratón" del lienzo queda solo para desktop.
     this._isTouch = detectTouch();
+    // Control táctil por arrastre (móvil): inclina el tablero con el dedo, con suavizado, zona
+    // muerta, retorno al centro y multitouch seguro. Escucha sobre la superficie de inclinación.
+    this.touchTilt = this._isTouch ? new TouchTiltController(this.tiltSurfaceEl) : null;
 
     // Arrastre (solo desktop/ratón)
     this.dragging = false; this._dragId = null; this._dragTouch = false;
@@ -48,6 +58,9 @@ export class InputController {
 
     this._enabled = false;
     this._dpadBound = [];
+    // Joystick OPCIONAL (por defecto OFF en móvil). Cuando está oculto, NO renderizamos el knob
+    // cada frame (evita trabajo inútil). Los eventos del joystick no llegan si está display:none.
+    this._joystickShown = false;
 
     this._onKeyDown = (e) => this._key(e, true);
     this._onKeyUp = (e) => this._key(e, false);
@@ -73,13 +86,15 @@ export class InputController {
     if (typeof document !== 'undefined' && document.addEventListener) {
       document.addEventListener('visibilitychange', this._onVisibility);
     }
-    // Arrastre del lienzo: SOLO en desktop/ratón. En táctil sería un control que
-    // compite con el D-pad y secuestra el toque sobre el tablero.
+    // Arrastre del lienzo: en DESKTOP con ratón usa el arrastre clásico; en MÓVIL usa el
+    // TouchTiltController (control principal por dedo sobre el tablero).
     if (!this._isTouch) {
       this.canvasEl.addEventListener('pointerdown', this._cDown, OPT);
       this.canvasEl.addEventListener('pointermove', this._cMove, OPT);
       this.canvasEl.addEventListener('pointerup', this._cUp, OPT);
       this.canvasEl.addEventListener('pointercancel', this._cUp, OPT);
+    } else if (this.touchTilt) {
+      this.touchTilt.enable();
     }
     // Joystick: escucha en su propio elemento (con captura).
     if (this.joystickEl) {
@@ -106,6 +121,8 @@ export class InputController {
       this.canvasEl.removeEventListener('pointermove', this._cMove, OPT);
       this.canvasEl.removeEventListener('pointerup', this._cUp, OPT);
       this.canvasEl.removeEventListener('pointercancel', this._cUp, OPT);
+    } else if (this.touchTilt) {
+      this.touchTilt.disable();
     }
     if (this.joystickEl) {
       this.joystickEl.removeEventListener('pointerdown', this._jDown, OPT);
@@ -126,6 +143,7 @@ export class InputController {
     this._knobPx = 0; this._knobPy = 0;
     if (this.joystickEl) this.joystickEl.classList.remove('active');
     if (this.dpadEl) this.dpadEl.querySelectorAll('.pressed').forEach((b) => b.classList.remove('pressed'));
+    if (this.touchTilt) this.touchTilt.reset();
     this._renderKnob();
   }
 
@@ -137,6 +155,9 @@ export class InputController {
   }
 
   refresh() { this._measure(); this._renderKnob(); }
+
+  /** Informa si el joystick está visible. Con OFF no se renderiza el knob cada frame. */
+  setJoystickShown(v) { this._joystickShown = !!v; }
 
   // --- API de dirección (la usan D-pad y, si hiciera falta, otros controles) --
   /** Inclina el tablero hacia `dir` ('up'|'down'|'left'|'right') y lo mantiene. */
@@ -280,7 +301,16 @@ export class InputController {
 
   /** Avanza el suavizado de la inclinación hacia el objetivo del input activo. */
   update(dt) {
+    if (this.touchTilt) this.touchTilt.update(dt);
     const keysActive = this.keys.up || this.keys.down || this.keys.left || this.keys.right;
+    // Arrastre TÁCTIL (móvil): trae su propio suavizado/retorno al centro → se usa DIRECTO.
+    // Prioridad general: joystick > D-pad/teclado > arrastre táctil > arrastre de ratón.
+    if (!this.joyActive && !keysActive && this.touchTilt && this.touchTilt.isEngaged()) {
+      this.tiltX = this.touchTilt.tiltX;
+      this.tiltZ = this.touchTilt.tiltZ;
+      this._renderKnob();
+      return;
+    }
     let targetX, targetZ;
     if (this.joyActive) {
       // 1) Joystick analógico (máxima prioridad si el dedo lo está usando).
@@ -303,7 +333,9 @@ export class InputController {
   }
 
   _renderKnob() {
-    if (!this.knobEl) return;
+    // Joystick oculto e inactivo → no escribir el estilo del knob cada frame (trabajo inútil).
+    // Si está en uso (joyActive) siempre se refleja, aunque el flag no se haya propagado.
+    if (!this.knobEl || (!this._joystickShown && !this.joyActive)) return;
     let px, py;
     if (this.joyActive) {
       px = this._knobPx; py = this._knobPy;
