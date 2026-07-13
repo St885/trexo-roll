@@ -5,7 +5,16 @@
 // Uso:  node tools/input-smoke.mjs
 
 // Stub de window (InputController registra listeners de teclado en window).
-globalThis.window = { addEventListener() {}, removeEventListener() {} };
+// OJO: tiene que DESPACHAR de verdad. Antes era un no-op y las teclas se tiraban a la
+// basura, así que el TECLADO no se probaba en absoluto (bug de cobertura, no del juego).
+const winHandlers = {};
+globalThis.window = {
+  addEventListener(t, fn) { (winHandlers[t] = winHandlers[t] || []).push(fn); },
+  removeEventListener(t, fn) { const a = winHandlers[t]; if (a) { const i = a.indexOf(fn); if (i >= 0) a.splice(i, 1); } },
+};
+/** Simula una tecla real del navegador (key = layout activo; code = tecla física). */
+const fireKey = (type, key, code) =>
+  (winHandlers[type] || []).forEach((fn) => fn({ key, code, preventDefault() {} }));
 
 const { InputController } = await import('../src/core/InputController.js');
 const { PHYS } = await import('../src/utils/constants.js');
@@ -119,6 +128,69 @@ ic.reset();
 step(ic);
 ok(!ic.keys.up && !ic.keys.down && !ic.keys.left && !ic.keys.right, 'reset() suelta todas las direcciones');
 ok(Math.abs(ic.tiltX) < 0.02 && Math.abs(ic.tiltZ) < 0.02, 'reset() devuelve la inclinación a cero');
+
+console.log('\n[Teclado: flechas]');
+// Convenio (coherente con BallPhysics): la bola SIGUE a la tecla.
+//   →  tiltZ negativo  ·  ←  tiltZ positivo  ·  ↑  tiltX negativo  ·  ↓  tiltX positivo
+const keyTilt = (key, code) => {
+  ic.reset();
+  fireKey('keydown', key, code);
+  step(ic);
+  const t = { x: ic.tiltX, z: ic.tiltZ };
+  fireKey('keyup', key, code);
+  return t;
+};
+{
+  const r = keyTilt('ArrowRight', 'ArrowRight');
+  ok(r.z < -0.1 && Math.abs(r.x) < 0.02, `ArrowRight → tiltZ negativo (tiltZ=${r.z.toFixed(2)})`);
+  const l = keyTilt('ArrowLeft', 'ArrowLeft');
+  ok(l.z > 0.1 && Math.abs(l.x) < 0.02, `ArrowLeft → tiltZ positivo (tiltZ=${l.z.toFixed(2)})`);
+  const u = keyTilt('ArrowUp', 'ArrowUp');
+  ok(u.x < -0.1 && Math.abs(u.z) < 0.02, `ArrowUp → tiltX negativo (tiltX=${u.x.toFixed(2)})`);
+  const d = keyTilt('ArrowDown', 'ArrowDown');
+  ok(d.x > 0.1 && Math.abs(d.z) < 0.02, `ArrowDown → tiltX positivo (tiltX=${d.x.toFixed(2)})`);
+}
+
+console.log('\n[Teclado: WASD (incl. layouts no-QWERTY)]');
+{
+  const d = keyTilt('d', 'KeyD');
+  ok(d.z < -0.1, `'d' → derecha (tiltZ=${d.z.toFixed(2)})`);
+  const w = keyTilt('w', 'KeyW');
+  ok(w.x < -0.1, `'w' → arriba (tiltX=${w.x.toFixed(2)})`);
+  // AZERTY: la tecla FÍSICA "W" emite e.key='z'. Debe seguir funcionando vía e.code.
+  const az = keyTilt('z', 'KeyW');
+  ok(az.x < -0.1, `AZERTY: e.key='z' + e.code='KeyW' → arriba (tiltX=${az.x.toFixed(2)})`);
+  // Una tecla no mapeada no debe mover nada.
+  const nop = keyTilt('k', 'KeyK');
+  ok(Math.abs(nop.x) < 0.02 && Math.abs(nop.z) < 0.02, 'tecla no mapeada no inclina');
+}
+
+console.log('\n[Teclado: manda la tecla FÍSICA (e.code) sobre e.key]');
+// Si e.code y e.key discrepan (layouts exóticos, remapeos del SO, capas de teclado), la
+// dirección la decide la tecla FÍSICA. Así el mando no depende de la distribución.
+{
+  const r = keyTilt('ArrowLeft', 'ArrowUp');   // e.key dice izquierda, la tecla física es ↑
+  ok(r.x < -0.1 && Math.abs(r.z) < 0.02,
+    `e.key='ArrowLeft' + e.code='ArrowUp' → manda e.code: ARRIBA (tiltX=${r.x.toFixed(2)})`);
+  // Y si NO hay e.code (evento sintético), se usa e.key como respaldo.
+  const f = keyTilt('ArrowUp', '');
+  ok(f.x < -0.1, `sin e.code → respaldo a e.key='ArrowUp' → ARRIBA (tiltX=${f.x.toFixed(2)})`);
+}
+
+console.log('\n[Teclado: soltar y diagonales]');
+{
+  ic.reset();
+  fireKey('keydown', 'ArrowRight', 'ArrowRight');
+  fireKey('keydown', 'ArrowUp', 'ArrowUp');
+  step(ic);
+  ok(ic.tiltZ < -0.1 && ic.tiltX < -0.1, 'arriba + derecha a la vez → diagonal');
+  fireKey('keyup', 'ArrowUp', 'ArrowUp');
+  step(ic);
+  ok(ic.keys.right === true && ic.keys.up === false, 'soltar una tecla NO suelta la otra');
+  fireKey('keyup', 'ArrowRight', 'ArrowRight');
+  step(ic);
+  ok(Math.abs(ic.tiltZ) < 0.02, 'al soltar las teclas la inclinación vuelve a cero');
+}
 
 console.log('\n[Helpers de dirección]');
 ic.pressDirection('left');

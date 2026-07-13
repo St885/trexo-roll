@@ -26,6 +26,25 @@ import { TouchTiltController } from '../input/TouchTiltController.js';
 const OPT = { passive: false };
 const DIRS = ['up', 'down', 'left', 'right'];
 
+// Tecla → dirección. Se consulta PRIMERO por `e.code` (la tecla FÍSICA) y solo como respaldo
+// por `e.key` (el carácter que produce el layout activo).
+//
+// Por qué `e.code` primero: en teclados no-QWERTY (AZERTY, QWERTZ…) la tecla física "W" no
+// emite 'w', así que con `e.key` el mando WASD queda descolocado. `e.code` ('KeyW') describe
+// la POSICIÓN de la tecla, no el carácter → el mando funciona en cualquier distribución. Es
+// la práctica habitual para controles de movimiento.
+//
+// `e.code` puede venir VACÍO en eventos sintéticos (inyectados por tests o automatización);
+// por eso el respaldo a `e.key` es necesario, no decorativo.
+const CODE_DIR = {
+  ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+  KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right',
+};
+const KEY_DIR = {
+  ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+  w: 'up', W: 'up', s: 'down', S: 'down', a: 'left', A: 'left', d: 'right', D: 'right',
+};
+
 export class InputController {
   constructor(canvasEl, joystickEl, knobEl, dpadEl, tiltSurfaceEl) {
     this.canvasEl = canvasEl;
@@ -186,13 +205,11 @@ export class InputController {
 
   // --- Teclado --------------------------------------------------------------
   _key(e, down) {
-    switch (e.key) {
-      case 'ArrowUp': case 'w': case 'W': this.keys.up = down; break;
-      case 'ArrowDown': case 's': case 'S': this.keys.down = down; break;
-      case 'ArrowLeft': case 'a': case 'A': this.keys.left = down; break;
-      case 'ArrowRight': case 'd': case 'D': this.keys.right = down; break;
-      default: return;
-    }
+    // `e.code` PRIMERO (tecla física, independiente del layout); `e.key` como respaldo
+    // (los eventos sintéticos llegan con `code` vacío).
+    const dir = CODE_DIR[e.code] || KEY_DIR[e.key];
+    if (!dir) return;
+    this.keys[dir] = down;
     e.preventDefault();
   }
 
