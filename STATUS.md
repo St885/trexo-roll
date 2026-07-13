@@ -5,7 +5,7 @@
 | **Versión** | **0.28.0** (GitHub/web) — 🚀 **Release estable: login real con Firebase y celebraciones 3D**. Auth real (Google en localhost + email/password + invitado; CSP corregida; sin contraseñas guardadas) · pantalla de acceso premium · **4 dinos 3D de victoria** (T-Rexo, Triceratops, Raptor, Parasaurio; brachio ⏳ procedural) con fallback procedural y Android performance sin GLB · perfiles gráficos quality/balanced/performance · assets optimizados, backups fuera de repo/build. **La versión Android/Play Store se preparará luego con su propio AAB** (Android intacto: `versionCode 4` / `versionName 0.26.0`, targetSdk 35) |
 | **Android** | `applicationId` `com.st885.trexoroll` · **`versionCode 4`** · **`versionName 0.26.0`** · `minSdk 22` · `compileSdk 35` · `targetSdk 35` · **`screenOrientation=fullSensor`** · permiso único `INTERNET` (sin AD_ID/GET_ACCOUNTS/READ_CONTACTS/ubicación/cámara/micro; sin Ads/Analytics/compras/Play Games) |
 | **Estado** | ✅ Web local funcionando (acceso+juego) · ✅ **Google login OK en localhost** · ✅ email/password conectado · ✅ invitado intacto · ✅ Firebase config real activa · Analytics **OFF** · Cloud Sync **OFF** · 📲 Android listo para probar (Google requiere SHA-1/256 en Firebase) · ✅ GitHub sincronizado (release 0.28.0). ⚠️ Pendientes: 1) SHA-1/SHA-256 del keystore → Firebase Android · 2) probar Google Sign-In en Samsung real · 3) rendimiento en Samsung real (no solo emulador) · 4) revisar scroll de la pantalla de victoria · 5) GLB de Braquiosaurio bebé azul · 6) Play Console Data Safety antes de publicar login real · 7) AAB interno solo cuando se autorice |
-| **Fecha** | 2026-07-06 |
+| **Fecha** | 2026-07-13 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
 | **Dependencias runtime** | 0 (Three.js en `libs/`) |
@@ -14,6 +14,56 @@
 | **Biomas** | 8 ambientaciones jurásicas |
 | **Git** | Repo `github.com/St885/trexo-roll`, rama `main` · commit prod **`8bfc40a`** |
 | **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · **v0.24.8 (2026-06-28, commit 8bfc40a)** |
+
+---
+
+## 🖥️ Validación Mac / Android Studio — 2026-07-13
+
+> El proyecto viene de **Windows** y queda validado en **Mac**. **No se generó AAB ni APK de
+> release, no se subió nada a Play Store y no se tocó ningún keystore.**
+
+### Verificado por ejecución (comandos reproducibles)
+
+| Paso | Resultado |
+|---|---|
+| `npm run build` | ✅ OK → `www/` |
+| `npm run cap:sync` (`npx cap sync android`) | ✅ OK → assets a `android/app/src/main/assets/public` |
+| `npm test` (17 smoke tests) | ✅ OK · 0 fallos |
+| `npm run test:graph` / `test:visual` / `test:ui` | ✅ OK |
+| **APK debug** compilado con `gradlew assembleDebug` (JDK 21 del JBR) | ✅ BUILD SUCCESSFUL |
+| **App ejecutada en emulador Pixel 8** (API 37, arm64) vía `adb install` | ✅ Arranca, login invitado, juego 3D, niveles superados, **0 errores JS** |
+
+**🐛 Bug de migración Windows→Mac corregido:** `node_modules/.bin/cap` y `android/gradlew`
+habían **perdido el bit de ejecución** (`-rw-rw-r--`), y `npx cap sync android` fallaba con
+`Permission denied`. Restaurado con `chmod +x`. Sin esto **ningún build de Android funciona en
+Mac**. (Ambos están fuera de git, así que no queda rastro en el repo: repetirlo tras un `clone`
+o un `npm install` si vuelve a fallar.)
+
+### Confirmado por Stefano (configuración de Android Studio / consolas — no verificable desde CLI)
+
+- Android Studio configurado en Mac · **Gradle Sync OK**.
+- **Android SDK** apuntando a la ruta de Mac: `~/Library/Android/sdk`.
+- **Gradle JDK** corregido a **Embedded JDK / JetBrains Runtime**.
+- **Firebase (Android)**: añadidas las **SHA-1/SHA-256 de debug** y las de **Play App Signing**.
+- **`google-services.json`** actualizado **localmente**.
+- **Play App Signing: ACTIVO**.
+
+> ℹ️ `android/` está **completo en `.gitignore`** (0 archivos en git). Por eso
+> `google-services.json`, `local.properties` y `gradle.properties` **nunca llegan al repo**
+> (protección de secretos). Tras clonar hay que regenerar el proyecto Android con
+> `npx cap add android` / `npx cap sync android` y volver a colocar `google-services.json`.
+
+### Pendientes (bloqueantes de release)
+
+1. **No se tiene la contraseña del keystore antiguo** → hay que **crear una nueva upload key**
+   y **solicitar el cambio de clave de subida** en Play Console (posible porque **Play App
+   Signing está activo**).
+2. **Configurar la firma de release**: `android/app/build.gradle` **no tiene `signingConfig`**
+   (0 referencias) → hoy `bundleRelease` produciría un AAB **sin firmar**.
+3. **Alinear versiones** antes del AAB: Android sigue en `versionCode 4` / `versionName 0.26.0`
+   frente a `package.json` **0.28.0**.
+4. **Generar el AAB solo cuando Stefano lo autorice.** **Nada de Play Store todavía.**
+5. Probar en **Samsung real** (rendimiento y Google Sign-In); hasta ahora solo emulador.
 
 ---
 

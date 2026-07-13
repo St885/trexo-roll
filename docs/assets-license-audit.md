@@ -31,7 +31,35 @@ La mayor parte del arte de TREXoRoll **no usa archivos externos**: se genera por
 ## 4. Assets de terceros / PENDIENTES de verificar — ⚠️ riesgo a resolver ANTES de publicar
 | Asset | Uso | Origen indicado | Riesgo | Acción recomendada |
 |---|---|---|---|---|
-| `assets/audio/trexo-roll-adventure-bg.mp3` (≈4.8 MB) | **Música de fondo** (la reproduce `src/effects/music.js`) | Comentario en código: `nastelbom-adventure-471461(trexob).mp3` (de la biblioteca compartida; "copiada con permiso de Stefano") | **ALTO** | **Verificar la licencia real** de la pista (uso comercial / royalty-free / CC0) y **guardar la prueba** (página de origen, número de licencia, términos). Si no se puede confirmar uso comercial + en app, **reemplazar** por música CC0 o propia. Añadir atribución si la licencia la exige. |
+| `assets/audio/trexo-roll-adventure-bg.mp3` (≈4.8 MB) | **Música de fondo** (la reproduce `src/effects/music.js`) | **Pixabay Music** — fuente indicada por Stefano (2026-07-13). Búsqueda de origen: https://pixabay.com/music/search/aventura/ · Nombre de archivo en el código: `nastelbom-adventure-471461(trexob).mp3` | **BAJO condicionado** | Ver §4.1 — **pendiente archivar la evidencia del track exacto antes de producción**. |
+
+### 4.1 Música de fondo — estado detallado (actualizado 2026-07-13)
+
+- **Asset:** `assets/audio/trexo-roll-adventure-bg.mp3`
+- **Fuente indicada por el usuario:** **Pixabay Music**
+- **URL de búsqueda/fuente:** https://pixabay.com/music/search/aventura/
+- **Estado:** Licencia **gratuita / permitida** según **confirmación del usuario**.
+- **Riesgo:** **BAJO condicionado** *(antes: ALTO)*.
+
+> **Riesgo bajo condicionado:** el usuario confirma que la pista proviene de **Pixabay Music** y
+> que es **música gratuita / de licencia permitida**. **Pendiente archivar la URL exacta del track
+> y la evidencia de licencia antes de producción.**
+
+**Antes de la publicación final en Play Store**, archivar la evidencia de licencia del **track
+exacto** utilizado:
+
+- [ ] **URL exacta del track** (no solo la búsqueda).
+- [ ] **Nombre del track.**
+- [ ] **Autor.**
+- [ ] **Fecha de descarga.**
+- [ ] **Captura o copia de la licencia** aplicable en Pixabay.
+- [ ] **Archivo de licencia**, si existe.
+
+> ⚠️ **No se han inventado** el nombre del track, el autor, la URL exacta, el tipo de licencia
+> concreto ni si la atribución es obligatoria. Todo eso queda **pendiente de confirmar** con la
+> página real del track. Guardar la evidencia en una carpeta **no pública** (fuera del repo).
+>
+> **No se ha borrado, reemplazado ni modificado ningún archivo de audio.**
 | ~~`assets/images/backgrounds/jurassic-world-bg.png`~~ | ~~Imagen de fondo~~ | Desconocido | ✅ **RESUELTO (2026-07-02)** | **Eliminado del proyecto.** El fondo de escena ahora se genera de forma **PROCEDURAL** (Canvas 2D, original de SLF Games) en `src/scene/textures.js` → `makeSceneBackgroundURL`, inyectado como data URL en la variable CSS `--bg-jungle` (antes `--bg-jurassic`). Sin archivo binario, sin nombre de marca, sin licencia que verificar. El PNG se movió a cuarentena fuera del repo. |
 
 ## 5. Búsqueda de marcas / IP de terceros en el proyecto
@@ -43,7 +71,10 @@ periodo geológico **no** es marca registrada; «Jurassic Park»/«Jurassic Worl
   (especie), no exclusivo de ninguna marca.
 
 ## 6. Riesgos detectados (resumen)
-1. **Música de fondo (mp3)** sin licencia verificada → **riesgo ALTO** para publicación comercial (pendiente).
+1. **Música de fondo (mp3)** → **riesgo BAJO condicionado** *(actualizado 2026-07-13; antes ALTO)*.
+   Fuente indicada por el usuario: **Pixabay Music** (https://pixabay.com/music/search/aventura/).
+   **Pendiente**: archivar la **URL exacta del track** y la evidencia de licencia antes de
+   producción (ver §4.1).
 2. ~~**Imagen de fondo (png)** con **nombre de marca** y licencia desconocida~~ → ✅ **RESUELTO
    (2026-07-02)**: reemplazada por un **fondo procedural propio** (Canvas 2D); PNG eliminado.
 3. Iconos/gráficos de ficha: confirmar que parten de arte propio (riesgo bajo).
@@ -52,7 +83,9 @@ periodo geológico **no** es marca registrada; «Jurassic Park»/«Jurassic Worl
 
 ## 7. Recomendaciones
 1. **Antes de generar el AAB de producción**, resolver §4:
-   - Confirmar y **archivar** la licencia de la música, o sustituirla por CC0/propia. (Pendiente.)
+   - **Archivar la evidencia de licencia del track exacto** de Pixabay (URL del track, nombre,
+     autor, fecha de descarga, captura de la licencia). Fuente ya documentada en **§4.1**;
+     riesgo rebajado a **BAJO condicionado**. (Pendiente la evidencia.)
    - ~~Renombrar/sustituir el fondo~~ → ✅ **HECHO**: fondo **procedural propio** (`makeSceneBackgroundURL`).
    - **Regenerar las capturas de Play Store** con el nuevo fondo procedural (las actuales muestran el fondo antiguo).
 2. Mantener este archivo actualizado cada vez que se añada un asset binario.
