@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | **0.28.0** (GitHub/web) — 🚀 **Release estable: login real con Firebase y celebraciones 3D**. Auth real (Google en localhost + email/password + invitado; CSP corregida; sin contraseñas guardadas) · pantalla de acceso premium · **4 dinos 3D de victoria** (T-Rexo, Triceratops, Raptor, Parasaurio; brachio ⏳ procedural) con fallback procedural y Android performance sin GLB · perfiles gráficos quality/balanced/performance · assets optimizados, backups fuera de repo/build. **AAB de Prueba interna v0.28.0 preparado localmente (2026-07-18)**: `versionCode 5` / `versionName 0.28.0`, targetSdk 35, firmado con la nueva upload key `trexoroll-upload`; **pendiente de subida manual a Prueba interna** (ver sección «Preparación AAB v0.28.0» abajo). No producción |
+| **Versión** | **0.28.0** (GitHub/web) — 🚀 **Release estable: login real con Firebase y celebraciones 3D**. Auth real (Google en localhost + email/password + invitado; CSP corregida; sin contraseñas guardadas) · pantalla de acceso premium · **4 dinos 3D de victoria** (T-Rexo, Triceratops, Raptor, Parasaurio; brachio ⏳ procedural) con fallback procedural y Android performance sin GLB · perfiles gráficos quality/balanced/performance · assets optimizados, backups fuera de repo/build. **Publicado en Prueba interna de Google Play y validado en teléfono Android real (2026-07-18)**: `versionCode 5` / `versionName 0.28.0`, targetSdk 35, firmado con la nueva upload key `trexoroll-upload`; **disponible para testers internos, funciona correctamente** (ver sección «Play Store — Prueba interna v0.28.0 validada» abajo). No producción |
 | **Android** | `applicationId` `com.st885.trexoroll` · **`versionCode 5`** · **`versionName 0.28.0`** · `minSdk 22` · `compileSdk 35` · `targetSdk 35` · **`screenOrientation=fullSensor`** · permiso único `INTERNET` (sin AD_ID/GET_ACCOUNTS/READ_CONTACTS/ubicación/cámara/micro; sin Ads/Analytics/compras/Play Games) |
-| **Estado** | ✅ Web local funcionando (acceso+juego) · ✅ **Google login OK en localhost** · ✅ email/password conectado · ✅ invitado intacto · ✅ Firebase config real activa · Analytics **OFF** · Cloud Sync **OFF** · 📲 Android listo para probar (Google requiere SHA-1/256 en Firebase) · ✅ GitHub sincronizado (release 0.28.0). ⚠️ Pendientes: 1) SHA-1/SHA-256 del keystore → Firebase Android · 2) probar Google Sign-In en Samsung real · 3) rendimiento en Samsung real (no solo emulador) · 4) revisar scroll de la pantalla de victoria · 5) GLB de Braquiosaurio bebé azul · 6) Play Console Data Safety antes de publicar login real · 7) AAB interno solo cuando se autorice |
+| **Estado** | ✅ Web local funcionando (acceso+juego) · ✅ **Google login OK en localhost** · ✅ email/password conectado · ✅ invitado intacto · ✅ Firebase config real activa (SHA debug + Play App Signing + upload key) · Analytics **OFF** · Cloud Sync **OFF** · ✅ **Publicado en Prueba interna (v0.28.0) y validado en teléfono Android real** · ✅ GitHub sincronizado. ⚠️ Pendientes antes de producción: 1) Data Safety (login real) · 2) App Access si aplica · 3) eliminación de cuenta · 4) revisión final de política de privacidad · 5) revisar scroll de la pantalla de victoria · 6) GLB de Braquiosaurio bebé azul · 7) decidir Analytics · 8) promoción a producción solo con autorización |
 | **Fecha** | 2026-07-18 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
@@ -14,6 +14,36 @@
 | **Biomas** | 8 ambientaciones jurásicas |
 | **Git** | Repo `github.com/St885/trexo-roll`, rama `main` · commit prod **`8bfc40a`** |
 | **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · **v0.24.8 (2026-06-28, commit 8bfc40a)** |
+
+---
+
+## ✅ Play Store — Prueba interna v0.28.0 validada (2026-07-18)
+
+> **TREXoRoll v0.28.0 publicado en el canal de Prueba interna de Google Play y
+> validado en un teléfono Android real. Funciona correctamente. NO producción.**
+
+| Ítem | Valor |
+|---|---|
+| **Fecha** | 2026-07-18 |
+| **versionCode / versionName** | `5` / `0.28.0` |
+| **AAB firmado** | ✅ Generado correctamente (firmado con la nueva upload key) |
+| **Subida a Play Console** | ✅ Subido |
+| **Canal** | **Prueba interna** |
+| **Estado en Play Console** | ✅ Disponible para testers internos |
+| **Validación en dispositivo** | ✅ Probado en **teléfono Android real** (modo test / prueba interna) por Stefano |
+| **Resultado** | ✅ Funciona correctamente en modo test |
+| **Firma (upload key)** | Nueva upload key `trexoroll-upload` (Play App Signing re-firma para distribución) |
+| **Play App Signing** | ✅ Activo |
+| **Firebase (Android)** | Actualizado con SHA **debug** + **Play App Signing** + **nueva upload key** · `google-services.json` local (ignorado por git) |
+
+### Pendiente antes de producción (NO hacer sin autorización explícita de Stefano)
+- [ ] **Data Safety** — declarar el manejo de datos por el login real (Firebase Auth).
+- [ ] **App Access** — credenciales de acceso para la revisión de Google, si aplica.
+- [ ] **Eliminación de cuenta** — flujo/URL de borrado de cuenta (requisito de Google para apps con login).
+- [ ] **Política de privacidad** — revisión final.
+- [ ] **Pantalla de victoria** — revisión visual (scroll).
+- [ ] **Analytics** — decidir si activarlo más adelante (hoy **OFF**).
+- [ ] **Promoción a producción** — solo con **autorización explícita**. No se sube a producción por ahora.
 
 ---
 
