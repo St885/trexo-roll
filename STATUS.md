@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| **Versión** | **0.28.0** (GitHub/web) — 🚀 **Release estable: login real con Firebase y celebraciones 3D**. Auth real (Google en localhost + email/password + invitado; CSP corregida; sin contraseñas guardadas) · pantalla de acceso premium · **4 dinos 3D de victoria** (T-Rexo, Triceratops, Raptor, Parasaurio; brachio ⏳ procedural) con fallback procedural y Android performance sin GLB · perfiles gráficos quality/balanced/performance · assets optimizados, backups fuera de repo/build. **La versión Android/Play Store se preparará luego con su propio AAB** (Android intacto: `versionCode 4` / `versionName 0.26.0`, targetSdk 35) |
-| **Android** | `applicationId` `com.st885.trexoroll` · **`versionCode 4`** · **`versionName 0.26.0`** · `minSdk 22` · `compileSdk 35` · `targetSdk 35` · **`screenOrientation=fullSensor`** · permiso único `INTERNET` (sin AD_ID/GET_ACCOUNTS/READ_CONTACTS/ubicación/cámara/micro; sin Ads/Analytics/compras/Play Games) |
+| **Versión** | **0.28.0** (GitHub/web) — 🚀 **Release estable: login real con Firebase y celebraciones 3D**. Auth real (Google en localhost + email/password + invitado; CSP corregida; sin contraseñas guardadas) · pantalla de acceso premium · **4 dinos 3D de victoria** (T-Rexo, Triceratops, Raptor, Parasaurio; brachio ⏳ procedural) con fallback procedural y Android performance sin GLB · perfiles gráficos quality/balanced/performance · assets optimizados, backups fuera de repo/build. **AAB de Prueba interna v0.28.0 preparado localmente (2026-07-18)**: `versionCode 5` / `versionName 0.28.0`, targetSdk 35, firmado con la nueva upload key `trexoroll-upload`; **pendiente de subida manual a Prueba interna** (ver sección «Preparación AAB v0.28.0» abajo). No producción |
+| **Android** | `applicationId` `com.st885.trexoroll` · **`versionCode 5`** · **`versionName 0.28.0`** · `minSdk 22` · `compileSdk 35` · `targetSdk 35` · **`screenOrientation=fullSensor`** · permiso único `INTERNET` (sin AD_ID/GET_ACCOUNTS/READ_CONTACTS/ubicación/cámara/micro; sin Ads/Analytics/compras/Play Games) |
 | **Estado** | ✅ Web local funcionando (acceso+juego) · ✅ **Google login OK en localhost** · ✅ email/password conectado · ✅ invitado intacto · ✅ Firebase config real activa · Analytics **OFF** · Cloud Sync **OFF** · 📲 Android listo para probar (Google requiere SHA-1/256 en Firebase) · ✅ GitHub sincronizado (release 0.28.0). ⚠️ Pendientes: 1) SHA-1/SHA-256 del keystore → Firebase Android · 2) probar Google Sign-In en Samsung real · 3) rendimiento en Samsung real (no solo emulador) · 4) revisar scroll de la pantalla de victoria · 5) GLB de Braquiosaurio bebé azul · 6) Play Console Data Safety antes de publicar login real · 7) AAB interno solo cuando se autorice |
-| **Fecha** | 2026-07-13 |
+| **Fecha** | 2026-07-18 |
 | **Ruta** | `03_juegos/trexo-roll/` |
 | **Stack** | Three.js r160 (vendorizado) · JS ES6+ · CSS3 · Web Audio |
 | **Dependencias runtime** | 0 (Three.js en `libs/`) |
@@ -14,6 +14,51 @@
 | **Biomas** | 8 ambientaciones jurásicas |
 | **Git** | Repo `github.com/St885/trexo-roll`, rama `main` · commit prod **`8bfc40a`** |
 | **Deploy** | ✅ GitHub Pages — https://st885.github.io/trexo-roll/ · **v0.24.8 (2026-06-28, commit 8bfc40a)** |
+
+---
+
+## 📦 Preparación AAB v0.28.0 — Prueba interna (2026-07-18)
+
+> **AAB release firmado generado localmente para la Prueba interna de Google Play.
+> NO subido a Play Console. NO producción. NO se tocó Play App Signing.**
+> Subida manual pendiente por Stefano.
+
+| Ítem | Valor |
+|---|---|
+| **Play App Signing** | ✅ Activo (no modificado) |
+| **Nueva upload key** | ✅ Activa y aceptada en Play Console |
+| **Keystore local** | `~/Documents/AndroidKeys/trexoroll-upload-key-2026.jks` (fuera del repo) |
+| **Alias** | `trexoroll-upload` |
+| **SHA-1 upload key** | `EE:9B:67:BD:31:05:9F:24:31:5A:8E:C8:F0:AB:B8:D8:2C:60:A8:C3` (coincide con Play Console) |
+| **SHA-256 upload key** | `8D:1B:01:A9:6E:95:C4:90:7B:58:D8:AE:6B:56:79:6C:56:DD:77:AC:67:DE:7A:E9:5C:A2:AA:E8:C0:A9:E1:F6` (coincide) |
+| **versionCode / versionName** | `5` / `0.28.0` |
+| **applicationId** | `com.st885.trexoroll` (sin cambios) |
+| **SDK** | targetSdk 35 · minSdk 22 · compileSdk 35 |
+| **Permisos** | `INTERNET` + `…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (app-scoped, benigno, auto-AndroidX). Sin Ads/Analytics/compras/Cloud Sync |
+| **google-services.json** | Colocado local en `android/app/` (project `trexoroll`; incluye las 3 SHA: debug, Play App Signing y nueva upload). **Ignorado por git** |
+
+### Firma release (local, NO versionada)
+- `android/app/build.gradle` lee `android/keystore.properties` si existe (con guarda: no rompe `assembleDebug`).
+- `android/keystore.properties` con `storeFile`/`keyAlias` reales; **contraseñas rellenadas a mano por Stefano**; archivo **ignorado por git**. Sin contraseñas en el repo.
+- Debug signing intacto (`AndroidDebugKey`).
+
+### Builds (reproducibles, JDK 21 del JBR)
+| Paso | Resultado |
+|---|---|
+| `npm run build` | ✅ OK → `www/` |
+| `npm run cap:sync` | ✅ OK |
+| `./gradlew clean assembleDebug` | ✅ BUILD SUCCESSFUL (APK debug ~17 MB) |
+| `./gradlew bundleRelease` | ✅ BUILD SUCCESSFUL — `validateSigningRelease` + `signReleaseBundle` |
+| `jarsigner -verify` del AAB | ✅ `jar verified` (aviso de cadena self-signed = normal en upload key) |
+| Cert firmante del AAB (`keytool -printcert`) | ✅ SHA-1/256 = nueva upload key |
+| `:app:signingReport` (variante release) | ✅ alias `trexoroll-upload`, mismas SHA |
+
+- **AAB:** `android/app/build/outputs/bundle/release/app-release.aab`
+- **Tamaño:** ~16 MB (16 834 941 bytes)
+- **Sin** `_backup`, keystore, `.env` ni secretos dentro del bundle.
+
+### Próximo paso (manual — NO automatizado)
+Subir `app-release.aab` en **Play Console → TREXoRoll → Probar y publicar → Pruebas → Prueba interna → Crear nueva versión**. **No producción.**
 
 ---
 
