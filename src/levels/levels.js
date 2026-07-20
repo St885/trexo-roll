@@ -1,4 +1,4 @@
-// levels.js — Definición de los niveles del juego (25 en total).
+// levels.js — Definición de los niveles del juego (70 en total).
 //
 // Coordenadas: plano del tablero, x → derecha, z → hacia la cámara, origen al centro.
 // Cada nivel define su huella (footprint, unión de formas), inicio, meta, trampas,
@@ -778,6 +778,330 @@ export const LEVELS = [
     portals: [{ x: 10, z: -6, r: 1.0 }, { x: -10, z: 6, r: 1.0 }],
     footDecals: [{ x: -9, z: 0 }, { x: 9, z: 0 }],
     par: 110,
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // MUNDO 11 — "Tierras Salvajes" (51–60). Debut de los cavernícolas nómadas:
+  // 2 caminantes ambientales (extraCavemen) patrullan cada mapa nuevo sin tocar
+  // los hoyos. Dificultad gradual Difícil→Experto; el 60 es un hito mayor.
+  // ════════════════════════════════════════════════════════════════════════
+  // 51 ────────────────────────────────────────────────────────────────────
+  {
+    id: 51, name: 'Meseta Ventosa', tier: 'Difícil', theme: 'meseta',
+    hint: 'Explanada abierta con hoyos dispersos. Los nómadas rondan: solo son paisaje.',
+    surfaceColor: '#8a7d55', surfaceAccent: '#766845',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 22, d: 12 }],
+    start: { x: -9, z: 0 }, goal: { x: 9, z: 0, r: 1.1 },
+    traps: [{ x: -3, z: -3, r: 0.9 }, { x: 0, z: 3, r: 0.9 }, { x: 3, z: -3, r: 0.9 }],
+    walls: [{ x: 0, z: -5.6, w: 21, d: 0.4 }, { x: 0, z: 5.6, w: 21, d: 0.4 }],
+    footDecals: [{ x: -6, z: 3 }, { x: 6, z: -3 }],
+    extraCavemen: 2,
+    par: 60,
+  },
+  // 52 ────────────────────────────────────────────────────────────────────
+  {
+    id: 52, name: 'Sendero Bifurcado', tier: 'Difícil', theme: 'bosque',
+    hint: 'Dos carriles largos separados por un muro. Elige y controla la velocidad.',
+    surfaceColor: '#5f7a4a', surfaceAccent: '#4f663d',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 24, d: 12 }],
+    start: { x: -10, z: -3 }, goal: { x: 10, z: 3, r: 1.1 },
+    traps: [{ x: -3, z: -3, r: 0.85 }, { x: 3, z: 3, r: 0.85 }],
+    walls: [
+      { x: 0, z: -5.6, w: 23, d: 0.4 }, { x: 0, z: 5.6, w: 23, d: 0.4 },
+      { x: -11.8, z: 0, w: 0.4, d: 11.6 }, { x: 11.8, z: 0, w: 0.4, d: 11.6 },
+      { x: 0, z: 0, w: 12, d: 0.5 },
+    ],
+    footDecals: [{ x: -7, z: -3 }, { x: 7, z: 3 }],
+    extraCavemen: 2,
+    par: 66,
+  },
+  // 53 ────────────────────────────────────────────────────────────────────
+  {
+    id: 53, name: 'Islas Flotantes', tier: 'Difícil', theme: 'isla',
+    hint: 'Salta de isla en isla por los puentes. No te salgas al vacío.',
+    surfaceColor: '#7d8a55', surfaceAccent: '#6a7547',
+    footprint: [
+      { type: 'rect', x: -8, z: 0, w: 8, d: 9 },
+      { type: 'rect', x: 0, z: 0, w: 10, d: 3 },
+      { type: 'rect', x: 8, z: 0, w: 8, d: 9 },
+    ],
+    start: { x: -9, z: 0 }, goal: { x: 9, z: 0, r: 1.1 },
+    traps: [{ x: -8, z: 2.6, r: 0.85 }, { x: 8, z: -2.6, r: 0.85 }],
+    walls: [],
+    footDecals: [{ x: -9, z: -2.5 }, { x: 9, z: 2.5 }],
+    extraCavemen: 2,
+    par: 64,
+  },
+  // 54 ────────────────────────────────────────────────────────────────────
+  {
+    id: 54, name: 'Marisma Sinuosa', tier: 'Difícil', theme: 'pantano',
+    hint: 'Serpentea entre los lodazales. El camino zigzaguea hasta la meta.',
+    surfaceColor: '#6a7a4a', surfaceAccent: '#59673d',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 24, d: 14 }],
+    start: { x: -10, z: -5 }, goal: { x: 10, z: 5, r: 1.1 },
+    traps: [{ x: -4, z: 3, r: 0.85 }, { x: 0, z: -2, r: 0.9 }, { x: 4, z: 3, r: 0.85 }],
+    walls: [
+      { x: 0, z: -6.8, w: 23, d: 0.4 }, { x: 0, z: 6.8, w: 23, d: 0.4 },
+      { x: -11.8, z: 0, w: 0.4, d: 13.6 }, { x: 11.8, z: 0, w: 0.4, d: 13.6 },
+      { x: -4, z: -2.5, w: 0.5, d: 7 }, { x: 4, z: 2.5, w: 0.5, d: 7 },
+    ],
+    footDecals: [{ x: -8, z: -4 }, { x: 8, z: 4 }],
+    extraCavemen: 2,
+    par: 72,
+  },
+  // 55 ────────────────────────────────────────────────────────────────────
+  {
+    id: 55, name: 'Anillo de Fuego', tier: 'Difícil', theme: 'volcan',
+    hint: 'Cráter circular sin bordes. Rodea el fuego central hacia la meta.',
+    surfaceColor: '#5a7f78', surfaceAccent: '#4a6b65',
+    footprint: [{ type: 'circle', x: 0, z: 0, r: 8.5 }],
+    start: { x: -6, z: 0 }, goal: { x: 6, z: 0, r: 1.05 },
+    traps: [{ x: 0, z: 0, r: 1.2 }, { x: 0, z: -4.5, r: 0.85 }, { x: 0, z: 4.5, r: 0.85 }],
+    walls: [],
+    footDecals: [{ x: -3, z: -3 }, { x: 3, z: 3 }],
+    extraCavemen: 2,
+    par: 68,
+  },
+  // 56 ────────────────────────────────────────────────────────────────────
+  {
+    id: 56, name: 'Encrucijada Antigua', tier: 'Experto', theme: 'ruinas',
+    hint: 'Ruinas en cruz: del brazo izquierdo al derecho esquivando el centro.',
+    surfaceColor: '#7a6d58', surfaceAccent: '#655a47',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 20, d: 5 }, { type: 'rect', x: 0, z: 0, w: 5, d: 18 }],
+    start: { x: -8, z: 0 }, goal: { x: 8, z: 0, r: 1.05 },
+    traps: [{ x: 0, z: -6, r: 0.9 }, { x: 0, z: 6, r: 0.9 }, { x: -4, z: 0, r: 0.8 }, { x: 4, z: 0, r: 0.8 }],
+    walls: [],
+    footDecals: [{ x: 0, z: -5 }, { x: 0, z: 5 }],
+    extraCavemen: 2,
+    par: 74,
+  },
+  // 57 ────────────────────────────────────────────────────────────────────
+  {
+    id: 57, name: 'Laguna del Huevo', tier: 'Experto', theme: 'huevos',
+    hint: 'Estanque redondo sin orillas. Precisión total hasta el huevo dorado.',
+    surfaceColor: '#6f8a6a', surfaceAccent: '#5b7458',
+    footprint: [{ type: 'circle', x: 0, z: 0, r: 8 }],
+    start: { x: -5.5, z: -3 }, goal: { x: 5.5, z: 3, r: 1.0 },
+    traps: [{ x: -2, z: 2.5, r: 0.85 }, { x: 2, z: -2.5, r: 0.85 }, { x: 0, z: 0, r: 0.9 }],
+    walls: [],
+    footDecals: [{ x: -4, z: -2 }, { x: 4, z: 2 }],
+    extraCavemen: 2,
+    par: 72,
+  },
+  // 58 ────────────────────────────────────────────────────────────────────
+  {
+    id: 58, name: 'Laberinto de Helechos', tier: 'Experto', theme: 'bosque',
+    hint: 'La espesura se cierra. Serpentea entre los tabiques hasta la salida.',
+    surfaceColor: '#57734a', surfaceAccent: '#48603d',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 24, d: 16 }],
+    start: { x: -10, z: -6 }, goal: { x: 10, z: 6, r: 1.05 },
+    traps: [{ x: -6, z: 3, r: 0.85 }, { x: 0, z: -3, r: 0.85 }, { x: 6, z: 3, r: 0.85 }],
+    walls: [
+      { x: 0, z: -7.8, w: 23, d: 0.4 }, { x: 0, z: 7.8, w: 23, d: 0.4 },
+      { x: -11.8, z: 0, w: 0.4, d: 15.6 }, { x: 11.8, z: 0, w: 0.4, d: 15.6 },
+      { x: -3, z: -2.5, w: 0.5, d: 9 }, { x: 3, z: 2.5, w: 0.5, d: 9 },
+    ],
+    portals: [{ x: -8, z: 4, r: 1.0 }, { x: 8, z: -4, r: 1.0 }],
+    footDecals: [{ x: -8, z: -5 }, { x: 8, z: 5 }],
+    extraCavemen: 2,
+    par: 82,
+  },
+  // 59 ────────────────────────────────────────────────────────────────────
+  {
+    id: 59, name: 'Filo de la Meseta', tier: 'Experto', theme: 'meseta',
+    hint: 'Cresta triangular sin bordes: apunta fino o caerás al abismo.',
+    surfaceColor: '#8a7d55', surfaceAccent: '#766845',
+    footprint: [{ type: 'poly', points: [[-10, 6], [10, 6], [0, -8]] }],
+    start: { x: -5, z: 4 }, goal: { x: 0, z: -5, r: 1.0 },
+    traps: [{ x: -3, z: 1, r: 0.85 }, { x: 3, z: 1, r: 0.85 }, { x: 0, z: -2, r: 0.8 }],
+    walls: [],
+    footDecals: [{ x: 0, z: 4 }],
+    extraCavemen: 2,
+    par: 76,
+  },
+  // 60 ────────────────────────────────────────────────────────────────────
+  {
+    id: 60, name: 'Guardián del Valle', tier: 'Experto', theme: 'volcan',
+    hint: 'Hito: gran laberinto ardiente. Trampas, portales y el cavernícola con lanza.',
+    surfaceColor: '#5a302c', surfaceAccent: '#44231c',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 26, d: 16 }],
+    start: { x: -11, z: -6 }, goal: { x: 11, z: 6, r: 1.05 },
+    traps: [{ x: -6, z: 4, r: 0.85 }, { x: 0, z: -4, r: 0.9 }, { x: 0, z: 2, r: 0.85 }, { x: 6, z: -4, r: 0.85 }],
+    walls: [
+      { x: 0, z: -7.8, w: 25, d: 0.4 }, { x: 0, z: 7.8, w: 25, d: 0.4 },
+      { x: -12.8, z: 0, w: 0.4, d: 15.6 }, { x: 12.8, z: 0, w: 0.4, d: 15.6 },
+      { x: -3, z: -3, w: 16, d: 0.5 }, { x: 3, z: 3, w: 16, d: 0.5 },
+    ],
+    portals: [{ x: -9, z: 4, r: 1.0 }, { x: 9, z: -4, r: 1.0 }],
+    footDecals: [{ x: -9, z: 0 }, { x: 9, z: 0 }],
+    extraCavemen: 2,
+    par: 96,
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // MUNDO 12 — "El Ocaso Jurásico" (61–70). Cierre del juego. Los nómadas
+  // siguen presentes. El 70 es el gran final.
+  // ════════════════════════════════════════════════════════════════════════
+  // 61 ────────────────────────────────────────────────────────────────────
+  {
+    id: 61, name: 'Cañón Estrecho', tier: 'Experto', theme: 'meseta',
+    hint: 'Un corredor largo y angosto. Un roce y caes: precisión constante.',
+    surfaceColor: '#847651', surfaceAccent: '#6f6141',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 26, d: 8 }],
+    start: { x: -11, z: 0 }, goal: { x: 11, z: -1, r: 1.0 },
+    traps: [{ x: -5, z: 1.4, r: 0.8 }, { x: 0, z: -1.4, r: 0.8 }, { x: 5, z: 1.4, r: 0.8 }],
+    walls: [{ x: 0, z: -3.6, w: 25, d: 0.4 }, { x: 0, z: 3.6, w: 25, d: 0.4 }],
+    footDecals: [{ x: -7, z: -1.5 }, { x: 7, z: 1.5 }],
+    extraCavemen: 2,
+    par: 78,
+  },
+  // 62 ────────────────────────────────────────────────────────────────────
+  {
+    id: 62, name: 'Puente Roto', tier: 'Experto', theme: 'isla',
+    hint: 'El puente cayó: los portales cruzan el abismo entre las dos orillas.',
+    surfaceColor: '#77854f', surfaceAccent: '#647142',
+    footprint: [{ type: 'rect', x: -8, z: 0, w: 8, d: 11 }, { type: 'rect', x: 8, z: 0, w: 8, d: 11 }],
+    start: { x: -9, z: 0 }, goal: { x: 9, z: 0, r: 1.05 },
+    traps: [{ x: -8, z: 3.5, r: 0.85 }, { x: -8, z: -3.5, r: 0.85 }, { x: 8, z: 3.5, r: 0.85 }, { x: 8, z: -3.5, r: 0.85 }],
+    walls: [],
+    portals: [{ x: -6, z: 0, r: 1.0 }, { x: 6, z: 0, r: 1.0 }],
+    footDecals: [{ x: -9, z: 4 }, { x: 9, z: -4 }],
+    extraCavemen: 2,
+    par: 74,
+  },
+  // 63 ────────────────────────────────────────────────────────────────────
+  {
+    id: 63, name: 'Ciénaga Doble', tier: 'Experto', theme: 'pantano',
+    hint: 'Dos grandes lodazales. Bordéalos con calma hasta el otro extremo.',
+    surfaceColor: '#66764a', surfaceAccent: '#55643c',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 24, d: 14 }],
+    start: { x: -10, z: -5 }, goal: { x: 10, z: 5, r: 1.05 },
+    traps: [{ x: -4, z: -1, r: 1.15 }, { x: 4, z: 1, r: 1.15 }],
+    walls: [
+      { x: 0, z: -6.8, w: 23, d: 0.4 }, { x: 0, z: 6.8, w: 23, d: 0.4 },
+      { x: -11.8, z: 0, w: 0.4, d: 13.6 }, { x: 11.8, z: 0, w: 0.4, d: 13.6 },
+    ],
+    footDecals: [{ x: -8, z: 4 }, { x: 8, z: -4 }],
+    extraCavemen: 2,
+    par: 78,
+  },
+  // 64 ────────────────────────────────────────────────────────────────────
+  {
+    id: 64, name: 'Espiral de Piedra', tier: 'Experto', theme: 'ruinas',
+    hint: 'Muros escalonados forman una espiral. Recórrela sin rozar los hoyos.',
+    surfaceColor: '#786b57', surfaceAccent: '#635846',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 24, d: 16 }],
+    start: { x: -10, z: -6 }, goal: { x: 0, z: 0, r: 1.0 },
+    traps: [{ x: -6, z: 3, r: 0.85 }, { x: 6, z: -3, r: 0.85 }, { x: 6, z: 4, r: 0.8 }],
+    walls: [
+      { x: 0, z: -7.8, w: 23, d: 0.4 }, { x: 0, z: 7.8, w: 23, d: 0.4 },
+      { x: -11.8, z: 0, w: 0.4, d: 15.6 }, { x: 11.8, z: 0, w: 0.4, d: 15.6 },
+      { x: -2, z: -4, w: 14, d: 0.5 }, { x: 4, z: -1, w: 12, d: 0.5 }, { x: -2, z: 3, w: 12, d: 0.5 },
+    ],
+    footDecals: [{ x: -8, z: -5 }, { x: 8, z: 5 }],
+    extraCavemen: 2,
+    par: 88,
+  },
+  // 65 ────────────────────────────────────────────────────────────────────
+  {
+    id: 65, name: 'Corazón del Volcán', tier: 'Experto', theme: 'volcan',
+    hint: 'Islas de roca sobre lava. El cavernícola acecha: cruza rápido y seguro.',
+    surfaceColor: '#5a302c', surfaceAccent: '#44231c',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 22, d: 14 }],
+    start: { x: -9, z: -5 }, goal: { x: 9, z: 5, r: 1.05 },
+    traps: [{ x: -3, z: -2, r: 0.9 }, { x: 3, z: 2, r: 0.9 }, { x: -3, z: 4, r: 0.8 }, { x: 3, z: -4, r: 0.8 }],
+    walls: [
+      { x: 0, z: -6.8, w: 21, d: 0.4 }, { x: 0, z: 6.8, w: 21, d: 0.4 },
+      { x: -10.8, z: 0, w: 0.4, d: 13.6 }, { x: 10.8, z: 0, w: 0.4, d: 13.6 },
+    ],
+    portals: [{ x: -8, z: 4, r: 1.0 }, { x: 8, z: -4, r: 1.0 }],
+    footDecals: [{ x: -7, z: 5 }, { x: 7, z: -5 }],
+    extraCavemen: 2,
+    par: 90,
+  },
+  // 66 ────────────────────────────────────────────────────────────────────
+  {
+    id: 66, name: 'Nido Escondido', tier: 'Experto', theme: 'huevos',
+    hint: 'El nido está tras el laberinto. Los portales abren la ruta secreta.',
+    surfaceColor: '#6c876a', surfaceAccent: '#587156',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 24, d: 16 }],
+    start: { x: -10, z: -6 }, goal: { x: 10, z: 6, r: 1.05 },
+    traps: [{ x: -5, z: 2, r: 0.85 }, { x: 0, z: -2, r: 0.85 }, { x: 5, z: 2, r: 0.85 }],
+    walls: [
+      { x: 0, z: -7.8, w: 23, d: 0.4 }, { x: 0, z: 7.8, w: 23, d: 0.4 },
+      { x: -11.8, z: 0, w: 0.4, d: 15.6 }, { x: 11.8, z: 0, w: 0.4, d: 15.6 },
+      { x: -2.5, z: -3, w: 0.5, d: 8 }, { x: 2.5, z: 3, w: 0.5, d: 8 },
+    ],
+    portals: [{ x: -9, z: 5, r: 1.0 }, { x: 9, z: -5, r: 1.0 }],
+    footDecals: [{ x: -8, z: -5 }, { x: 8, z: 5 }],
+    extraCavemen: 2,
+    par: 86,
+  },
+  // 67 ────────────────────────────────────────────────────────────────────
+  {
+    id: 67, name: 'Bosque Cerrado', tier: 'Experto', theme: 'bosque',
+    hint: 'La jungla más densa: pasos estrechos entre la maleza. Memoriza la ruta.',
+    surfaceColor: '#546f47', surfaceAccent: '#455c3a',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 22, d: 16 }],
+    start: { x: -9, z: -6 }, goal: { x: 9, z: 6, r: 1.05 },
+    traps: [{ x: -4, z: 4, r: 0.8 }, { x: 4, z: -4, r: 0.8 }, { x: 0, z: 0, r: 0.85 }],
+    walls: [
+      { x: 0, z: -7.8, w: 21, d: 0.4 }, { x: 0, z: 7.8, w: 21, d: 0.4 },
+      { x: -10.8, z: 0, w: 0.4, d: 15.6 }, { x: 10.8, z: 0, w: 0.4, d: 15.6 },
+      { x: -4, z: -2, w: 8, d: 0.5 }, { x: 4, z: 2, w: 8, d: 0.5 },
+    ],
+    footDecals: [{ x: -7, z: -5 }, { x: 7, z: 5 }],
+    extraCavemen: 2,
+    par: 88,
+  },
+  // 68 ────────────────────────────────────────────────────────────────────
+  {
+    id: 68, name: 'Valle de Sombras', tier: 'Experto', theme: 'valle',
+    hint: 'El valle al anochecer. Cruce en cruz con hoyos en cada brazo.',
+    surfaceColor: '#4f6a5a', surfaceAccent: '#3f5748',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 22, d: 6 }, { type: 'rect', x: 0, z: 0, w: 6, d: 18 }],
+    start: { x: -9, z: 0 }, goal: { x: 0, z: 8, r: 1.05 },
+    traps: [{ x: 6, z: 0, r: 0.85 }, { x: -6, z: 0, r: 0.85 }, { x: 0, z: -6, r: 0.9 }, { x: 0, z: 3, r: 0.8 }],
+    walls: [],
+    footDecals: [{ x: -6, z: 0 }, { x: 0, z: 6 }],
+    extraCavemen: 2,
+    par: 82,
+  },
+  // 69 ────────────────────────────────────────────────────────────────────
+  {
+    id: 69, name: 'Meseta Final', tier: 'Experto', theme: 'meseta',
+    hint: 'La última meseta antes del trono. Laberinto abierto con portales.',
+    surfaceColor: '#877a54', surfaceAccent: '#726444',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 26, d: 16 }],
+    start: { x: -11, z: -6 }, goal: { x: 11, z: 6, r: 1.05 },
+    traps: [{ x: -6, z: 3, r: 0.85 }, { x: -1, z: -3, r: 0.85 }, { x: 4, z: 3, r: 0.85 }, { x: 8, z: -3, r: 0.8 }],
+    walls: [
+      { x: 0, z: -7.8, w: 25, d: 0.4 }, { x: 0, z: 7.8, w: 25, d: 0.4 },
+      { x: -12.8, z: 0, w: 0.4, d: 15.6 }, { x: 12.8, z: 0, w: 0.4, d: 15.6 },
+      { x: -4, z: -2.5, w: 0.5, d: 7 }, { x: 5, z: 2.5, w: 0.5, d: 7 },
+    ],
+    portals: [{ x: -9, z: 5, r: 1.0 }, { x: 10, z: -5.5, r: 1.0 }],
+    footDecals: [{ x: -9, z: 0 }, { x: 9, z: 0 }],
+    extraCavemen: 2,
+    par: 94,
+  },
+  // 70 ────────────────────────────────────────────────────────────────────
+  {
+    id: 70, name: 'Trono del Trueno', tier: 'Experto', theme: 'volcan',
+    hint: 'El gran final: el laberinto del trono. Trampas, portales y el guardián.',
+    surfaceColor: '#62332c', surfaceAccent: '#4a241b',
+    footprint: [{ type: 'rect', x: 0, z: 0, w: 28, d: 18 }],
+    start: { x: -12, z: -7 }, goal: { x: 12, z: 7, r: 1.0 },
+    traps: [{ x: -7, z: 4, r: 0.85 }, { x: -1, z: -4, r: 0.9 }, { x: 1, z: 1, r: 0.85 }, { x: 5, z: 5, r: 0.85 }, { x: 7, z: -4, r: 0.85 }],
+    walls: [
+      { x: 0, z: -8.8, w: 27, d: 0.4 }, { x: 0, z: 8.8, w: 27, d: 0.4 },
+      { x: -13.8, z: 0, w: 0.4, d: 17.6 }, { x: 13.8, z: 0, w: 0.4, d: 17.6 },
+      { x: -3, z: -4.5, w: 18, d: 0.5 }, { x: 3, z: -1, w: 18, d: 0.5 }, { x: -3, z: 3.5, w: 18, d: 0.5 },
+    ],
+    portals: [{ x: 11, z: -6, r: 1.0 }, { x: -11, z: 6, r: 1.0 }],
+    footDecals: [{ x: -10, z: 0 }, { x: 10, z: 0 }],
+    extraCavemen: 2,
+    par: 115,
   },
 ];
 

@@ -2,6 +2,40 @@
 
 Formato basado en *Keep a Changelog*. Versionado semántico.
 
+## [0.29.0] — EN DESARROLLO — 🗺️ 20 mapas nuevos + cavernícolas nómadas
+
+> **En desarrollo (no publicado, sin AAB).** `package.json` = `0.29.0`. **Android sigue intacto**
+> en `versionCode 6` / `versionName 0.28.1` (no se toca hasta autorizar subida a Play).
+
+### 🗺️ 20 niveles nuevos (51–70)
+- **Mundo 11 "Tierras Salvajes" (51–60)** y **Mundo 12 "El Ocaso Jurásico" (61–70)**, con dificultad
+  gradual Difícil→Experto. El **60** ("Guardián del Valle") y el **70** ("Trono del Trueno") son hitos
+  mayores. Variedad real: explanadas abiertas, carriles bifurcados, islas con puentes, marismas
+  sinuosas, cráteres, cruces, círculos, laberintos y crestas triangulares; algunos con **portales**.
+- Total de niveles **50 → 70**. Monedas/estrellas y **trampas dinámicas** se aplican automáticamente a
+  los nuevos niveles (sistemas procedurales por número de nivel). `MAX_STARS` se auto-deriva.
+- Los **70 niveles** siguen pasando el validador de solvencia (BFS portal-aware).
+
+### 🦴 Cavernícolas nómadas (nuevo enemigo/ambiente)
+- **2 cavernícolas caminantes aleatorios por mapa nuevo** (`extraCavemen: 2`). Reaparecen en
+  **posiciones aleatorias válidas cada carga/reinicio**.
+- **Interacción aplicada:** son **ambientales/visuales** — patrullan (wander) y dan vida al mapa, pero
+  **NO empujan ni dañan la bola** (obstáculo dinámico no colisionable). El cavernícola **con lanza**
+  (peligroso) sigue siendo el de los niveles múltiplos de 5, sin cambios.
+- **Spawn seguro** (`src/systems/wanderers.js`, lógica pura y testeable): nunca sobre hoyos rojos, ni
+  sobre/junto a la meta verde, ni pegados a la bola inicial, ni fuera del tablero, ni encimados entre
+  sí; con **fallback determinista** si el azar no encuentra sitio.
+- **IA wander:** eligen destino local válido con **camino despejado** (no cruzan hoyos), caminan,
+  pausan al llegar y re-eligen; si un paso deja de ser seguro (p. ej. una trampa dinámica se movió),
+  **recalculan**. Actualización con **delta time**, reutilizando el modelo `Caveman.js` (sin assets
+  nuevos) y **sin acumularse** al reiniciar (`clearBoard` los libera).
+
+### ✅ Validación
+- `npm test` (incl. nuevo `cavemen-wander-smoke`, 12 puntos) · `test:graph` · `test:visual` ·
+  `test:ui` · `npm run build` · `npx cap sync android` — todo verde.
+- Navegador real (Chrome+WebGL): niveles 51/52/60/70 con 2 nómadas en posiciones seguras, wander en
+  movimiento, reinicio sin duplicar, 0 errores de consola.
+
 ## [0.28.0] — 2026-07-06 — 🚀 Login real con Firebase y celebraciones 3D (RELEASE estable)
 
 > **Versión estable consolidada** de todo el ciclo 0.25→0.27 (detalle por entrega en las entradas

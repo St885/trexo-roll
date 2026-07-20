@@ -1652,6 +1652,16 @@ export class Game {
       this._cavemanCooldown = 1.4; // gracia inicial: no golpea nada más empezar
     }
 
+    // Cavernícolas NÓMADAS ambientales (mundos 11–12): 2 caminantes aleatorios por mapa nuevo.
+    // Solo en niveles que lo declaran (lvl.extraCavemen). NO tocan la bola: dan vida al mapa sin
+    // afectar la jugabilidad. Se re-generan en posiciones nuevas cada carga/reinicio (sin acumular:
+    // clearBoard vacía la lista y libera sus grupos con el árbol del tablero).
+    if (lvl.extraCavemen && lvl.goal) {
+      this.scene.spawnWanderers(lvl.extraCavemen, {
+        goal: lvl.goal, footprint: lvl.footprint, traps: lvl.traps, portals: lvl.portals, start: lvl.start,
+      });
+    }
+
     this.input.reset();
     this.input.enable();
     this._levelStart = performance.now();

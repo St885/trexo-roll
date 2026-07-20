@@ -55,7 +55,7 @@ for (const theme of Object.keys(tex.THEMES)) {
   await run('makeGroundTexture(' + theme + ')', () => tex.makeGroundTexture(theme));
 }
 
-console.log('\n[Construcción de tableros 3D (los 25 niveles)]');
+console.log('\n[Construcción de tableros 3D (todos los niveles)]');
 const { buildBoard } = await import('../src/scene/BoardBuilder.js');
 const { LEVELS } = await import('../src/levels/levels.js');
 for (const lvl of LEVELS) {

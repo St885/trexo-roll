@@ -9,6 +9,7 @@ import { buildCaveman, buildThrownSpear } from './Caveman.js';
 import { makeRocket, makeRocketFlame, makeGlow, makeFireworkBurst } from './RocketArt.js';
 import { makeCoin, makeStarToken, makeTrapCover, makePtero } from './collectibleArt.js';
 import { footprintBounds, isInsideFootprint } from '../physics/footprint.js';
+import { pickSpawnPosition, pickWanderTarget, isPositionSafeForCaveman, WANDER } from '../systems/wanderers.js';
 import { loadGLB, fitModel } from './gltf.js';
 import { PHYS } from '../utils/constants.js';
 import { countResize } from '../utils/perf.js';
@@ -182,6 +183,7 @@ export class SceneManager {
     this._bursts = [];       // ráfagas de partículas (estrella, rescate)
     this._portalRings = [];  // anillos de luz al teletransportar (entrada/salida)
     this._caveman = null;    // cavernícola con lanza (niveles 5, 10, …)
+    this._wanderers = [];    // cavernícolas nómadas ambientales (mundos 11–12, wander sin ataque)
     this._spearFx = null;    // lanza-proyectil (al lanzar hacia el jugador)
     this._rockets = [];      // cohetes en reposo sobre el tablero (ítems recogibles)
     this._rocketFx = [];     // cohetes en animación (lanzamiento/fuegos/evento ptero)
@@ -297,6 +299,7 @@ export class SceneManager {
     this._bursts = [];        // sus puntos colgaban del tablero (ya liberados)
     this._portalRings = [];   // sus mallas colgaban del tablero (ya liberadas)
     this._caveman = null;     // su grupo colgaba del tablero (ya liberado)
+    this._wanderers = [];     // sus grupos colgaban del tablero (ya liberados) → nunca se acumulan
     this._rockets = [];       // sus mallas colgaban del tablero (ya liberadas)
     // Las animaciones de cohete viven en la raíz de la escena: liberar a mano.
     for (const fx of this._rocketFx) this._disposeRocketFx(fx);
@@ -847,6 +850,88 @@ export class SceneManager {
     c.group.position.set(c.x, c.baseY + bob, c.z);
   }
 
+  // --- Cavernícolas nómadas ambientales (mundos 11–12) -----------------------
+  // Caminantes de patrulla aleatoria que dan vida a los mapas nuevos. NO interactúan con la
+  // bola (no la empujan ni la dañan): son obstáculo visual/ambiental. La lógica de spawn seguro
+  // y wander es PURA (systems/wanderers.js) → testeable sin escena. Aquí solo se le pone cuerpo 3D.
+
+  /** Coloca `count` nómadas en posiciones aleatorias SEGURAS. cfg: {goal,footprint,traps,portals,start}. */
+  spawnWanderers(count, cfg = {}) {
+    this._wanderers = [];
+    if (!this.boardGroup || !cfg.goal) return;
+    const bounds = this._bounds || { minX: cfg.goal.x - 6, maxX: cfg.goal.x + 6, minZ: cfg.goal.z - 6, maxZ: cfg.goal.z + 6 };
+    const wcfg = {
+      footprint: cfg.footprint || null, bounds,
+      traps: cfg.traps || [], portals: cfg.portals || [],
+      goal: cfg.goal, start: cfg.start || cfg.goal,
+    };
+    const n = Math.max(0, Math.min(4, count | 0));
+    const placed = []; // posiciones ya ocupadas (para no encimar dos nómadas)
+    for (let i = 0; i < n; i++) {
+      const pos = pickSpawnPosition(wcfg, Math.random, placed);
+      if (!pos) break; // tablero sin sitio seguro (teórico): mejor 1 nómada menos que uno mal puesto
+      const built = buildCaveman();
+      built.group.scale.setScalar(0.9); // algo más pequeños que el atacante (son secundarios)
+      built.group.traverse((o) => { o.frustumCulled = false; });
+      this.boardGroup.add(built.group);
+      const w = {
+        group: built.group, legL: built.legL, legR: built.legR, armL: built.armL, armThrow: built.armThrow,
+        cfg: wcfg, x: pos.x, z: pos.z, baseY: 0.0, r: WANDER.R,
+        speed: 0.85 + Math.random() * 0.35,   // ambiental: más lento que el atacante
+        target: null, facing: Math.random() * Math.PI * 2,
+        walkT: Math.random() * 6, pauseT: 0,
+      };
+      w.group.position.set(w.x, w.baseY, w.z);
+      w.group.rotation.y = w.facing;
+      placed.push({ x: w.x, z: w.z });
+      this._wanderers.push(w);
+      w.target = pickWanderTarget(w, w.cfg, Math.random, this._otherWanderers(w));
+    }
+  }
+
+  /** Posiciones {x,z} del resto de nómadas (para separación); array pequeño (≤3). */
+  _otherWanderers(self) {
+    const out = [];
+    for (const o of this._wanderers) if (o !== self) out.push({ x: o.x, z: o.z });
+    return out;
+  }
+
+  /** Avanza todos los nómadas con delta time. Barato: solo unos pocos por nivel. */
+  _updateWanderers(dt) {
+    for (const w of this._wanderers) this._walkWanderer(w, dt);
+  }
+
+  _walkWanderer(w, dt) {
+    w.walkT += dt;
+    // Pausa al llegar a un destino (mira alrededor) antes de elegir el siguiente.
+    if (w.pauseT > 0) {
+      w.pauseT -= dt;
+      const sway = Math.sin(w.walkT * 2) * 0.08;
+      w.group.rotation.y = w.facing + sway; // leve balanceo en reposo
+      if (w.pauseT <= 0) w.target = pickWanderTarget(w, w.cfg, Math.random, this._otherWanderers(w));
+      return;
+    }
+    if (!w.target) { w.target = pickWanderTarget(w, w.cfg, Math.random, this._otherWanderers(w)); if (!w.target) return; }
+    const dx = w.target.x - w.x, dz = w.target.z - w.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.14) { w.pauseT = 0.5 + Math.random() * 0.9; return; } // llegó: pausa y luego re-elige
+    const step = Math.min(d, w.speed * dt);
+    const nx = w.x + (dx / d) * step, nz = w.z + (dz / d) * step;
+    // Seguridad en marcha: si el siguiente paso NO es seguro (p. ej. una trampa dinámica se
+    // desplazó hacia aquí), recalcula destino en vez de invadir el hoyo. (Sin `others` por frame
+    // para no asignar memoria: la separación entre nómadas se cuida al elegir destino.)
+    if (!isPositionSafeForCaveman(nx, nz, w.cfg)) { w.target = pickWanderTarget(w, w.cfg, Math.random, this._otherWanderers(w)); return; }
+    w.x = nx; w.z = nz;
+    w.facing = Math.atan2(dx, dz); // +Z es "adelante"
+    w.group.rotation.y = w.facing;
+    // Animación de caminar: piernas y brazos alternan + rebote del cuerpo.
+    const sw = Math.sin(w.walkT * 7);
+    w.legL.rotation.x = sw * 0.55; w.legR.rotation.x = -sw * 0.55;
+    w.armThrow.rotation.x = -sw * 0.28; w.armL.rotation.x = -0.2 + sw * 0.28;
+    const bob = Math.abs(Math.sin(w.walkT * 7)) * 0.045;
+    w.group.position.set(w.x, w.baseY + bob, w.z);
+  }
+
   // --- Cohetes (ítems de celebración: color y raya roja) ---------------------
 
   /** Monta los cohetes del nivel sobre el tablero. rockets: [{x,z,type}]. */
@@ -1179,6 +1264,7 @@ export class SceneManager {
 
     // Cavernícola: patrulla cuando camina; el ataque lo dirige Game por progreso.
     if (this._caveman) this._walkCaveman(dt);
+    if (this._wanderers.length) this._updateWanderers(dt);
     if (this._spearFx) this._animateSpearFx(dt);
 
     // Cohetes (ítems): flote en reposo + animaciones de lanzamiento/fuegos/evento.

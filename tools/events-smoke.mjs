@@ -30,16 +30,18 @@ for (const par of [40, 60, 90, 110]) {
   ok(ts[1] <= 14, `par ${par}: el 2º vuelo ocurre dentro de un margen razonable (${ts[1]}s)`);
 }
 
-console.log('\n[Portales: 2 por nivel en 26–50, ninguno en 1–25]');
+console.log('\n[Portales: 2 por nivel en 26–50, ninguno en 1–25, opcionales en 51–70]');
 let newWith2 = 0, oldWithPortals = 0;
 for (const lvl of LEVELS) {
   const n = (lvl.portals || []).length;
-  if (lvl.id >= 26) { if (n === 2) newWith2++; else { console.log(`  ❌ Nivel ${lvl.id} tiene ${n} portales (esperado 2)`); failures++; } }
-  else if (n !== 0) { oldWithPortals++; console.log(`  ❌ Nivel ${lvl.id} (1–25) tiene portales y no debería`); failures++; }
+  if (lvl.id >= 26 && lvl.id <= 50) { if (n === 2) newWith2++; else { console.log(`  ❌ Nivel ${lvl.id} tiene ${n} portales (esperado 2)`); failures++; } }
+  else if (lvl.id <= 25) { if (n !== 0) { oldWithPortals++; console.log(`  ❌ Nivel ${lvl.id} (1–25) tiene portales y no debería`); failures++; } }
+  // Mundos 11–12 (51–70): portales OPCIONALES por diseño; si un nivel los declara, deben ser 2.
+  else if (n !== 0 && n !== 2) { console.log(`  ❌ Nivel ${lvl.id} tiene ${n} portales (si hay, deben ser 2)`); failures++; }
 }
-ok(newWith2 === 25, `los 25 niveles nuevos (26–50) tienen 2 portales (${newWith2}/25)`);
-ok(oldWithPortals === 0, 'los 25 niveles originales no tienen portales');
-ok(LEVELS.length === 50, `hay 50 niveles en total (${LEVELS.length})`);
+ok(newWith2 === 25, `los 25 niveles de los mundos 6–10 (26–50) tienen 2 portales (${newWith2}/25)`);
+ok(oldWithPortals === 0, 'los 25 niveles originales (1–25) no tienen portales');
+ok(LEVELS.length === 70, `hay 70 niveles en total (${LEVELS.length})`);
 
 console.log('\n[SVG de critters: bien formado]');
 {

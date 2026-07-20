@@ -17,6 +17,36 @@
 
 ---
 
+## 🗺️ 20 mapas nuevos + cavernícolas nómadas — v0.29.0 EN DESARROLLO (2026-07-20)
+
+> **En desarrollo. NO se generó AAB. NO se tocó Play Console ni producción. NO push.**
+> `package.json` = `0.29.0`. **Android intacto** en `versionCode 6` / `versionName 0.28.1`.
+
+- **20 niveles nuevos: 51–70** (total 50 → 70). Mundo 11 "Tierras Salvajes" (51–60) y Mundo 12 "El
+  Ocaso Jurásico" (61–70); dificultad gradual Difícil→Experto; hitos en 60 y 70. Variedad real de
+  layouts; algunos con portales. **Los 70 niveles pasan el validador de solvencia** (BFS).
+- **Cavernícolas nómadas: 2 por mapa nuevo** (`extraCavemen: 2`), en **posiciones aleatorias válidas
+  cada carga/reinicio**.
+- **Interacción aplicada:** **ambiental/visual** (patrullan y dan vida al mapa; **NO empujan ni dañan la
+  bola** → no rompe la jugabilidad ni la ganabilidad). El cavernícola **con lanza** (peligroso) de los
+  niveles ×5 no cambia.
+- **Spawn aleatorio seguro** (`src/systems/wanderers.js`, puro y testeable): nunca sobre hoyos rojos,
+  meta verde, pegado a la bola inicial, fuera del tablero, ni encimados; con **fallback determinista**.
+- **Anti-hoyos en movimiento:** destino con **camino despejado** (no cruzan hoyos); si un paso deja de
+  ser seguro (trampa dinámica movida), **recalculan**. Delta time; reutiliza `Caveman.js`; **sin
+  acumular** al reiniciar (`clearBoard`).
+- **Pruebas:** `npm test` (585 checks, incl. `cavemen-wander-smoke` con 12 puntos) · `test:graph` ·
+  `test:visual` · `test:ui` · `build` · `cap:sync` — verde. Navegador real (Chrome+WebGL): niveles
+  51/52/60/70 con 2 nómadas seguros, wander en movimiento, reinicio sin duplicar, **0 errores**.
+- **QA pendiente:** validación humana en móvil real (sensación, rendimiento con nómadas + trampas
+  dinámicas en los mapas grandes 60/70), y revisar encuadre de cámara en los tableros más anchos (28×18).
+- **Archivos:** `src/levels/levels.js` (+20 niveles), `src/systems/wanderers.js` (nuevo),
+  `src/scene/SceneManager.js`, `src/core/Game.js`, `package.json`, `tools/cavemen-wander-smoke.mjs`
+  (nuevo), `tools/level-validator.mjs`, `tools/events-smoke.mjs`, `tools/canvas-smoke.mjs`,
+  `docs/changelog.md`.
+
+---
+
 ## 🔒 Auditoría de seguridad + fix pantalla negra — v0.28.1 / versionCode 6 (2026-07-20)
 
 > **Revisión integral de seguridad antes de seguir con testers. Sin generar AAB (pendiente

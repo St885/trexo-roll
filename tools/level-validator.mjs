@@ -98,9 +98,11 @@ for (const lvl of LEVELS) {
   for (const t of lvl.traps || []) {
     if (Math.hypot(t.x - lvl.goal.x, t.z - lvl.goal.z) < t.r + lvl.goal.r) issues.push('trampa demasiado pegada a la meta');
   }
-  // Portales naranjas: los niveles 26–50 deben tener EXACTAMENTE 2, bien colocados.
+  // Portales naranjas: los niveles 26–50 (mundos 6–10) deben tener EXACTAMENTE 2, bien
+  // colocados. En los mundos 11–12 (51–70) los portales son OPCIONALES por diseño (algunos
+  // mapas son abiertos), pero si un nivel los declara se validan igual (posición/separación).
   const portals = lvl.portals || [];
-  if (lvl.id >= 26 && portals.length !== 2) issues.push('los niveles 26–50 deben tener exactamente 2 portales');
+  if (lvl.id >= 26 && lvl.id <= 50 && portals.length !== 2) issues.push('los niveles 26–50 deben tener exactamente 2 portales');
   if (portals.length) {
     if (portals.length !== 2) issues.push('debe haber exactamente 2 portales (enlazados)');
     for (const p of portals) {
