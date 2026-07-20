@@ -20,9 +20,10 @@ const out = path.join(root, 'www');
 const INCLUDE = [
   'index.html',
   'manifest.webmanifest',
-  'privacy.html',   // política pública (si existe)
-  'terms.html',     // términos públicos (si existe)
-  'legal.html',     // legal/créditos públicos (si existe)
+  'privacy.html',        // política pública (si existe)
+  'terms.html',          // términos públicos (si existe)
+  'legal.html',          // legal/créditos públicos (si existe)
+  'delete-account.html', // eliminación de cuenta/datos (Play compliance; si existe)
   'assets',
   'libs',
   'src',

@@ -1,6 +1,6 @@
 {
   "name": "trexo-roll",
-  "version": "0.28.0",
+  "version": "0.28.1",
   "description": "TREXoRoll — juego 3D de habilidad (inclina el tablero y rueda la bola al hoyo). Three.js, temática jurásica.",
   "type": "module",
   "scripts": {

@@ -20,7 +20,7 @@ import { shouldShowTutorial, tutorialSteps, markTutorialSeen, resetTutorial, sho
 import { dynamicKind, buildDynamicSpecs, dynamicTrapState } from '../levels/dynamicTraps.js';
 import { SCREENS, LIVES_START, SCORE, PHYS, DEBUG_SHOW_DPAD, CELEBRATION_MODELS } from '../utils/constants.js';
 import * as perf from '../utils/perf.js';
-import { getGraphicsProfile } from '../utils/device.js';
+import { getGraphicsProfile, isAndroidWebView } from '../utils/device.js';
 import * as hud from '../ui/hud.js';
 import { sfx } from '../effects/sfx.js';
 import { music } from '../effects/music.js';
@@ -208,8 +208,11 @@ export class Game {
     window.addEventListener('pagehide', () => this._endAnalyticsSession());
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this._endAnalyticsSession();
-      else this._startAnalyticsSession();
+      else { this._startAnalyticsSession(); this.recoverToSafeScreen(); }
     });
+    // Al volver a primer plano (p. ej. tras un intento de login que navegó fuera en Android),
+    // garantizamos que SIEMPRE haya una pantalla visible: nunca pantalla negra.
+    window.addEventListener('pageshow', () => this.recoverToSafeScreen());
     this._loop = this._loop.bind(this);
   }
 
@@ -350,7 +353,42 @@ export class Game {
   _applyAuthModeUI() {
     document.body.classList.toggle('cloud-auth', !!this._cloudMode);
     setText('auth-mode-msg', this._cloudMode ? t('auth.modeCloud') : t('auth.modeDemo'));
+    this._applyGoogleAvailability();
     this._updateAccountUI();
+  }
+
+  /**
+   * Google Sign-In con Firebase JS SDK usa popup y, en WebView, cae a REDIRECT: ese flujo es
+   * inestable dentro del WebView de Capacitor (navega fuera del juego y al volver puede dejar
+   * pantalla negra). Por eso, SOLO dentro del WebView de Android, ocultamos el botón de Google
+   * (email/contraseña + invitado siguen funcionando). En navegador web, Google sigue disponible.
+   */
+  _applyGoogleAvailability() {
+    const btn = document.getElementById('btn-auth-google');
+    if (!btn) return;
+    const hide = isAndroidWebView();
+    // La regla CSS `.provider-google { display: flex !important }` (modo nube) gana a un estilo
+    // inline normal, así que ocultamos con prioridad `important`; al mostrar, la quitamos.
+    if (hide) btn.style.setProperty('display', 'none', 'important');
+    else btn.style.removeProperty('display');
+    btn.setAttribute('aria-hidden', hide ? 'true' : 'false');
+    if (hide) btn.disabled = false; // por si quedó deshabilitado de un intento previo
+  }
+
+  /**
+   * Red de seguridad ANTI-PANTALLA-NEGRA: garantiza que SIEMPRE haya una pantalla visible.
+   * Si por cualquier fallo (auth, navegación externa, error no capturado) no queda ninguna
+   * `.screen.active`, restaura la pantalla adecuada según haya o no sesión local. Idempotente.
+   */
+  recoverToSafeScreen() {
+    try {
+      const active = document.querySelector('.screen.active');
+      const gbtn = document.getElementById('btn-auth-google');
+      if (gbtn) gbtn.disabled = false; // desbloquea un login que pudo quedar colgado
+      if (active) return;              // ya hay algo visible: nada que recuperar
+      if (hasSession()) this.screens.show(SCREENS.LANDING);
+      else this._showAuth();
+    } catch (_) { /* último recurso: no relanzar desde el recuperador */ }
   }
 
   /** Refresca el bloque de cuenta + estado de sincronización en Ajustes. */
@@ -660,15 +698,21 @@ export class Game {
     if (!this._cloudMode) { this._setAuthError('auth-home-error', t('auth.errNotReady')); return; }
     const btn = document.getElementById('btn-auth-google');
     if (btn) btn.disabled = true; // loading state: evita dobles pulsaciones
+    // Watchdog: si el popup/flujo de Google se cuelga (nunca resuelve), no dejamos al usuario
+    // atascado sin feedback. A los 25 s liberamos el botón y mostramos un mensaje recuperable.
+    const TIMEOUT = Symbol('auth-timeout');
+    let timer;
+    const watchdog = new Promise((resolve) => { timer = setTimeout(() => resolve(TIMEOUT), 25000); });
     try {
-      const res = await auth.signInWithGoogle();
+      const res = await Promise.race([auth.signInWithGoogle(), watchdog]);
+      if (res === TIMEOUT) { this._setAuthError('auth-home-error', t('auth.errTimeout')); return; }
       if (res.ok) { await this._afterCloudAuth(res, (res.user && res.user.email) || '', 'google'); return; }
       if (res.code === 'auth/redirecting') return;                 // el navegador redirige; vuelve luego
       if (res.code === 'auth/popup-closed-by-user' || res.code === 'auth/cancelled-popup-request') return; // cancelado por el usuario: silencioso
       this._setAuthError('auth-home-error', this._authErrorMsg(res.code));
     } catch (_) {
       this._setAuthError('auth-home-error', t('auth.errGeneric'));
-    } finally { if (btn) btn.disabled = false; }
+    } finally { clearTimeout(timer); if (btn) btn.disabled = false; }
   }
 
   /** Abre el correo del usuario para SOLICITAR la eliminación de cuenta y datos (Play compliance). */

@@ -35,8 +35,8 @@ ok(/android:screenOrientation="fullSensor"/.test(manifest), 'screenOrientation="
 
 console.log('\n[Identidad y versión]');
 ok(/applicationId\s+"com\.st885\.trexoroll"/.test(appGradle), 'applicationId com.st885.trexoroll (sin cambios)');
-ok(/versionCode\s+4\b/.test(appGradle), 'versionCode 4');
-ok(/versionName\s+"0\.26\.0"/.test(appGradle), 'versionName 0.26.0');
+ok(/versionCode\s+6\b/.test(appGradle), 'versionCode 6');
+ok(/versionName\s+"0\.28\.1"/.test(appGradle), 'versionName 0.28.1');
 
 console.log('\n[SDK]');
 ok(/targetSdkVersion\s*=\s*35/.test(vars), 'targetSdkVersion 35 (mantenido)');

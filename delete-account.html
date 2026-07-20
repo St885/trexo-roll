@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
+  <title>TREXoRoll — Eliminar cuenta y datos</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #0a2417; color: #f1ede0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 60px; }
+    h1 { color: #f2c14e; font-size: 1.7rem; margin: 0 0 4px; }
+    h2 { color: #f2c14e; font-size: 1.15rem; margin: 28px 0 8px; }
+    .muted { color: #b9b29c; font-size: 0.9rem; }
+    a { color: #f2c14e; }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+    .ok::before { content: "✅ "; }
+    .no::before { content: "🚫 "; }
+    .step { background: rgba(0,0,0,0.22); border: 1px solid rgba(242,193,78,0.25); border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+    hr { border: none; border-top: 1px solid rgba(242,193,78,0.25); margin: 32px 0; }
+    code { background: rgba(0,0,0,0.3); padding: 1px 6px; border-radius: 6px; }
+    .btn-mail { display: inline-block; margin-top: 8px; background: #f2c14e; color: #16321f; font-weight: 700; text-decoration: none; padding: 10px 16px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🦖 TREXoRoll — Eliminar cuenta y datos</h1>
+    <p class="muted">Juego: <strong>TREXoRoll</strong> · Desarrollador/publicador: <strong>SLF Games</strong> ·
+       Contacto de soporte: <a href="mailto:stefano.luisf@gmail.com">stefano.luisf@gmail.com</a></p>
+
+    <p>En <strong>TREXoRoll</strong> puedes jugar <strong>como invitado sin crear cuenta</strong>. Si iniciaste
+       sesión con <strong>Google</strong> o con <strong>correo y contraseña</strong>, se creó una cuenta mediante
+       <strong>Firebase Authentication</strong> (Google). Esta página explica cómo <strong>solicitar la
+       eliminación de tu cuenta y de los datos asociados</strong>.</p>
+
+    <h2>Cómo solicitar la eliminación</h2>
+    <div class="step">
+      <p><strong>Opción A — Desde el juego:</strong> abre <em>Ajustes → Solicitar eliminación de cuenta</em>.
+         Se abrirá tu app de correo con la solicitud ya redactada.</p>
+    </div>
+    <div class="step">
+      <p><strong>Opción B — Por correo:</strong> escribe a
+         <a href="mailto:stefano.luisf@gmail.com">stefano.luisf@gmail.com</a> desde (o indicando) el
+         <strong>correo con el que iniciaste sesión</strong>, con el asunto
+         <em>«Eliminar mi cuenta de TREXoRoll»</em>.</p>
+      <a class="btn-mail" href="mailto:stefano.luisf@gmail.com?subject=Eliminar%20mi%20cuenta%20de%20TREXoRoll&body=Solicito%20eliminar%20mi%20cuenta%20de%20TREXoRoll%20y%20los%20datos%20asociados.%20(Indica%20el%20correo%20con%20el%20que%20iniciaste%20sesi%C3%B3n.)">✉️ Solicitar eliminación por correo</a>
+    </div>
+
+    <h2>Qué datos se eliminan</h2>
+    <ul>
+      <li class="ok">Tu <strong>cuenta de autenticación</strong> (Firebase Authentication): correo, nombre de
+        perfil, foto de perfil (si Google la facilitó) e identificador de usuario (UID).</li>
+      <li class="ok">Cualquier <strong>dato de perfil de jugador</strong> asociado a tu cuenta que pudiera
+        haberse guardado en el servicio.</li>
+    </ul>
+
+    <h2>Qué NO se elimina automáticamente</h2>
+    <ul>
+      <li class="no">El <strong>progreso guardado localmente</strong> en tu dispositivo (niveles, estrellas,
+        ajustes) no se envía a nuestros servidores. Puedes borrarlo tú desde
+        <em>Ajustes → Reiniciar progreso</em> o borrando los datos de la app en Android.</li>
+    </ul>
+
+    <h2>Plazos y retención</h2>
+    <p>Atenderemos tu solicitud y eliminaremos la cuenta y los datos personales asociados en un plazo
+       <strong>máximo de 30 días</strong>. Solo podríamos conservar información mínima si una ley aplicable
+       lo exige (por ejemplo, obligaciones legales); en TREXoRoll <strong>no hay compras ni facturación</strong>,
+       por lo que en la práctica no se retienen datos tras la eliminación.</p>
+
+    <p class="muted">TREXoRoll no muestra anuncios, no realiza compras, no usa analítica en esta versión y no
+       vende datos. Ver también la <a href="privacy.html">Política de privacidad</a>.</p>
+
+    <hr />
+
+    <h1 style="font-size:1.4rem">🇬🇧 Delete your account and data (English)</h1>
+    <p>In <strong>TREXoRoll</strong> (by <strong>SLF Games</strong>) you can play <strong>as a guest with no
+       account</strong>. If you signed in with <strong>Google</strong> or <strong>email/password</strong>, an
+       account was created via <strong>Firebase Authentication</strong>. To request deletion of your account and
+       associated data, use <em>Settings → Request account deletion</em> in the game, or email
+       <a href="mailto:stefano.luisf@gmail.com">stefano.luisf@gmail.com</a> from (or stating) the address you
+       signed in with, subject <em>“Delete my TREXoRoll account”</em>.</p>
+    <p><strong>What is deleted:</strong> your authentication account (email, display name, profile photo if
+       provided by Google, and user ID) and any associated player-profile data.
+       <strong>Local progress</strong> stays on your device — clear it via <em>Settings → Reset progress</em> or by
+       clearing the app data. Requests are handled within <strong>30 days</strong>. There are no purchases or
+       billing, so no data is retained afterwards.</p>
+    <p class="muted">Support: stefano.luisf@gmail.com</p>
+
+    <hr />
+    <p style="text-align:center"><a href="privacy.html">Privacidad</a> · <a href="terms.html">Términos</a> · <a href="legal.html">Legal</a></p>
+    <p class="muted" style="text-align:center">© 2026 SLF Games. Todos los derechos reservados.</p>
+  </div>
+</body>
+</html>

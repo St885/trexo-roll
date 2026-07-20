@@ -17,6 +17,71 @@
 
 ---
 
+## 🔒 Auditoría de seguridad + fix pantalla negra — v0.28.1 / versionCode 6 (2026-07-20)
+
+> **Revisión integral de seguridad antes de seguir con testers. Sin generar AAB (pendiente
+> de autorización). Cambios en rama `main`, sin commit/push todavía.**
+
+**Estado tras la auditoría:** `npm test` ✅ · `npm run build` ✅ · `npx cap sync android` ✅ ·
+`test:graph`/`test:visual`/`test:ui` ✅ · validación en navegador real (Chrome headless + WebGL vía
+CDP): boot sin errores de consola, recuperación anti-pantalla-negra y ocultación de Google en WebView
+verificadas end-to-end ✅.
+
+### Causa probable del aviso "app no muy segura"
+No hay indicios de malware. Lo más probable es **reputación baja de app nueva + canal de prueba +
+sideload/instalación fuera de Play**: Play Protect avisa de apps recién publicadas o instaladas por
+enlace de tester hasta que ganan reputación. En el **código** no se encontró causa: permiso único
+`INTERNET`, sin cleartext, sin dominios inseguros, sin secretos. Recomendación (no implementada, requiere
+tu OK): valorar **Play Integrity API** más adelante; el aviso debería remitir al madurar la prueba cerrada.
+
+### Bug de pantalla negra (causa raíz + fix)
+- **Causa:** el login de Google usa `signInWithPopup` y, al fallar en el WebView de Capacitor, cae a
+  `signInWithRedirect`; ese redirect es **inestable dentro del WebView** (navega fuera y al volver puede
+  dejar el WebView en blanco).
+- **Fix elegido (autorizado):** **ocultar el botón de Google solo dentro del WebView de Android**
+  (`isAndroidWebView()`); email/contraseña + invitado siguen funcionando. En navegador web Google sigue
+  disponible. Más una **red de seguridad anti-pantalla-negra**:
+  - `recoverToSafeScreen()` en `visibilitychange`/`pageshow`: si no hay ninguna `.screen.active`, restaura
+    landing/acceso. **Nunca pantalla negra.**
+  - **Watchdog de 25 s** en el login de Google (si el flujo se cuelga, libera el botón y avisa).
+  - Handlers globales `error`/`unhandledrejection` en `main.js` con **log seguro** (solo código/mensaje,
+    nunca tokens/PII) y **panel de recuperación** con "Reintentar".
+
+### Hallazgos de la auditoría
+- **Permisos Android:** solo `INTERNET` (mínimo). ✅
+- **Secretos:** ninguno versionado. `android/`, `google-services.json`, `keystore.properties`,
+  `*.jks/*.pem/*.aab/*.apk`, `.env` correctamente ignorados. La config **web** de Firebase
+  (`firebaseConfig.js`) es **pública por diseño** (se sirve a todos los clientes); la seguridad la dan
+  reglas de Firestore + dominios autorizados + Auth. **Recomendado:** restringir la API key web en Google
+  Cloud Console (por app Android / referrers) — no es urgente ni bloqueante.
+- **Tokens/contraseñas:** nunca se guardan en localStorage/sessionStorage. El SDK de Firebase gestiona su
+  propia sesión (IndexedDB). `_safeUser` proyecta sin tokens; analytics filtra parámetros sensibles. ✅
+- **Almacenamiento local:** solo progreso/ajustes/sesión no sensibles (nombre saneado, idioma). ✅
+- **Red:** sin `fetch/XHR/WebSocket` propios; toda la red va por el SDK de Firebase (HTTPS). Analytics
+  **OFF** y Cloud Sync **OFF** por flags con guardas. ✅
+- **CSP:** estricta, sin comodines, `object-src 'none'`, `base-uri 'self'`, dominios concretos de Google
+  para Auth. ✅
+- **Dependencias:** `npm audit --omit=dev` → **0 vulnerabilidades**. Las 2 "high" (`tar`) provienen solo
+  de `@capacitor/cli` (**devDependency**, build-time, **no se envía a usuarios**) y su fix es un major
+  breaking — **no aplicado** (requeriría tu OK).
+- **Capacitor:** `androidScheme: https`, `allowMixedContent: false`. ✅
+- **Legal/Play:** `privacy.html` completa (datos, Firebase Auth, no ads/compras/analytics, eliminación de
+  cuenta, contacto). **Nueva `delete-account.html`** dedicada (TREXoRoll · SLF Games · pasos · correo de
+  soporte · qué se elimina · retención ≤30 días), enlazada desde privacy y añadida al build/`www/`.
+
+### Archivos modificados
+`src/main.js`, `src/core/Game.js`, `src/utils/i18n.js`, `styles/main.css`, `privacy.html`,
+`tools/build-web.mjs`, `tools/auth-smoke.mjs`, `tools/android-manifest-check.mjs`, `package.json`
+(0.28.1) · **nuevo** `delete-account.html` · **local (ignorado)** `android/app/build.gradle`
+(`versionCode 6` / `versionName 0.28.1`).
+
+### Pendiente
+- **Autorizar generación de AAB** v0.28.1 / versionCode 6 (no generado).
+- URL de eliminación de cuenta para Play Console: `…/delete-account.html`.
+- (Opcional, con tu OK) restringir API key web, valorar Play Integrity, plugin nativo de Google Sign-In.
+
+---
+
 ## ✅ Play Store — Prueba interna v0.28.0 validada (2026-07-18)
 
 > **TREXoRoll v0.28.0 publicado en el canal de Prueba interna de Google Play y

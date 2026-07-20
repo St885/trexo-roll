@@ -19,6 +19,8 @@ import { chooseMoreAdvanced, SYNC_STATUS } from '../src/services/progressSyncSer
 import { EVENTS, logEvent, sanitizeParams } from '../src/services/analyticsService.js';
 import { importSave, exportSave } from '../src/utils/storage.js';
 import { AUTH_MODES } from '../src/utils/session.js';
+import { STRINGS } from '../src/utils/i18n.js';
+import { isAndroidWebView } from '../src/utils/device.js';
 
 let fails = 0;
 const ok = (cond, msg) => { console.log(`  ${cond ? '✅' : '❌'} ${msg}`); if (!cond) fails++; };
@@ -83,6 +85,17 @@ ok(clean.password === undefined && clean.token === undefined && clean.email === 
 let threw = false; try { await logEvent(EVENTS.LEVEL_START, { level: 1, password: 'X' }); await logEvent(EVENTS.LOGIN, { method: 'password' }); } catch (_) { threw = true; }
 ok(!threw, 'logEvent no lanza nunca (no-op seguro sin Firebase)');
 ok(Object.keys(EVENTS).length >= 12, `eventos definidos (${Object.keys(EVENTS).length})`);
+
+console.log('\n[Red de seguridad anti-pantalla-negra]');
+// Mensajes de recuperación/timeout definidos en AMBOS idiomas (para que el usuario nunca quede
+// sin feedback ante un fallo de auth). Si falta uno, el fix de pantalla negra estaría a medias.
+const RECOVERY_KEYS = ['auth.errTimeout', 'auth.googleWebOnly', 'recover.title', 'recover.body', 'recover.retry', 'recover.guest'];
+for (const k of RECOVERY_KEYS) {
+  ok(typeof STRINGS.es[k] === 'string' && typeof STRINGS.en[k] === 'string', `clave i18n "${k}" en ES y EN`);
+}
+// En Node (sin navegador WebView) el gating de Google NO oculta el botón: Google sigue disponible
+// en la versión web. La ocultación solo aplica dentro del WebView de Android (isAndroidWebView()).
+ok(isAndroidWebView() === false, 'isAndroidWebView() = false fuera de WebView (Google visible en web)');
 
 console.log(`\n${fails === 0 ? '✅ Capa de cuenta (auth/sync/analytics) OK' : '❌ ' + fails + ' fallo(s)'}\n`);
 process.exit(fails === 0 ? 0 : 1);
