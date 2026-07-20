@@ -75,9 +75,20 @@ tu OK): valorar **Play Integrity API** más adelante; el aviso debería remitir 
 (0.28.1) · **nuevo** `delete-account.html` · **local (ignorado)** `android/app/build.gradle`
 (`versionCode 6` / `versionName 0.28.1`).
 
+### ✅ AAB release generado (2026-07-20)
+- **Ruta:** `android/app/build/outputs/bundle/release/app-release.aab`
+- **Tamaño:** ~16 MB (16 840 030 bytes)
+- **Firma:** ✅ verificada (`jarsigner -verify` → *jar verified*; tarea `signReleaseBundle` OK)
+- **Versión:** `versionCode 6` / `versionName 0.28.1` (confirmado en el manifest de release)
+- **applicationId:** `com.st885.trexoroll` (sin cambios)
+- **Contenido:** ✅ sin `_backup`, `keystore`, `.env`, `.pem`, `.jks`, `google-services.json` ni secretos.
+- **Gates previos:** `npm test` ✅ · `npm run build` ✅ · `npx cap sync android` ✅.
+- **NO subido a Play Console. NO push.** Commit del código: `ad49c74` (solo cambios seguros; el AAB
+  no se versiona).
+
 ### Pendiente
-- **Autorizar generación de AAB** v0.28.1 / versionCode 6 (no generado).
-- URL de eliminación de cuenta para Play Console: `…/delete-account.html`.
+- Subir el AAB a Play Console **solo con tu autorización** (Data Safety + URL de eliminación de cuenta
+  `…/delete-account.html`).
 - (Opcional, con tu OK) restringir API key web, valorar Play Integrity, plugin nativo de Google Sign-In.
 
 ---
