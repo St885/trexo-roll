@@ -84,3 +84,58 @@ npm run test:visual     # ejerce el dibujo Canvas 2D y la construcción 3D (sin 
 2. Más niveles y/o selector de dificultad (arquitectura ya lista: `src/levels/levels.js`).
 3. Control por giroscopio en móvil (opcional).
 4. Despliegue en GitHub Pages — **requiere confirmación de Stefano**.
+
+---
+
+## AISLAMIENTO OBLIGATORIO DEL PROYECTO
+
+### Identidad del proyecto
+
+- **Nombre:** `TREXoRoll`
+- **Ruta absoluta:** `/Users/stefanofrontado/Desktop/Programacion IA/03_juegos/trexo-roll`
+- **Carpeta Git esperada (repositorio propio):** `/Users/stefanofrontado/Desktop/Programacion IA/03_juegos/trexo-roll`
+
+`git rev-parse --show-toplevel` **debe** devolver exactamente `/Users/stefanofrontado/Desktop/Programacion IA/03_juegos/trexo-roll`. Si devuelve otra ruta,
+un ancestro, o `fatal: not a git repository`, **detente**: el proyecto se abrió desde el sitio
+equivocado. No ejecutes ningún comando Git fuera de esta carpeta.
+
+Esta sesión debe trabajar **exclusivamente** dentro de este proyecto.
+
+### Validación obligatoria antes de actuar
+
+Antes de inspeccionar, editar, ejecutar pruebas o usar Git, comprueba SIEMPRE que estás en el
+sitio correcto:
+
+```bash
+pwd                        # debe estar dentro de /Users/stefanofrontado/Desktop/Programacion IA/03_juegos/trexo-roll
+git rev-parse --show-toplevel   # ver la regla de Git de arriba
+```
+
+Si `pwd` no está dentro de la ruta de este proyecto, **detente**: el juego no se abrió desde su
+propia carpeta raíz. No adivines la ruta ni «te muevas» a ella con `cd` para forzar el arranque;
+avisa de que el proyecto se abrió mal.
+
+### Aislamiento y concurrencia (proyectos hermanos)
+
+- `03_juegos/` contiene **varios juegos independientes**. Los cambios en CUALQUIER otro juego
+  (por ejemplo en `survivors-sf`, `troll-castle-wars`, `dinocolor`…) **no son concurrencia de
+  este proyecto** y **no deben interpretarse como tal**: ignóralos por completo. Solo cuentan los
+  ficheros DENTRO de `/Users/stefanofrontado/Desktop/Programacion IA/03_juegos/trexo-roll`.
+- **No mezcles contextos** entre juegos: documentación, decisiones, convenciones de código,
+  paletas ni dependencias de un juego no aplican a otro.
+- **No modifiques, leas para editar, ni ejecutes** nada en otro proyecto de `03_juegos/`, aunque
+  parezca relacionado. Si un cambio necesitara tocar dos juegos, **detente y repórtalo** antes de
+  actuar.
+- Si detectas ediciones concurrentes **dentro de este mismo proyecto** que tú no has hecho (un
+  fichero que cambia entre tus propios comandos), asume que **hay otra sesión trabajando aquí**:
+  **detente, no sigas editando y avisa** — no intentes «ganar» la carrera de ediciones.
+
+### Git y raíz del workspace
+
+- **Nunca ejecutes Git desde la raíz general** `~/Desktop/Programacion IA` ni desde
+  `03_juegos/`: no son repositorios del proyecto. Ejecuta Git solo dentro de la carpeta de este
+  juego (o no lo ejecutes, si no tiene repositorio propio).
+- No hagas `push`, `deploy`, ni cambios de rama/historial sin autorización explícita de Stefano.
+
+*(Bloque de aislamiento estándar del workspace — añadido por el agente-orquestador de
+mantenimiento. Documental: no cambia código, assets ni configuración de build.)*
